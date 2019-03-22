@@ -1,0 +1,71 @@
+# This recipe exercises the use of GIT_ variables in jinja template strings.
+# It uses load_setup_py_data from conda_build.jinja_context to populate some fields
+# with values fed from setuptools.
+
+{% set data = load_setup_py_data() %}
+
+# package information
+package:
+  # hard-code name as load_setup_py_data() fails to get package name
+  name: "qats"
+  # the version string is taken from the most recent tag
+  version: {{ data.get('version') }}
+
+# where to fetch the source code
+source:
+  # use path when building locally (remember to switch off git tag versioning)
+  # path: .
+  # clone repository
+  git_url: .
+  # and checkout certain revision by tag (if not branch head is used)
+  git_tag:
+
+# build specifications
+build:
+  # PY_VER resolves to the python version used for build
+  string: py{{ CONDA_PY }}_{{ PKG_BUILDNUM }}
+  # disable including recipe (files in repository) in the final package, only code zipped as .egg
+  include_recipe: False
+  # For short build scripts, this can be more convenient. Used instead of build.sh and bld.bat.
+  # script: python setup.py install
+
+# requirements for build and run time
+requirements:
+  build:
+    - python
+    - setuptools >=36,<37
+    - setuptools_scm >=1,<2
+    - sphinx >=1.6
+    - pywin32 # [win]
+  run:
+    - python
+    - setuptools >=36,<37
+    - setuptools_scm >=1,<2
+    - matplotlib >=1,<3
+    - openpyxl >=2,<3
+    - numpy >=1,<2
+    - scipy >=0,<1
+    - h5py >=2.7,<3
+    - hdf5 >=1.8,<2
+    - qt >=5.6.0,<6
+    - pyqt >=5.6.0,<6
+    - pywin32 # [win]
+
+exclude:
+  - menuinst
+
+# the package will be installed into a test environment after the build is finished and the tests will be run there
+# for some strange reason this does currently not work (conda build says 'no test to be performed')
+test:
+  imports:
+    # Test that the imports are working
+    - qats
+
+about:
+  home: {{ data.get('url') }}
+  license: {{ data.get('license') }}
+  summary: {{ data.get('description') }}
+
+extra:
+  maintainers:
+   - {{ data.get('author') }}
