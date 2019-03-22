@@ -1,0 +1,69 @@
+** Info about series written by SIMO-S2XMOD
+** 05-FEB-2016 15:07
+** Direct access file           :
+** System identifier            :
+** Initial condition identifier :         
+**
+** Number of samples :    65536
+** Time step  :    0.2000000    
+** Start_time :     0.000000    
+** End_time   :     13107.00    
+** --------------------------------------------------
+** Series number at file :     1
+** R_nsamp, R_nrec, Samp, Time_1
+** Channel name          : Info_arr
+Info_arr
+** --------------------------------------------------
+** Series number at file :     2
+** Channel name          : Time_arr
+Time_arr
+** --------------------------------------------------
+** Series number at file :     3
+** Body number           :     1
+** Response number       :    29
+** Channel number        :     1
+** SIMO ID number        :       1
+** Channel name          : XGtranslationTotalmotion            
+B1r29c1_XGtranslationTotalmotion
+** --------------------------------------------------
+** Series number at file :     4
+** Body number           :     1
+** Response number       :    29
+** Channel number        :     2
+** SIMO ID number        :       2
+** Channel name          : YGtranslationTotalmotion            
+B1r29c2_YGtranslationTotalmotion
+** --------------------------------------------------
+** Series number at file :     5
+** Body number           :     1
+** Response number       :    29
+** Channel number        :     3
+** SIMO ID number        :       3
+** Channel name          : ZGtranslationTotalmotion            
+B1r29c3_ZGtranslationTotalmotion
+** --------------------------------------------------
+** Series number at file :     6
+** Body number           :     1
+** Response number       :    29
+** Channel number        :     4
+** SIMO ID number        :       4
+** Channel name          : XLrotationTotalmotion               
+B1r29c4_XLrotationTotalmotion
+** --------------------------------------------------
+** Series number at file :     7
+** Body number           :     1
+** Response number       :    29
+** Channel number        :     5
+** SIMO ID number        :       5
+** Channel name          : YLrotationTotalmotion               
+B1r29c5_YLrotationTotalmotion
+** --------------------------------------------------
+** Series number at file :     8
+** Body number           :     1
+** Response number       :    29
+** Channel number        :     6
+** SIMO ID number        :       6
+** Channel name          : ZGrotationTotalmotion               
+B1r29c6_ZGrotationTotalmotion
+** ------------------------------
+** Number of series :    8

@@ -1,0 +1,60 @@
+
+   R I F L E X  -  KEY FILE
+   ------------------------
+
+
+   This key-file describes the contents of : n_elmfor.bin
+   The format of n_elmfor.bin is BINARY
+   with numbers stored as real single precision (4 bytes)
+   The file n_elmfor.bin contains a time series of element-forces
+   The element-forces are stored in columns on n_elmfor.bin
+
+   Column no. 1 contains FORTRAN specific data (please ignore)
+
+   Column no. 2 contains the time.
+
+
+   For each bar element the following applies : 
+
+   DOF 1 = Axial force
+
+
+   For each beam element the following applies : 
+
+   DOF 1 = Axial force
+   DOF 2 = Torsional moment
+   DOF 3 = Mom. about local y-axis, end 1
+   DOF 4 = Mom. about local y-axis, end 2
+   DOF 5 = Mom. about local z-axis, end 1
+   DOF 6 = Mom. about local z-axis, end 2
+   DOF 7 = Shear force in local y-direction, end 1
+   DOF 8 = Shear force in local y-direction, end 2
+   DOF 9 = Shear force in local z-direction, end 1
+   DOF10 = Shear force in local z-direction, end 2
+
+
+   The response is stored as follows
+
+   Line   Local     Local      No. of         Stored in
+    Id    segment   element    responses      column(s)
+   ------------------------------------------------------
+ DUMMY           1         1          10         3   -     12
+ ML01            1         1           1                13
+ ML02            1         1           1                14
+ ML03            1         1           1                15
+ ML04            1         1           1                16
+ ML05            1         1           1                17
+ ML06            1         1           1                18
+ ML07            1         1           1                19
+ ML08            1         1           1                20
+ ML09            1         1           1                21
+ ML10            1         1           1                22
+ ML11            1         1           1                23
+ ML12            1         1           1                24
+ ML13            1         1           1                25
+ ML14            1         1           1                26
+ ML15            1         1           1                27
+ ML16            1         1           1                28
+ ML17            1         1           1                29
+
+   Column no.          30 contains FORTRAN specific data (please ignore)

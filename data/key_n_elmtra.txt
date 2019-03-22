@@ -1,0 +1,60 @@
+
+   R I F L E X  -  KEY FILE
+   ------------------------
+
+
+   This key-file describes the contents of : n_elmtra.bin
+   The format of n_elmtra.bin is BINARY
+   with numbers stored as real single precision (4 bytes)
+   The file n_elmtra.bin contains a time series of element-tracon
+   The element-tracon are stored in columns on n_elmtra.bin
+
+   Column no. 1 contains FORTRAN specific data (please ignore)
+
+   Column no. 2 contains the time.
+
+
+   For each element the following applies : 
+   DOF 1 = TRACON(1,1,IEL)
+   DOF 2 = TRACON(2,1,IEL)
+   DOF 3 = TRACON(3,1,IEL)
+   DOF 4 = TRACON(1,2,IEL)
+   DOF 5 = TRACON(2,2,IEL)
+   DOF 6 = TRACON(3,2,IEL)
+   DOF 7 = TRACON(1,3,IEL)
+   DOF 8 = TRACON(2,3,IEL)
+   DOF 9 = TRACON(3,3,IEL)
+   i.e. TRACON is printed column-wise
+   for the selected elements
+
+   TRACON is the transformation matrix from global
+   to local system, i. e.,
+   x_local = TRACON * x_global
+
+
+
+   The response is stored as follows
+
+   Line   Local     Local      No. of         Stored in
+    Id    segment   element    responses      column(s)
+   ------------------------------------------------------
+ DUMMY           1         1           9         3   -     11
+ ML01            1         1           9        12   -     20
+ ML02            1         1           9        21   -     29
+ ML03            1         1           9        30   -     38
+ ML04            1         1           9        39   -     47
+ ML05            1         1           9        48   -     56
+ ML06            1         1           9        57   -     65
+ ML07            1         1           9        66   -     74
+ ML08            1         1           9        75   -     83
+ ML09            1         1           9        84   -     92
+ ML10            1         1           9        93   -    101
+ ML11            1         1           9       102   -    110
+ ML12            1         1           9       111   -    119
+ ML13            1         1           9       120   -    128
+ ML14            1         1           9       129   -    137
+ ML15            1         1           9       138   -    146
+ ML16            1         1           9       147   -    155
+ ML17            1         1           9       156   -    164
+
+   Column no.         165 contains FORTRAN specific data (please ignore)
