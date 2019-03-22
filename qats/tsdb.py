@@ -1,0 +1,1624 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+Provides :class:`TsDB` class.
+"""
+import os
+import glob
+import copy
+from scipy.io import loadmat
+import fnmatch
+import matplotlib.pyplot as plt
+import numpy as np
+from struct import pack
+from array import array
+from collections import OrderedDict, defaultdict
+from .readers import read_bin_keys, read_ts_keys, read_bin, read_ts, read_ascii
+from .readers import read_h5_keys, read_h5
+from .ts import TimeSeries
+
+# todo: cross spectrum(scipy.signal.csd)
+# todo: coherence (scipy.signal.coherence)
+# todo: consider implementing TsDB.__contains__ hook
+'''
+Regarding __contains__ hook, see:
+https://docs.python.org/3/reference/datamodel.html#object.__contains__
+https://stackoverflow.com/questions/30081275/why-is-1000000000000000-in-range1000000000000001-so-fast-in-python-3?rq=1
+--> is it needed? Eg. ``'line1' in tsdb``
+'''
+
+
+class TsDB(object):
+    """
+    A class for storage, processing and presentation of time series.
+
+    Parameters
+    ----------
+    name : str, optional
+        Database name.
+
+    """
+
+    def __init__(self, name=None):
+        self.name = name
+        self.register = OrderedDict()           # dictionary of unique id and time series objects
+        self.register_parent = OrderedDict()    # dictionary of unique id and parent name (source/file name)
+        self.register_indices = OrderedDict()   # dictionary of unique id and the time series index on parent file
+        self.register_keys = []     # register keys in the order the associated time series where loaded
+        self._timekeys = dict()  # register of time keys (only relevant for .mat files)
+
+    def __iter__(self):
+        """
+        Generator yielding time series in database
+
+        Returns
+        -------
+        TimeSeries
+            time series in database
+        """
+        keys = self.list()
+        for key in keys:
+            yield self.get_ts(key=key)
+
+    def __repr__(self):
+        return '<TsDB "%s">' % self.name
+
+    @property
+    def common(self):
+        """
+        Common part of all keys (paths) in DB.
+
+        Returns
+        -------
+        str
+        """
+        if self.n == 0:
+            return ""
+        elif self.n == 1:
+            k = self.register_keys[0]
+            return self._path_dirname(k)
+        else:
+            return os.path.commonpath(self.register_keys)
+
+    @property
+    def n(self):
+        """
+        Number of time series in database
+
+        Returns
+        -------
+        int : number of loaded time series
+
+        """
+        return len(self.register)
+
+    @staticmethod
+    def _check_time_arrays(container, **kwargs):
+        """
+
+        Parameters
+        ----------
+        container: dict
+            Time series container obtained from `TsDB.get_many_ts()`.
+        kwargs:
+            Optional arguments passed to `TimeSeries.get()`
+
+        Returns
+        -------
+        dict
+            Attributes: 'is_common' (bool), 'dtg_defined' (bool), 'dtg_ref' (datetime or None), 'common' (tuple),
+            'devations' (dict)', 'actions' (list), 'msg' (str).
+        """
+        # evaluate whether the time series have common time array (time steps and time windows are equal)
+        _dtg_ref = []
+        _dt = []
+        _start_time = []
+        _end_time = []
+
+        for _, ts in container.items():
+            _dtg_ref.append(ts.dtg_ref)
+            _dt.append(ts.dt)
+            _start_time.append(ts.start)
+            _end_time.append(ts.end)
+
+        # evaluate dtg_ref, etc.
+        _same_dtg_ref = all(r == _dtg_ref[0] for r in _dtg_ref)
+        dtg_defined = any(r is not None for r in _dtg_ref)
+        dtg_ref = _dtg_ref[0] if (dtg_defined is True and _same_dtg_ref is True) else None
+
+        # evaluate time step, start and end time
+        _same_dt = ((max(_dt) - min(_dt)) == 0.)
+        _same_start_time = ((max(_start_time) - min(_start_time)) == 0.)
+        _same_end_time = ((max(_end_time) - min(_end_time)) == 0.)
+
+        # recommended parameters for common time: latest start, earliest end, smallest avg. time step
+        common_start = max(_start_time)
+        common_end = min(_end_time)
+        if common_start < common_end:
+            common = common_start, common_end, min(_dt)
+        else:
+            # not possible to create common time array (earliest end time is before latest start time)
+            common = None
+
+        # evaluate and define deviations and recommended actions
+        deviations = OrderedDict()
+
+        if not _same_dt:
+            deviations["dt"] = "mean time step varies from %.10g to %.10g" % (min(_dt), max(_dt))
+
+        if not _same_start_time:
+            deviations["start"] = "start time varies from %.7g to %.7g" % (min(_start_time), max(_start_time))
+
+        if not _same_end_time:
+            deviations["end"] = "end time varies from %.7g to %.7g" % (min(_end_time), max(_end_time))
+
+        if dtg_defined and not _same_dtg_ref:
+            '''
+            If dtg_ref test criteria fails, none of the previous tests are relevant anymore. Therefore, the devations
+            dict is reset here.
+            '''
+            deviations = OrderedDict()
+            deviations["dtg_ref"] = "'dtg_ref' is defined for one or more of the time series, " \
+                                    "but is not equal for all of them"
+
+        # identify any deviations that are handled by kwargs
+        handled = set()
+        if "resample" in kwargs:
+            if isinstance(kwargs.get("resample"), float):
+                handled.add("dt")
+            elif isinstance(kwargs.get("resample"), np.ndarray) or isinstance(kwargs.get("resample"), list):
+                t_new = kwargs.get("resample")
+                if np.allclose(np.min(np.diff(t_new)), np.max(np.diff(t_new))):
+                    handled.add("dt")
+                if t_new[0] >= common_start:
+                    handled.add("start")
+                if t_new[-1] >= common_end:
+                    handled.add("end")
+        if kwargs.get("twin") is not None:
+            t_start, t_end = kwargs["twin"]
+            if t_start >= common_start:
+                handled.add("start")
+            if t_end >= common_end:
+                handled.add("end")
+
+        # remove deviations handled by kwargs
+        for h in handled:
+            _ = deviations.pop(h, None)
+
+        # evaluate if time array is common
+        is_common = (len(deviations) == 0)
+
+        # define actions
+        actions = []
+        msg = ""
+        if not is_common:
+            if "dt" in deviations:
+                actions.append("Resample to constant time step by specifying `resample=%.10g` (or smaller)" % common[2])
+            if "start" in deviations or "end" in deviations:
+                actions.append("Crop time series to the common time window by specifying "
+                               "`twin=(%.7g, %.7g)`" % (common[0], common[1]))
+                actions.append("Resample to a common time array by specifying "
+                               "`resample=np.arange(%.7g, %.7g, %.7g)`" % (common[0], common[1]+common[2], common[2]))
+            if "dtg_ref" in deviations:
+                actions.append("Ensure 'dtg_ref' is the same for all specified time series "
+                               "-- see `TimeSeries.set_dtg_ref()`")
+
+            # compile deviations and recommended actions to message string
+            msg = "Time array is not common within specified parameters for specified time series.\n" \
+                  "Deviations:\n"
+            for dev, s in deviations.items():
+                msg += "  * %s : %s\n" % (dev, s)
+            if len(actions) > 0:
+                msg += "Recommended actions (one or more may be necessary):\n"
+                if common is not None:
+                    for a in actions:
+                        msg += "  * %s\n" % a
+                else:
+                    msg += "   (none - not possible to create common time array)\n"
+
+        timecheck = dict(
+            is_common=is_common,        # True or False
+            # dtg info
+            dtg_defined=dtg_defined,    # True or False
+            dtg_ref=dtg_ref,            # datetime or None
+            # recommended parameters for common time array
+            common=common,              # tuple or None
+            # descriptions of deviations and proposed actions
+            deviations=deviations,      # dict
+            actions=actions,            # list
+            msg=msg,                    # str
+        )
+
+        return timecheck
+
+    def _make_export_friendly_keys(self, container, keep_basename=False):
+        """
+        Shorten keys by removing common part of it and replace path separators with underscore. Use only basename
+        if specified.
+
+        Parameters
+        ----------
+        container : dict
+            Container for time series
+        keep_basename : bool, optional
+            Keep only time series names e.g. 'tension' in key 'C:\data\results.ts\tension'. Default False.
+
+        Returns
+        -------
+        dict
+            Time series container with modified keys
+
+        Raises
+        ------
+        KeyError
+            If `keep_basename` = True and several timeseries have the same name
+
+        Notes
+        -----
+        To keep info but avoid path confusion when loading the exported file later
+            - keys shortened by only removing non-unique part
+            - remove parent file extension from key
+            - replace path separators in key with underscore
+            - do not replace '.' elsewhere in the key e.g. directory name or filename containing '.'
+
+        """
+        new_container = OrderedDict()
+        if keep_basename:
+            key_count = defaultdict(int)
+        else:
+            # common part of all selected keys
+            common_key = os.path.commonpath([str(k) for k in container.keys()])
+        for key, ts in container.items():
+            if keep_basename:
+                # shorten key by using only basename
+                new_k = self._path_basename(key)
+                key_count[new_k] += 1
+                if key_count[new_k] > 1:
+                    raise KeyError("Multiple keys with basename '%s' -- "
+                                   "consider using ``basename=False``" % new_k)
+            else:
+                # make
+                relkey = self._path_relpath(key, common_key)
+                name = self._path_basename(relkey)
+                new_k = "_".join([os.path.splitext(self._path_dirname(relkey))[0].replace(os.path.sep, "_"), name])
+
+            # put in new container
+            new_container[new_k] = ts
+
+        return new_container
+
+    @staticmethod
+    def _path_basename(key):
+        """
+        As os.path.basename, but does not split on '/' or '\\' if they are within square brackets.
+        """
+        if "[" in key:
+            i = key.index("[")
+            return os.path.basename(key[:i]) + key[i:]
+        else:
+            return os.path.basename(key)
+
+    @staticmethod
+    def _path_dirname(key):
+        """
+        As os.path.dirname, but does not split on '/' or '\\' if they are within square brackets.
+        """
+        if "[" in key:
+            i = key.index("[")
+            return os.path.dirname(key[:i]) + key[i:]
+        else:
+            return os.path.dirname(key)
+
+    @staticmethod
+    def _path_relpath(key, start=os.curdir):
+        """
+        As os.path.relpath, but does not split on '/' or '\\' if they are within square brackets.
+        """
+        if "[" in key:
+            i = key.index("[")
+            return os.path.relpath(key[:i], start) + key[i:]
+        else:
+            return os.path.relpath(key, start)
+
+    def _read(self, keys, outkeys=None, store=True):
+        """
+        Read time series specified by absolute keys from file
+
+        Parameters
+        ----------
+        keys : list
+            Keys (path) to time series
+        outkeys : list, optional
+            Keys used in returned container. Note that full key will still be used in the db register.
+            Useful if you want to have shorter keys (less the common db path) in the container returned.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+
+        Returns
+        -------
+        dict
+            TimeSeries objects stored in dictionary by key
+
+        Notes
+        -----
+        Absolute keys are typical obtained using the list() method.
+
+        """
+        # handle outkeys
+        if outkeys is not None:
+            assert len(outkeys) == len(keys), "The number of 'outkeys' is different from the number of 'keys'."
+        else:
+            outkeys = copy.copy(keys)
+
+        # correlation between full keys and specified keys for returned container
+        keypairs = dict(zip(keys, outkeys))
+
+        # initiate and pre-populate ordered dictionary (to keep order of keys)
+        container = OrderedDict()
+        for key in keys:
+            reg = self.register[key]   # gives None if not previously read/stored
+            if isinstance(reg, TimeSeries) or reg is None:
+                container[keypairs[key]] = reg
+            else:
+                raise LookupError("Unexpected look-up error, key: %s" % key)
+
+        # group keys by parent file
+        keys_by_parent = defaultdict(list)
+        for key in keys:
+            # only interested in keys that are not already stored
+            if container[keypairs[key]] is None:
+                keys_by_parent[self.register_parent[key]].append(key)
+
+        # read requested keys, file by file
+        for parent, keys in keys_by_parent.items():
+            names = [key.replace(parent, "").lstrip(os.path.sep) for key in keys]
+
+            # extract parent file extension
+            fext = os.path.splitext(parent)[-1]
+
+            # which indices; relevant for .ts, .tda, .asc, .bin
+            indices = [0] + [self.register_indices[key] for key in keys]
+
+            tslist = [None] * len(keys)
+
+            if (fext == '.ts') or (fext == '.tda'):
+                data = read_ts(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+
+            elif fext == '.asc':
+                data = read_ascii(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+
+            elif fext == '.dat':
+                data = read_ascii(parent, ind=indices, skiprows=1)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+
+            elif fext == '.bin':
+                data = read_bin(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+
+            elif fext == '.mat':
+                timekey = self._timekeys[parent]
+                data = loadmat(parent, squeeze_me=True, variable_names=[timekey]+names)  # dictionary
+                # zero and duplicate time vectors were sorted out on load
+                timekey = fnmatch.filter(data.keys(), '[Tt]ime*')[0]
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[timekey], data[name], parent=parent)
+
+            elif fext in ('.h5', '.hdf5'):
+                dsetnames = [name.replace('\\', '/') for name in names]
+                data = read_h5(parent, dsetnames=dsetnames)
+                for i, name in enumerate(names):
+                    timearr, arr = data[i]
+                    tslist[i] = TimeSeries(name, timearr, arr, parent=parent)
+
+            else:
+                raise NotImplementedError("Invalid file type: %s (ext = %s)" % (parent, fext))
+
+            # add to ordered dictionary (and store in db if specified)
+            for key, ts in zip(keys, tslist):
+                container[keypairs[key]] = ts
+
+                if store:
+                    self.register[key] = ts
+
+        return container
+
+    def _reorder_list(self, keylist, keys=None, names=None):
+        """
+        Re-order keys to match order in which they were specified.
+
+        Parameters
+        ----------
+        keylist: list
+            List to re-order.
+        keys: list, optional
+            See parameter description in `list()`.
+        names: list, optional
+            See parameter description in `list()`.
+
+        Returns
+        -------
+        list
+            Re-ordered list
+
+        Raises
+        ------
+        ValueError
+            If `keep_order` is True, in combination with more than one key and more than one name.
+        """
+        # define function need for sorting
+        def get_index(m, patterns, kind):
+            """ For specified match (key), return index based on specified keys or names patterns. """
+            if kind == 'name':
+                m = self._path_basename(m)
+            try:
+                _ind = [fnmatch.fnmatch(m, pat) for pat in patterns].index(True)
+            except ValueError:
+                # True was not found in generated list. This should not occur, because all the keys/matches
+                # currently
+                # this
+                raise Exception("Unexpected error: could not find sorting index for key '%s'" % m)
+            return _ind
+
+        # re-order keys to match specified order
+        if (keys is not None and len(keys) > 1) and (names is not None and len(names) > 1):
+            raise ValueError("`keep_order=True` may not be combined with more than one key and "
+                             "more than one name")
+
+        if (keys is not None and len(keys) > 1) or (names is not None and len(names) > 1):
+            if keys is not None and len(keys) > 1:
+                # sort on specified keys
+                _patterns = keys
+                _kind = 'key'
+            elif names is not None and len(names) > 1:
+                # sort on specified keys
+                _patterns = names
+                _kind = 'name'
+
+            # perform the sorting
+            reordered = sorted(keylist, key=lambda m: get_index(m, _patterns, _kind))
+
+        else:
+            # keys or names not sufficiently specified, there is nothing to do
+            reordered = keylist
+
+        return reordered
+
+    def add(self, ts):
+        """
+        Add new TimeSeries object to db
+
+        Parameters
+        ----------
+        ts : TimeSeries
+            added TimeSeries object
+
+        Notes
+        -----
+        Key/identifier will be the name of the time series. If you want to change the key, just change the name before
+        adding the TimeSeries to the db.
+
+        """
+        '''
+        Note: 
+        If only 'name' is used as the register key, one may encounter issues later (e.g. at export), since 
+        os.path.commonpath will not accept a mix of absolute and relative paths. Therefore, the added timeseries is
+        registered with a fictitious key constructed as follows: commonpath + ts.name
+        '''
+        if not isinstance(ts, TimeSeries):
+            raise TypeError("expected TimeSeries instance, got: %s" % type(ts))
+
+        key = os.path.join(self.common, ts.name)
+
+        if key in self.register.keys():
+            raise KeyError("The specified key is not unique: %s" % key)
+
+        self.register[key] = ts
+        self.register_parent[key] = None    # does not have a parent (file)
+        self.register_indices[key] = None   # ... and therefore has no index (yet)
+        self.register_keys.append(key)
+
+    def clear(self, keys=None, names=None, display=True):
+        """
+        Clear/remove time series from register
+
+        Parameters
+        ----------
+        keys : str | list | tuple, optional
+            keys to remove from database register, supports wildcard.
+        names : str, optional
+            common part of unique path/key
+        display : bool, optional
+            disable print to screen. Default True
+
+        Notes
+        -----
+        Either `keys` or `names` must be given.
+
+        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
+
+        """
+        if display:
+            print("Removing:`\n")
+        match = self.list(keys=keys, names=names, display=display, relative=False)
+        for k in match:
+            _ = self.register.pop(k, None)
+            _ = self.register_parent.pop(k, None)
+            _ = self.register_indices.pop(k, None)
+            _ = self.register_keys.pop(self.register_keys.index(k))
+
+    def copy(self, keys=None, names=None, shallow=False, keep_order=False):
+        """
+        Make a copy (new TsDB instance) with the specified keys/names included.
+
+        Parameters
+        ----------
+        keys : str | list | tuple
+            Time series id, supports wildcard.
+        names : str | list | tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        shallow: bool, optional
+            If False (default), the copied TimeSeries objects do not point back to the TimeSeries instances in the
+            source TsDB.
+        keep_order: bool, optional
+            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
+            added). NB: This option does not make sense if more than one key and more than one name is specified.
+
+        Returns
+        -------
+        tsdb
+            New TsDB instance.
+
+        Notes
+        -----
+        If shallow is True, the TimeSeries objects in the new TsDB instance point back to the original objects. This
+        implies that modifications to the copied TimeSeries are routed back to the source objects. The of shallow=True
+        is that memory usage is limited. However, if in doubt use shallow=False (the default).
+
+        Specified timeseries that are not preloaded (stored), will be loaded during this procedure.
+        """
+        new = TsDB(name=self.name)
+        container = self.get_many_ts(keys=keys, names=names, store=True, fullkey=True, keep_order=keep_order)
+        for key, ts in container.items():
+            if shallow is False:
+                ts = ts.copy()
+            new.add(ts)
+            new.register_parent[key] = self.register_parent[key]
+            new.register_indices[key] = self.register_indices[key]
+        return new
+
+    def create_common_time(self, keys=None, names=None, twin=None, maxdt=None, strict=False):
+        """
+        Creates common time array.
+
+        The time array is created based on:
+            - latest start time
+            - earliest end time
+            - minimum mean time step
+
+        Parameters
+        ----------
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            Time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        twin: tuple, optional
+            If specified, the common time array within specified window (start, end) is created.
+        maxdt: float, optional
+            Max. time step desired. If minimum mean time step is larger than 'maxdt', the latter is used.
+            Note: Do not specify this parameter unless you know what you are doing.
+        strict: bool, optional
+            If True, ValueError is raised if obtained time step deviates from specified/recommended time step.
+
+        Returns
+        -------
+        array
+            New time array.
+        """
+        container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False)
+        timecheck = self._check_time_arrays(container)
+        try:
+            start, end, dt = timecheck["common"]
+        except TypeError:
+            raise ValueError("Could not create common time array "
+                             "- check if earliest end time is before latest start time")
+        if maxdt is not None:
+            if dt > maxdt:
+                dt = maxdt
+        nt = int(round((end-start)/dt)) + 1
+        common_time, _dt = np.linspace(start, end, nt, retstep=True)
+        if strict is True and not round(dt - _dt, 4) == 0:
+            raise ValueError("obtained 'dt' (%f) deviates from specified 'dt' (%s)" % (_dt, dt))
+        if twin is not None:
+            t_start, t_end = twin
+            ind = (common_time >= t_start) & (common_time <= t_end)
+            common_time = common_time[ind]
+        return common_time
+
+    @classmethod
+    def fromfile(cls, filenames, read=False, verbose=False):
+        """
+        Create TsDB instance from one ore more files.
+
+        Parameters
+        ----------
+        filenames: str, list or tuple
+            File names including suffix. Wildcards can also be used.
+        read: bool, optional
+            If True, all time series are read from file and stored. The default is that they are read from file
+            when requested by any of the `get_<>` methods.
+        verbose : bool, optional
+            If True, print information to screen.
+
+        Returns
+        -------
+        TsDB
+            TsDB instance with files loaded.
+
+        Notes
+        -----
+        The purpose of the classmethod is efficient initiation of a new class instance. For example:
+
+        >>> from qats import TsDB
+        >>> tsdb = TsDB.fromfile("mooring.ts")
+
+        ... is equivalent to:
+
+        >>> tsdb = TsDB("")
+        >>> tsdb.load("mooring.ts")
+
+
+        See also notes for :meth:`~TsDB.load`.
+        """
+        tsdb = cls("")
+        tsdb.load(filenames, read=read, verbose=verbose)
+        return tsdb
+
+    def export(self, filename, keys=None, names=None, delim="\t", skip_header=False, keep_order=False,
+               exist_ok=True, basename=True, verbose=False, **kwargs):
+        """
+        Export time series to file
+
+        Parameters
+        ----------
+        filename : str
+            File name including suffix.
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            Time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        delim : str, optional
+            column delimiter for column wise ascii file, default "\t"
+        skip_header: bool, optional
+            For ascii files, skip header with keys? Default is to include them on first line. This parameter is ignored
+            for other file formats.
+        keep_order: bool, optional
+            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
+            added). NB: This option does not make sense if more than one key and more than one name is specified.
+        exist_ok : bool, optional
+            if false (the default), a FileExistsError is raised if target file already exists
+        basename : bool, optional
+            If true (the default), basename (no path/file info) will be exported to key file. If false, the name/path
+            relative to common path is used. Also see notes below.
+        verbose : bool, optional
+            Print information
+        kwargs : optional
+            see documentation of get_many() method for available options
+
+        Notes
+        -----
+        Currently implemented file formats
+         - direct access format (.ts)
+         - column-wise ascii file with single header line defining the keys(.dat) (comment character is #)
+
+        The time series are resampled to a common time vector with a constant time step (sample rate). The minimum
+        average time step of all the selected time series is applied. This is done before enforcing the specified
+        time window.
+
+        If `basename` is true, an exception is raised if two or more time series share the same basename. The solution
+        is then to specify ``basename=False``, so that only the common part of the paths/identifiers of the specified
+        time series is removed before writing the identifiers to key file (applies to .ts format) or ascii file header.
+        Note that in this case the keys are modified so that path separators ('/' and '\\') are replaced by
+        underscore ('_').
+        """
+        # todo: export(): include `header` parameter; text string that is included on top of key file
+
+        # assert that filename is specified as string
+        if not isinstance(filename, str):
+            raise TypeError("Filename should be a str, not: %s" % type(filename))
+
+        # assert that if the file exists the user has specifically allowed overwriting it
+        if os.path.isfile(filename) and exist_ok is False:
+            raise FileExistsError("The file '%s' already exists." % filename)
+
+        # create non-existing directories
+        dirname = self._path_dirname(filename)
+        if dirname != "" and not os.path.exists(dirname):
+            os.makedirs(dirname)
+
+        # generate time series container
+        '''
+        Note:
+        For most of the code below, it is convenient to use container generated by `get_many()`. However; to evaluate
+        whether time array is common (using `_check_time_arrays()`), we need TimeSeries objects in case `dtg_ref` 
+        defined. The container is therefore generated as follows:
+        1) Generate container of TimeSeries objects
+        2) Modify container keys to export friendly keys
+        3) Perform time array check (taking `dtg_ref` and  `**kwargs` into account)
+        4) Convert container to container of arrays (same as output from `get_many()`, taking **kwargs into account)
+        '''
+        # generate container, step 1 (generate container of TimeSeries objects)
+        container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False, keep_order=keep_order)
+        # generate container, step 2 (create export friendly keys)
+        container = self._make_export_friendly_keys(container, keep_basename=basename)
+        # generate container, step 3 (perform time array check
+        timecheck = self._check_time_arrays(container, **kwargs)
+        # generate container, step 4 (convert to container of arrays)
+        container = OrderedDict((k, v.get(**kwargs)) for k, v in container.items())
+
+        # evaluate outcome of time array check, raise error if not common (time steps and time windows are not equal)
+        if not timecheck["is_common"]:
+            # create error message (principle: error+advice rather than automagic solution)
+            # in other words; inform the user that the time arrays are not equal and suggest how to mitigate
+            raise ValueError(timecheck["msg"])
+        else:
+            # all time arrays are equal, just use the time array from one of the TimeSeries objects
+            common_time_array = container[list(container)[0]][0]
+
+        # get file extension
+        _, ext = os.path.splitext(filename)
+
+        if ext == ".ts":    # write direct access file
+            # deduct name of key file
+            base, _ = os.path.splitext(filename)
+            keyfilename = base + ".key"
+
+            # open key file (ascii) and .ts file (binary)
+            # todo: check if 'w' or 'wb' should be used, seems like fts.write(array(....)) expects a bytearray
+            fts = open(filename, "wb")
+            fkey = open(keyfilename, "w")
+            try:
+                # number of data points in a single time series
+                ndat = common_time_array.size
+
+                # number of records (number of time series + header + time vector)
+                nrec = len(container) + 2
+
+                # write meta info to first record
+                fts.write(pack("ii", ndat, nrec))
+
+                # zero pad the first record
+                fts.write(array("i", [0]*(ndat-2)))
+
+                # time array
+                fkey.write("time\n")
+                fts.write(array("f", common_time_array))
+
+                # time series
+                for key, arr in container.items():
+                    # write key to key file
+                    fkey.write("%s\n" % key)
+
+                    # write time series array to ts file (position 1 refers to time series data)
+                    fts.write(array("f", arr[1]))
+
+            except Exception:
+                raise RuntimeError("Exception encountered when writing data to file '%s'." % filename)
+
+            finally:
+                # end key file and close file pointers
+                fkey.write("END\n")
+                fkey.close()
+                fts.close()
+
+        elif ext == ".dat":     # write ascii file
+            with open(filename, "w") as f:
+                # write keys + time to ascii-file header
+                if not skip_header:
+                    header = ["%15s%s" % (k, delim) for k, _ in container.items()]
+                    header.insert(0, "%15s%s" % ("time", delim))
+                    header += "\n"
+                    f.write("".join(header))
+
+                # write data to ascii file
+                out = ""
+                for i in range(len(common_time_array)):
+                    # write time value
+                    out += "%15.7g%s" % (common_time_array[i], delim)
+
+                    # write data values column wise (position 1 refers to time series data,
+                    # index i refers to time step #)
+                    for _, arr in container.items():
+                        out += "%15.7g%s" % (arr[1][i], delim)
+
+                    out += "\n"
+
+                    # flush to file every 500th time step (for efficiency) and at the end
+                    if ((i != 0) and (i % 500 == 0)) or (i == len(common_time_array) - 1):
+                        f.write(out)
+                        out = ""
+
+        else:
+            raise NotImplementedError("File format/type '%s' is not yet implemented." % ext)
+
+        # print information
+        if verbose:
+            print(50 * "=")
+            print("Exported %d records to file '%s'" % (len(container), filename))
+            print(50 * "-")
+            for key in container.keys():
+                print(key)
+            print(50 * "=")
+        else:
+            print("Exported %d records to file '%s'." % (len(container), filename))
+
+    def get(self, key=None, name=None, ind=None, store=True, **kwargs):
+        """
+        Return one time series as arrays processed according to parameters
+
+        Parameters
+        ----------
+        key : str, optional
+            String that is passed to TsDB.get_ts() method.
+        name : str, optional
+            String that is passed to TsDB.get_ts() method.
+        ind : int, optional
+            Index (integer) that is pass to TsDB.get_ts() method.
+            This parameter may not be combined with `key` or `name`.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        kwargs : optional
+            See documentation of TimeSeries.get() method for available options
+
+        Returns
+        -------
+        tuple
+            Two arrays: time and data
+
+        Notes
+        -----
+        Either key or name must be specified.
+
+        Error is raised if zero or more than one match is obtained.
+
+        """
+        # use self.get() to avoid duplicate code
+        try:
+            ts = self.get_ts(key=key, name=name, ind=ind, store=store)
+        except TypeError:
+            raise
+        except LookupError:
+            raise
+        except ValueError:
+            raise
+        return ts.get(**kwargs)
+
+    def get_many(self, keys=None, names=None, ind=None, store=True, fullkey=False, keep_order=False, **kwargs):
+        """
+        Get many time series as arrays processed according to parameters
+
+        Parameters
+        ----------
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        ind : int|list, optional
+            Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
+            This parameter may not be combined with `keys` or `names`.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        fullkey : bool, optional
+            Use full key in returned container
+        keep_order: bool, optional
+            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
+            added). NB: This option does not make sense if more than one key and more than one name is specified.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        Returns
+        -------
+        dictionary
+            Each entry is a tuple with 2 arrays: time and data for each time series
+
+        Notes
+        -----
+        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
+
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        See also
+        --------
+        qats.ts.TimeSeries
+
+        """
+        # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
+        container = OrderedDict((k, v.get(**kwargs)) for k, v in
+                                self.get_many_ts(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
+                                                 keep_order=keep_order).items())
+
+        return container
+
+    def get_many_ts(self, keys=None, names=None, ind=None, store=True, fullkey=False, keep_order=False):
+        """
+        Get many time series as TimeSeries objects
+
+        Parameters
+        ----------
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        ind : int|list, optional
+            Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
+            This parameter may not be combined with `keys` or `names`.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        fullkey : bool, optional
+            Use full key in returned container
+        keep_order: bool, optional
+            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
+            added). NB: This option does not make sense if more than one key and more than one name is specified.
+
+
+        Returns
+        -------
+        dict
+            TimeSeries objects stored in dictionary by key
+
+        Notes
+        -----
+        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
+
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        Note that this method is somewhat similar to get_many() but returns TimeSeries objects instead of arrays. As a
+        consequence this method does not support keyword arguments to be passed further to TimeSeries.get().
+
+        See also
+        --------
+        qats.ts.TimeSeries
+
+        """
+        # check that non-compatible parameters are not combined
+        if ind is not None and not (keys is None and names is None):
+            raise TypeError("Parameter `ind` may not be combined with `keys` or `names`")
+
+        # get absolute keys
+        if ind is None:
+            key_list = self.list(keys=keys, names=names, display=False, relative=False, keep_order=keep_order)
+        else:
+            # generate key_list directly from indices
+            if isinstance(ind, int):
+                ind = [ind]
+            try:
+                key_list = [self.register_keys[i] for i in ind]
+            except IndexError as err:
+                raise IndexError("one or more index is out of range (number of entries = %d)" % self.n) from err
+            except TypeError as err:
+                raise TypeError("Parameter `ind` must be integer or list of integers") from err
+
+        if fullkey:
+            # use full key in returned container
+            outkeys = key_list
+        else:
+            # todo: consider including the '\\' in self.common (currently I am not sure what is the best)
+            # create shorter keys (relative to db common path)
+            _common = self.common + os.path.sep
+            outkeys = [k.replace(_common, "") for k in key_list]
+
+        # read time series and put in ordered dictionary
+        container = self._read(key_list, outkeys=outkeys, store=store)
+
+        return container
+
+    def get_ts(self, key=None, name=None, ind=None, store=True):
+        """
+        Return one time series processed according to parameters
+
+        Parameters
+        ----------
+        key : str, optional
+            String that is passed to TsDB.get_many() method.
+        name : str, optional
+            String that is passed to TsDB.get_many() method.
+        ind : int, optional
+            Index of desired time series (index refers to index of key in list attribute `register_keys`).
+            This parameter may not be combined with `key` or `name`.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+
+        Returns
+        -------
+        TimeSeries
+            Time series
+
+        Notes
+        -----
+        Either key, name or ind must be specified.
+
+        Error is raised if zero or more than one match is obtained.
+
+        If asarray=True is passed as kwargs routed further to TimeSeries.get() method, this method returns a
+        TimeSeries object instead of tuple of two numpy arrays.
+
+        Note that this method is somewhat similar to get() but returns a TimeSeries object instead of arrays. As a
+        consequence this method does not support keyword arguments to be passed further to TimeSeries.get().
+
+        """
+        # check that at least one of the required parameters is given,
+        # and that non-compatible parameters are not combined
+        if (key is None and name is None) and (ind is None):
+            raise TypeError("Either of parameters `key`, `name` or `ind` must be given")
+        if ind is not None and not (key is None and name is None):
+            raise TypeError("Parameter `ind` may not be combined with `key` or `name`")
+        # check type of specified parameters
+        if key is not None and not isinstance(key, str):
+            raise TypeError("Parameter `key` must be string if specified")
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Parameter `name` must be string if specified")
+        if ind is not None and not isinstance(ind, int):
+            raise TypeError("Parameter `ind` must be integer if specified")
+
+        # return quickly if specified key (or index) matches a register entry and data is already loaded
+        if ind is not None:
+            try:
+                _key = self.register_keys[ind]
+            except IndexError as err:
+                raise IndexError("index %d is not available (number of entries = %d)" % (ind, self.n)) from err
+        else:
+            _key = key
+        ts = self.register.get(_key, None)
+        if isinstance(ts, TimeSeries):
+            return ts
+        # if not yet returned, use get_many_ts() method to match(es)
+        container = self.get_many_ts(keys=key, names=name, ind=ind, fullkey=True, store=store)
+        n = len(container)
+        if n == 0:
+            raise LookupError("No match found for specified key and/or name")
+        elif n > 1:
+            raise ValueError("More than one match found for specified key and/or name:"
+                             "\n    %s" % "\n    ".join(container.keys()))
+        else:
+            return container.popitem()[1]
+
+    def is_common_time(self, keys=None, names=None, twin=None):
+        """
+        Check if time array is common.
+
+        If `keys` or `names` are not specified, the entire database is considered.
+
+        Parameters
+        ----------
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            Time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        twin: tuple, optional
+            Time window (start, end) to consider.
+
+        Returns
+        -------
+        bool
+            True if common time array (within specified time window), otherwise False.
+        """
+        container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False)
+        timecheck = self._check_time_arrays(container, twin=twin)
+        return timecheck["is_common"]
+
+    def list(self, keys=None, names=None, display=False, relative=False, keep_order=False):
+        """
+        List time series in database by id
+
+        Parameters
+        ----------
+        keys : str/list/tuple, optional
+            time series id (full name) filter that supports regular expressions, default all time series will be listed
+        names : str/list/tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        display : bool, optional
+            disable print to screen, default False
+        relative : bool, optional
+            return unique parts of keys (i.e. path relative to common path of all database keys)
+        keep_order: bool, optional
+            Return keys/names in the order specified? Default is to return keys/names match in registered order
+            (i.e. order loaded/added).
+            NB: This option does not make sense if more than one key and more than one name is specified.
+
+        Returns
+        -------
+        list
+            time series keys (full names or relative to `commonpath`, depending on parameter `relative`)
+
+        Notes
+        -----
+        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
+
+        Raises
+        ------
+        ValueError
+            If `keep_order` is True, in combination with more than one key and more than one name.
+
+        """
+        def _remove_special_characters(strings):
+            """
+            Remove characters with special meaning in regular expressions
+
+            Parameters
+            ----------
+            strings : tuple or list
+                Strings from which special characters are to be removed
+
+            Returns
+            -------
+            list :
+                Strings with special characters removed
+
+            """
+            out = []
+            for s in copy.copy(strings):
+                # handle regex special characters
+                s = s.replace("[", ":[:")  # to avoid troubles when "[" is inserted to handle "]"
+                s = s.replace("]", "[]]")
+                s = s.replace(":[:", "[[]")
+                s = s.replace("^", "[^]")
+                s = s.replace("(", "[(]")
+                s = s.replace(")", "[)]")
+                out.append(s)
+            return out
+
+        # full keys in db register
+        regkeys = copy.copy(self.register_keys)
+
+        if keys is None:
+            match = regkeys
+
+        else:
+            if isinstance(keys, str):
+                keys = [keys]
+            if type(keys) not in (list, tuple):
+                raise TypeError("parameter `keys` should be of type str/list/tuple, not %s" % type(names))
+
+            # todo: list(): consider if match on `keys` pattern preserves the order of the keys (or how to obtain it)
+            match = []
+            for key in _remove_special_characters(keys):
+                match.extend(fnmatch.filter(regkeys, key))
+
+        if names is not None:
+            if isinstance(names, str):
+                names = [names]
+            if type(names) not in (list, tuple):
+                raise TypeError("parameter `names` should be of type str/list/tuple, not %s" % type(names))
+
+            name_patterns = _remove_special_characters(names)
+            match_names = [key for key in match if
+                           sum([fnmatch.fnmatch(self._path_basename(key), name_pattern) for name_pattern in
+                                name_patterns]) > 0]
+            match = match_names
+
+        if keep_order:
+            try:
+                match = self._reorder_list(match, keys=keys, names=names)
+            except ValueError:
+                raise
+
+        if relative:
+            common = self.common
+            match = [self._path_relpath(path, common) for path in match]
+
+        if display:
+            print()
+            print("=============================================================================================")
+            if relative:
+                print("Common path : %s" % common)
+                print("---------------------------------------------------------------------------------------------")
+            if len(match) > 0:
+                print("\n".join(match))
+            else:
+                print("(no match found for specified keys/names)")
+            print("=============================================================================================")
+
+        return match
+
+    def load(self, filenames, read=False, verbose=False):
+        """
+        Load time series from files
+
+        Parameters
+        ----------
+        filenames : str | list | tuple
+            File names including suffix. Wildcards can also be used.
+        read: bool, optional
+            If True, all time series are read from file and stored. The default is that they are read from file
+            when requested by any of the `get_<>` methods.
+        verbose : bool, optional
+            If True, print information to screen.
+
+        Notes
+        -----
+        `read=True` may be time consuming and require high memory usage if applied for large files with many
+        time series. However, if you will work with all the time series on files of moderate size, `read=True` can
+        provide efficiency as you only access the file(s) once.
+
+        If time series names contain path separators ('/' or '\\'), these must be enclosed within square brackets (e.g.
+        as the slash in "response[m/s]").
+        """
+        if isinstance(filenames, list) or isinstance(filenames, tuple):
+            # expect that iterable contains set of file names, stored with absolute path
+            files = [os.path.abspath(f) for f in filenames]
+        elif isinstance(filenames, str):
+            # string is interpreted as a filename, possibly with wildcards, stored with absolute path
+            files = [os.path.abspath(f) for f in glob.glob(filenames)]
+        else:
+            raise TypeError("files should be either str/tuple/list, not: %s" % type(filenames))
+
+        # If the specified filenames does not exist glob.glob returns an empty list
+        if len(files) < 1:
+            raise FileExistsError("Path does not exist: %s" % filenames)
+
+        for thefile in files:
+            fext = os.path.splitext(thefile)[-1]
+            basename = os.path.basename(thefile)
+            dirname = os.path.dirname(thefile)
+
+            if not os.path.isfile(thefile):
+                raise FileExistsError("Object is not a file: %s" % thefile)
+
+            if fext == '.ts':
+                # direct access format without info array
+                keys = read_ts_keys(thefile.replace(fext, '.key'), filetype='ts')
+
+            elif fext == '.tda':
+                # simo s2x direct access format
+                keys = read_ts_keys(thefile.replace(fext, '.txt'), filetype='tda')
+
+            elif (fext == '.asc') or (fext == '.bin'):
+                # riflex/simo ascii and direct access format
+                keys = read_bin_keys(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+
+            elif fext == '.dat':
+                # plain column wise ascii format
+                # get keys from first non-commented row, # is default comment in numpy.loadtxt
+                with open(thefile) as f:
+                    for line in f:
+                        if not line.startswith("#"):
+                            keys = line.split()
+                            break
+                # identify time key, check that there is only one
+                timekeys = fnmatch.filter(keys, '[Tt]ime*')
+                if len(timekeys) < 1:
+                    raise KeyError("File does not contain a time vector: %s" % thefile)
+                elif len(timekeys) > 1:
+                    raise KeyError("Duplicate time vectors on file: %s" % thefile)
+                # remove time key from list of time series
+                keys.remove(timekeys[0])
+
+            elif fext == '.mat':
+                # Matlab format
+                # Note: this code is for Matlab version < 7.3. For version >= 7.3, .mat is on hdf5 format
+                #       ref: http://pyhogs.github.io/reading-mat-files.html
+                mat = loadmat(thefile)
+                keys = list(mat.keys())  # make list, since type dict_keys does not support remove()
+                # identify time key, check that there is only one
+                timekeys = fnmatch.filter(keys, '[Tt]ime*')
+                if len(timekeys) < 1:
+                    raise KeyError("File does not contain a time vector: %s" % thefile)
+                elif len(timekeys) > 1:
+                    raise KeyError("Duplicate time vectors on file: %s" % thefile)
+                # filter keys, keep only np.ndarrays of same size as time array
+                timekey = timekeys[0]
+                tsize = mat[timekey].size
+                keys = [k for k, v in mat.items() if (isinstance(v, np.ndarray) and v.size == tsize)]
+                # remove time key from list of time series
+                keys.remove(timekey)
+                # store time key for use when reading
+                self._timekeys[thefile] = timekey
+
+            elif fext in ('.h5', '.hdf5'):
+                keys = read_h5_keys(thefile)
+                # replace all slashes with backslash
+                keys = [k.replace('/', "\\") for k in keys]
+
+            else:
+                raise NotImplementedError("Invalid file type: %s" % thefile)
+
+            # update database register: unique id consists of filename and key
+            # before the time series is loaded the register store the time series index on the file
+            # j +1 since record 0 is the time vector
+            for j, k in enumerate(keys):
+                fullkey = os.path.join(thefile, k)
+                # None until the time series is read and stored
+                self.register[fullkey] = None
+                # Parent, i.e. source file
+                self.register_parent[fullkey] = thefile
+                # Time series index on file, to speed up reading the time series, dummy for .mat files, +1 to skip time
+                ind = j + 1 if fext not in ('.h5', '.hdf5', '.mat') else None
+                self.register_indices[fullkey] = ind
+                # time series keys in the order the associated time series where loaded
+                self.register_keys.append(fullkey)
+
+            if read is True:
+                fullkeys = [os.path.join(thefile, k) for k in keys]
+                _ = self._read(fullkeys, store=True)
+
+            if verbose:
+                print("Loaded %d records from file '%s'." % (len(keys), thefile))
+                print('\n'.join(keys))
+
+    def plot(self, keys=None, names=None, figurename=None, store=True, **kwargs):
+        """
+        Plot time series
+
+        Parameters
+        ----------
+        keys : str/list/tuple, optional
+            time series id (full name) filter that supports regular expressions, default all time series will be listed
+        names : str/list/tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        Notes
+        -----
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        See also
+        --------
+        qats.ts.TimeSeries
+
+        """
+        # todo: add possibility for subplots in plot method. nsub=None (int), sharex=True.
+        # todo: consider need for `keep_order` parameter when plotting
+        # dict with numpy arrays: time and data
+        container = self.get_many(keys=keys, names=names, store=store, **kwargs)
+
+        plt.figure(1)
+        for k, v in container.items():
+            label = k  # todo: more readable label, e.g. remove commonpath
+            plt.plot(v[0], v[1], label=label)
+
+        plt.xlabel('Time (s)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_psd(self, keys=None, names=None, figurename=None, store=True, **kwargs):
+        """
+        Return power spectral density processed according to arguments.
+
+        Parameters
+        ----------
+        keys : str/list/tuple, optional
+            time series id (full name) filter that supports regular expressions, default all time series will be listed
+        names : str/list/tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        Notes
+        -----
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        See also
+        --------
+        qats.ts.TimeSeries
+
+        """
+        # dict with TimeSeries objects
+        container = self.get_many_ts(keys=keys, names=names, store=store)
+
+        plt.figure(1)
+        for k, v in container.items():
+            f, p = v.psd(**kwargs)
+            plt.plot(f, p, label=k)
+
+        plt.xlabel('Frequency (Hz)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def rename(self, newname, key=None, name=None):
+        """
+        Rename a timeseries (and update register accordingly).
+
+        Parameters
+        ----------
+        newname : str
+            New basename (i.e. key/name excl. path of parent file).
+        key : str, optional
+            As for method get()
+        name :
+            As for method get()
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        `newname` must be only the base name; the parent part (path to parent file) is inherited from old key.
+
+        Parameters `key` and `name` behave as for get(), and at least one of them must be given.
+        A single match must be obtained for the specified parameters.
+        """
+        if key is None and name is None:
+            raise TypeError("Either of parameters `key` or `name` must be given")
+        if key is not None and not isinstance(key, str):
+            raise TypeError("Parameter `key` must be string if specified")
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Parameter `name` must be string if specified")
+
+        # use list() method to get key(s)
+        key_list = self.list(keys=key, names=name, display=False, relative=False)
+        n = len(key_list)
+        if n == 0:
+            raise LookupError("No match found for specified key and/or name")
+        elif n > 1:
+            raise ValueError("More than one match found for specified key and/or name:"
+                             "\n    %s" % "\n    ".join(key_list))
+        oldkey = key_list[0]
+
+        # define new key, and check that it doesn't exist
+        # todo: consider replace (parent --> "") instead of dirname (only relevant for ts from .h5?)
+        newkey = os.path.join(self._path_dirname(oldkey), newname)
+        if newkey in self.register_keys:
+            raise ValueError("New key already exists: %s" % newkey)
+
+        # rename (change register)
+        self.register[newkey] = self.register.pop(oldkey)
+        self.register_parent[newkey] = self.register_parent.pop(oldkey)
+        self.register_indices[newkey] = self.register_indices.pop(oldkey)
+        self.register_keys[self.register_keys.index(oldkey)] = newkey
+
+        # rename TimeSeries instance if it is pre-loaded
+        ts = self.register.get(newkey, None)
+        if isinstance(ts, TimeSeries):
+            ts.name = newname
+
+        return
+
+    def stats(self, statsdur=None, keys=None, names=None, ind=None, store=True, fullkey=False, keep_order=False, **kwargs):
+        """
+        Get statistics for time series processed according to parameters
+
+        Parameters
+        ----------
+        statsdur : float
+            Duration in seconds for estimation of extreme value distribution (Gumbel) from peak distribution (Weibull).
+            Default is 3 hours (see `TimeSeries.stats()`).
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        ind : int|list, optional
+            Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
+            This parameter may not be combined with `keys` or `names`.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        fullkey : bool, optional
+            Use full key in returned container
+        keep_order: bool, optional
+            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
+            added). NB: This option does not make sense if more than one key and more than one name is specified.
+        kwargs : optional
+            see documentation of TimeSeries.stats() and TimeSeries.get() methods for available options
+
+        Returns
+        -------
+        dictionary
+            Each entry is a dictionary with statistics
+
+        Notes
+        -----
+        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
+
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        See also
+        --------
+        qats.ts.TimeSeries.stats, qats.ts.TimeSeries.get
+
+        Examples
+        --------
+        To get sample statistics and 3-hour extreme (default) value statistics for time series in database
+
+        >>> from qats import TsDB
+        >>> db = TsDB.fromfile('filename')
+        >>> stats = db.stats()
+
+        To get sample statistics and 1-hour (3600 seconds) extreme value statistics for time series in database which
+        names starts with 'Mooring'.
+
+        >>> stats = db.stats(statsdur=3600., names="Mooring*")
+
+        To get sample statistics and 3-hour extreme value statistics for time series in database which names starts with
+        'Mooring' low-pass filtered at 0.025 Hz.
+
+        >>> stats = db.stats(names="Mooring*", filterargs=("lp", 0.025))
+
+        To ignore the transient part of the time series, time window may be specified:
+
+        >>> stats = db.stats(names="Mooring*", twin=(1000., 1e12), filterargs=("lp", 0.025))
+
+        """
+        # todo: create entry in dictionary with meta data such as applied time window, filter etc.
+        # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
+        container = OrderedDict((k, v.stats(statsdur=statsdur, **kwargs)) for k, v in
+                                self.get_many_ts(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
+                                                 keep_order=keep_order).items())
+
+        return container
+
+    def update(self, tsdb, keys=None, names=None, shallow=False):
+        """
+        Update TsDB with speicified keys/names from other TsDB instance.
+
+        Parameters
+        ----------
+        tsdb: TsDB
+            TsDB instance to update from.
+        keys : str|list|tuple
+            Time series id, supports wildcard.
+        names : str|list|tuple, optional
+            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
+            `keys`.
+        shallow: bool, optional
+            If False (default), the copied TimeSeries objects do not point back to the TimeSeries instances in the
+            source TsDB.
+
+        Returns
+        -------
+        None
+        """
+        if not isinstance(tsdb, TsDB):
+            raise TypeError("expected TsDB instance, got: %s" % type(tsdb))
+
+        container = tsdb.get_many_ts(keys=keys, names=names, fullkey=True)
+        for key, ts in container.items():
+            if key in self.register.keys():
+                raise KeyError("The specified key is not unique: %s" % key)
+
+            if shallow is False:
+                ts = ts.copy()
+
+            self.register[key] = ts
+            self.register_keys.append(key)
+            self.register_parent[key] = tsdb.register_parent[key]
+            self.register_indices[key] = tsdb.register_indices[key]
+
+        return
+
