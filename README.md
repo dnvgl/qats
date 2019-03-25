@@ -18,6 +18,7 @@ GUI:
 - Quick fit of maxima distribution (Weibull).
 - Drag-and-drop to load time series files.
 
+![qats GUI](images/qats-gui.png)
 
 ## Getting started
 
