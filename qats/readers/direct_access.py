@@ -5,69 +5,225 @@ from struct import unpack
 import os
 import numpy as np
 
+# ts - Direct access time series file with time array and without info array
+# tda - Direct access time series file with time array and info array
+# dis - Direct access cycle distribution file without time array and info array
 
-def read_ts_keys(keyfile, path='', filetype='ts'):
+
+def read_ts_keys(path):
     """
-    Read key-files for ts-files on format 'ts' and 'tda'.
+    Read keys from key-file associated with the direct access (binary) time series file format '.ts'.
 
     Parameters
     ----------
-    keyfile : str
-        Name of keyfile.
-    path : str, optional
-        Path to file
-    filetype : {'ts', 'tda', 'dis'}, optional
-        Type of corresponding time series file
-            ts - Direct access time series file with time array and without info array
-            tda - Direct access time series file with time array and info array
-            dis - Direct access cycle distribution file without time array and info array
+    path : str
+        Key file path
 
     Returns
     -------
     list
-        List of key entries on key-file.
+        Keys
 
+    Notes
+    -----
+    Keys are stored on ASCII file as one key per line. The file is terminated by END.
+
+    The associated time series are stored on a binary direct access file with suffix '.ts'.
     """
-    if filetype not in ("ts", "tda", "dis"):
-        raise ValueError("Unknown file format specified: %s" % filetype)
+    # read line-separated keys from ascii file
+    keys = _read_keys(path)
 
-    keys = []
-    with open(os.path.join(path, keyfile), 'r') as f:
-        for line in f:
-            if not line.startswith(("**", "'")) and not line.upper().strip() == "END":
-                keys.append(line.strip())
+    # skip the key referring to the time array (always the first one on the ascii file)
+    return keys[1:]
 
-    if filetype == 'tda':
-        # Skip 'Info_arr' on .tda files
-        keys = keys[1:]
 
-    if filetype in ("ts", "tda"):
-        # remove time array from keys
-        _ = keys.pop(0)
+def read_tda_keys(path):
+    """
+    Read keys from key-file associated with the direct access (binary) time series file format '.tda'.
+
+    Parameters
+    ----------
+    path : str
+        Key file path
+
+    Returns
+    -------
+    list
+        Keys
+
+    Notes
+    -----
+    Keys are stored on ASCII file as one key per line. The file is terminated by END.
+
+    The associated time series are stored on a binary direct access file with suffix '.tda'.
+    """
+    # Read line-separated keys from ascii file
+    keys = _read_keys(path)
+
+    # Skip the keys referring to the
+    # - info array (always the first one on the ascii file)
+    # - time array (always the second one on the ascii file)
+    return keys[2:]
+
+
+def read_dis_keys(path):
+    """
+    Read keys from key-file associated with the direct access (binary) cycle distribution file format '.dis'.
+
+    Parameters
+    ----------
+    path : str
+        Key file path
+
+    Returns
+    -------
+    list
+        Keys
+
+    Notes
+    -----
+    Keys are stored on ASCII file as one key per line. The file is terminated by END.
+
+    The associated cycle distributions are stored on a binary direct access file with suffix '.dis'.
+    """
+    # read line-separated keys from ascii file
+    keys = _read_keys(path)
 
     return keys
 
 
-def read_ts(name, ind=None, path='', verbose=False):
+def _read_keys(path):
+    """
+    Read line-separated keys from ascii file
+
+    Parameters
+    ----------
+    path : str
+        Key file path
+
+    Returns
+    -------
+    list
+        Keys
+
+    Notes
+    -----
+    This reader can be used directly on the key-files associated with the direct access '.dis' files used for
+    storing cycle distributions.
+    """
+    with open(os.path.join(path, path), 'r') as f:
+        keys = [l.strip() for l in f if not l.startswith(("**", "'")) and not l.upper().strip() == "END"]
+
+    return keys
+
+
+def read_ts_data(path, ind=None, verbose=False):
+    """
+    Read time series from binary direct access formatted '.ts' file.
+
+    Parameters
+    ----------
+    path : str
+        File path (relative or absolute)
+    ind : list of integers, optional
+        Index of the requested records on the file. By default all time series are read.
+    verbose : bool, optional
+        Increase verbosity
+
+    Returns
+    -------
+    array
+        Array with time and data
+
+    Notes
+    -----
+    Note that `0` is the index of the time array. If ``ind`` is specified, time array is only included if
+    `0` is included in the specified indices.
+    """
+    # the format specifier for decoding binary integers is 'i'
+    data = _read_data(path, ifmt='i', ind=ind, verbose=verbose)
+
+    return data
+
+
+def read_tda_data(path, ind=None, verbose=False):
+    """
+    Read time series from binary direct access formatted '.tda' file.
+
+    Parameters
+    ----------
+    path : str
+        File path (relative or absolute)
+    ind : list of integers, optional
+        Index of the requested records on the file. By default all time series are read.
+    verbose : bool, optional
+        Increase verbosity
+
+    Returns
+    -------
+    array
+        Array with time and data
+
+    Notes
+    -----
+    Note that `0` is the index of the time array. If ``ind`` is specified, time array is only included if
+    `0` is included in the specified indices.
+    """
+    # the format specifier for decoding binary integers is 'i'
+    data = _read_data(path, ifmt='f', ind=ind, verbose=verbose)
+
+    return data
+
+
+def read_dis_data(path, ind=None, verbose=False):
+    """
+    Read cycle distributions from binary direct access formatted '.dis' file.
+
+    Parameters
+    ----------
+    path : str
+        File path (relative or absolute)
+    ind : list of integers, optional
+        Index of the requested records on the file. By default all time series are read.
+    verbose : bool, optional
+        Increase verbosity
+
+    Returns
+    -------
+    array
+        Array with time and data
+
+    Notes
+    -----
+    Note that `0` is the index of the time array. If ``ind`` is specified, time array is only included if
+    `0` is included in the specified indices.
+    """
+    # the format specifier for decoding binary integers is 'i'
+    data = _read_data(path, ifmt='i', ind=ind, verbose=verbose)
+
+    return data
+
+
+def _read_data(path, ifmt, ind=None, verbose=False):
     """
     Read direct access formatted files with time series or cycle distributions
 
     Parameters
     ----------
-    name : str
-        Name of the binary file (incl. extension).
+    path : str
+        File path (relative or absolute)
+    ifmt : str
+        Format to decode binary integers
     ind : list of integers, optional
-        Defines which responses to include in returned array. Each of the indices in `ind` refer the sequence number
-        of the reponses. Note that `0` is the index of the time array.
-    path : str, optional
-        Path to file
+        Index of the requested records on the file. Note that `0` is the index of the time array. All data
+        is read by default.
     verbose : bool, optional
-        Write info to screen?
+        Increase verbosity
 
     Returns
     -------
     array
-        Array with time and responses.
+        Array with time and data
 
     Notes
     -----
@@ -80,50 +236,45 @@ def read_ts(name, ind=None, path='', verbose=False):
     For reading of .dis files, keep in mind that there is no common time array or similar for each data set. For
     example; if one intends to request data set number three, one would need to request indices 4 and 5 (first set is
     stored on indices 0 and 1, second on 2 and 3, etc.)
+
+    The correct integer format varies with OS and the software exporting the data to file.
+        - .ts on Windows  : 'i', 'l'
+        - .ts on Linux    : 'i'
+        - .tda on Windows : 'f'
+        - .tda on Linux   : ?
+        - .dis on Windows : 'i'
+        - .dis on Linux : ?
     """
-    # path
-    tspath = os.path.join(path, name)
     if verbose:
-        print('Reading %s ...' % name)
+        print('Reading %s ...' % path)
+
     # indices --> list or None
     if isinstance(ind, int):
         ind = [ind]
-    # check extension
-    ext = os.path.splitext(name)[-1]
-    if ext in (".ts", ".dis"):
-        fmt = "i"
-    elif ext == ".tda":
-        fmt = "f"
-    else:
-        raise ValueError("Invalid file format for this reader: %s" % ext)
 
-    # The loop below, with try/except, is introduced to account for troubles
-    # in reading .tda files (output from simo s2xmod). The following
-    # combinations of platform and formats have been checked and found OK:
-    #    .ts on Windows  : 'i', 'l'
-    #    .ts on Linux    : 'i'
-    #    .tda on Windows : 'f'
-    #    .tda on Linux   : ??
+    # check extension
+    if ifmt not in ("i", "l", "f"):
+        raise ValueError(f"Invalid format for decoding binary integers: {ifmt}")
 
     try:
-        with open(tspath, 'rb') as f:
+        with open(path, 'rb') as f:
             # read ts-file information (1st line)
             nbytes = 4
             s = f.read(nbytes)
-            ndat = unpack(fmt, s)[0]  # number of time steps per array
+            ndat = unpack(ifmt, s)[0]  # number of time steps per array
 
             # the code below works generally, but for some direct access files: nts=nrec-1
             # therefore, `nrec` is based on parsing the file instead
             #
             #   s = f.read(nbytes)
-            #   nrec = unpack(fmt, s)[0]  # number of records(including info "row" and time array)
+            #   nrec = unpack(ifmt, s)[0]  # number of records(including info record and time record)
             #   nts = nrec-2
 
             f.seek(0, 2)  # go to end of file
             epos = f.tell()  # get end position (in bytes)
             nrec = epos / (ndat * nbytes)  # no. of "rows"
             nts = nrec - 2  # excl. time array
-            # make integers (necessary for fmt='f')
+            # make integers (necessary for ifmt='f')
             ndat = int(ndat)
             nts = int(nts)
 
