@@ -1,13 +1,9 @@
 """
-Functions for reading various time series file formats.
+Readers for various direct access formatted time series files
 """
 from struct import unpack
 import os
 import numpy as np
-
-# ts - Direct access time series file with time array and without info array
-# tda - Direct access time series file with time array and info array
-# dis - Direct access cycle distribution file without time array and info array
 
 
 def read_ts_keys(path):

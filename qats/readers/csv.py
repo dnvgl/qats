@@ -1,3 +1,6 @@
+"""
+Readers CSV formatted time series files
+"""
 import pandas as pd
 
 

@@ -1,3 +1,6 @@
+"""
+Readers for binary time series files exported from MATLAB
+"""
 import numpy as np
 import fnmatch
 from datetime import datetime, timedelta

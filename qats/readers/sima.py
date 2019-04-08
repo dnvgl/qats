@@ -1,3 +1,6 @@
+"""
+Readers for ASCII and direct access formatted time series files exported from SIMA
+"""
 import fnmatch
 import os
 import re
@@ -148,7 +151,7 @@ def read_bin_data(path, ind=None, verbose=False):
     return arr[ind, :]
 
 
-def read_ascii_data(path, ind=None, skiprows=None, verbose=False):
+def read_ascii_data(path, ind=None, verbose=False):
     """
     Read time series arranged column wise on ascii formatted file exported from SIMA/RIFLEX Dynmod.
 
@@ -157,17 +160,15 @@ def read_ascii_data(path, ind=None, skiprows=None, verbose=False):
     path : str
         Name of the binary file (incl. extension).
     ind : list or tuple, optional
-        Which columns to read, with 0 being the first. For example, usecols = (1,4,5) will extract the 2nd, 5th and
-        6th columns. The default, None, results in all columns being read.
-    skiprows : int, optional
-        Skip the first `skiprows` lines; default: 0.
+        Which columns to read, with 0 being the first. For example, ind=(1,4,5) will extract the
+        2nd, 5th and 6th columns. The default, None, results in all columns being read.
     verbose : bool, optional
-        Write info to screen?
+        Increase verbosity
 
     Returns
     -------
     array
-        Array with time and responses.
+        Data
 
     Notes
     -----
@@ -175,37 +176,31 @@ def read_ascii_data(path, ind=None, skiprows=None, verbose=False):
 
     If ``ind`` is specified, the response arrays (1-D) are stored in the returned 2-D array in the same order as
     specified. I.e. if ``ind=[0,10,2,3]``, then the response array with index `10` on ascii file is obtained from
-    ``arr[1,:]``.
+    ``data[1,:]``.
 
     """
     if verbose:
         print('Reading %s ...' % path)
 
     # read
-    with open(path) as f:
+    with open(path, 'r') as f:
         # skip commmented lines at start of file
-        pos = f.tell()
-        while True:
-            line = f.readline()
-            if not line:
-                # reached EOF
-                raise IOError("reached EOF - uncommented lines not found")
-            if line.startswith("#"):
-                pos = f.tell()
-                continue
-            f.seek(pos)
-            break
-        # load arrays
-        arr = np.loadtxt(f, skiprows=skiprows, usecols=ind, unpack=True)
+        for line in f:
+            if not line.startswith("#"):
+                # skip all comment lines
+                break
+
+        # load data from the remaining rows as an array
+        data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
 
     # info
     if verbose:
-        nts, ndat = arr.shape
+        nts, ndat = data.shape
         print('---------------------------------------')
         print('nts (no. of responses read) : %d' % nts)
         print('ndat (no. of time steps)    : %d' % ndat)
 
-    return arr
+    return data
 
 
 def _riflex_key_suffices(txt):
