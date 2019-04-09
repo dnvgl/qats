@@ -4,9 +4,9 @@ Readers CSV formatted time series files
 import pandas as pd
 
 
-def read_keys(path):
+def read_names(path):
     """
-    Read data series keys/names from a comma-separated file.
+    Read time series names from a comma-separated file.
 
     Parameters
     ----------
@@ -16,7 +16,7 @@ def read_keys(path):
     Returns
     -------
     list
-        Name of data series
+        Time series names
 
     Notes
     -----
@@ -32,7 +32,7 @@ def read_keys(path):
 
 def read_data(path, ind=None):
     """
-    Read time series arranged column wise on a comma-separated file.
+    Read time series data arranged column wise on a comma-separated file.
 
     Parameters
     ----------
@@ -45,7 +45,7 @@ def read_data(path, ind=None):
     Returns
     -------
     array
-        Time and data series
+        Time and data
 
     """
     df = pd.read_csv(path, usecols=ind, sep=None, engine='python')  # pandas will infer the format e.g. delimiter.

@@ -6,22 +6,22 @@ import h5py
 import numpy as np
 
 
-def read_keys(path, verbose=False):
+def read_names(path, verbose=False):
     """
-    Extracts keys (data sets names) for `h5` data sets containing (or; interpreted as) time series from h5-file exported
+    Extracts time series names for `h5` data sets containing (or; interpreted as) time series from h5-file exported
     from SIMA.
 
     Parameters
     ----------
     path: str
-        File name.
+        Path (relative or absolute) to h5-file
     verbose: bool, optional
         If True, print info.
 
     Returns
     -------
     list
-        List of dset names (keys/addresses)
+        List of time series names (datasets)
     """
     if not os.path.isfile(path):
         raise FileNotFoundError("file not found: %s" % path)
@@ -29,7 +29,7 @@ def read_keys(path, verbose=False):
     if verbose:
         print('Identifying datasets on %s ...' % path)
 
-    dsetnames = []  # list of dataset names/keys (only for data sets that are time series)
+    names = []  # list of dataset names/keys (only for data sets that are time series)
     n_dsets = 0
     n_groups = 0
 
@@ -44,7 +44,7 @@ def read_keys(path, verbose=False):
 
                 # include data set if it is interpreted as a time series (i.e. if timeinfo is not None)
                 if timeinfo is not None:
-                    dsetnames.append(key)
+                    names.append(key)
 
             elif isinstance(f[key], h5py.Group):
                 n_groups += 1
@@ -58,15 +58,15 @@ def read_keys(path, verbose=False):
     if verbose:
         print("   no. of groups      : %4d" % n_groups + "   (incl. subgroups)")
         print("   no. of datasets    : %4d" % n_dsets)
-        print("   no. of time series : %4d" % len(dsetnames) + "   (datasets interpreted as time series)")
+        print("   no. of time series : %4d" % len(names) + "   (datasets interpreted as time series)")
 
     # replace all slashes with backslash
-    dsetnames = [_.replace('/', "\\") for _ in dsetnames]
+    names = [_.replace('/', "\\") for _ in names]
 
-    return dsetnames
+    return names
 
 
-def read_data(path, dsetnames=None, verbose=False):
+def read_data(path, names=None, verbose=False):
     """
     Extracts time series data from `.h5` (or `hdf5`) file exported from SIMA.
 
@@ -75,11 +75,10 @@ def read_data(path, dsetnames=None, verbose=False):
     ----------
     path: str
         File name.
-    dsetnames: str or list, optional
-        List of dset names (keys/adresses) to desired data sets. If None (default), all (time series) data
-        sets are read.
+    names: str or list, optional
+        Timeseries/dataset names. If None (default), all time series are read.
     verbose:  bool, optional
-        Write info to screen?
+        Increase verbosity
 
     Returns
     -------
@@ -88,8 +87,7 @@ def read_data(path, dsetnames=None, verbose=False):
 
     Notes
     -----
-    If `dsetnames` is not specified, all datasets that are interpreted as time series will be read. See also
-    `read_h5_keys`.
+    If `keys` is not specified, all datasets that are interpreted as time series will be read. See also `read_h5_keys`.
 
     Note that the hdf5 is an extremely flexible file format and this reader is tailored to the SIMA h5 file format.
     """
@@ -99,37 +97,36 @@ def read_data(path, dsetnames=None, verbose=False):
     if verbose:
         print('Reading %s ...' % path)
 
-    if isinstance(dsetnames, str):
-        dsetnames = [dsetnames]
-    elif type(dsetnames) in (list, tuple):
+    if isinstance(names, str):
+        names = [names]
+    elif type(names) in (list, tuple):
         pass
-    elif dsetnames is None:
-        pass
+    elif names is None:
+        # if names not specified, get all names
+        names = read_names(path)
     else:
-        raise TypeError("`dsetnames` must be str/list/tuple, got: %s" % type(dsetnames))
+        raise TypeError("`names` must be str/list/tuple, got: %s" % type(names))
 
-    # if dsetnames not specified, get all keys
-    if dsetnames is None:
-        dsetnames = read_keys(path)
-
+    # correct slashes
+    names = [_.replace('\\', '/') for _ in names]
     arrays = []
 
     with h5py.File(path, "r") as f:
-        for key in dsetnames:
-            dset = f[key]
+        for name in names:
+            dset = f[name]
 
             if not isinstance(dset, h5py.Dataset):
-                raise TypeError("expected to get h5py.Dataset, got %s (for key '%s')" % (type(dset), key))
+                raise TypeError("expected to get h5py.Dataset, got %s (for name '%s')" % (type(dset), name))
 
             # get values (data array), check size and dimensions
             data = dset[:]  # dset.value
             # todo: consider if check of data type is really neccessary -- if not, dset.ndim, dset.size etc. may be used
             if not isinstance(data, np.ndarray):
-                raise NotImplemented("only value of type np.ndarray is implented, got: %s (for key '%s')" %
-                                     (type(data), key))
+                raise NotImplemented("only value of type np.ndarray is implented, got: %s (for name '%s')" %
+                                     (type(data), name))
             if data.ndim != 1:
-                raise NotImplemented("only 1-dimensional arrays implemented, got ndim=%d (for key '%s')" %
-                                     (data.ndim, key))
+                raise NotImplemented("only 1-dimensional arrays implemented, got ndim=%d (for name '%s')" %
+                                     (data.ndim, name))
             data = data.flatten()   # flatten data array
             nt = data.size          # number of time steps
 
@@ -138,7 +135,7 @@ def read_data(path, dsetnames=None, verbose=False):
             # establish or extract time array
             timeinfo = _timearray_info(dset)
             if timeinfo is None:
-                raise Exception("no time info extracted for dataset '%s'" % key)
+                raise Exception("no time info extracted for dataset '%s'" % name)
             kind = timeinfo["kind"]
             if kind == "sima":
                 t_start = timeinfo["start"]

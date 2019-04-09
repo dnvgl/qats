@@ -5,10 +5,10 @@ import fnmatch
 import numpy as np
 
 
-def read_dat_keys(path):
+def read_dat_names(path):
     """
-    Read data series keys/names from an ASCII file with data arranged column-wise. The
-    keys are in the first non-commented row.
+    Read time series names from an ASCII file with data arranged column-wise. The names are in the first non-commented
+    row.
 
     Parameters
     ----------
@@ -18,33 +18,31 @@ def read_dat_keys(path):
     Returns
     -------
     list
-        Name of data series (keys)
+        Time series names
         
     Notes
     -----
-    The keys are extracted from the header row (the first non-commented row). The comment
-    character is '#'.
+    The names are extracted from the header row (the first non-commented row). The comment character is '#'. Time is
+    assumed to be in the first column.
     """
-    keys = None
+    names = None
     with open(path) as f:
         for line in f:
             if not line.startswith("#"):
-                # keys in first row that is not a comment
-                keys = line.split()
+                # names in first row that is not a comment
+                names = line.split()
                 break
     
-    if keys is not None:
+    if names is not None:
         # identify time key, check that there is only one
-        timekeys = fnmatch.filter(keys, '[Tt]ime*')
+        timekeys = fnmatch.filter(names, '[Tt]ime*')
         if len(timekeys) < 1:
             raise KeyError(f"The file '{path}' does not contain a time vector")
         elif len(timekeys) > 1:
             raise KeyError(f"The file '{path}' contain duplicate time vectors")
 
-        # remove time key from list of time series
-        keys.remove(timekeys[0])
-
-    return keys
+    # skip the time array name assumed to be in the first column
+    return names[1:]
 
 
 def read_dat_data(path, ind=None):
@@ -62,7 +60,7 @@ def read_dat_data(path, ind=None):
     Returns
     -------
     array
-        Data
+        Time and data
 
     Notes
     -----

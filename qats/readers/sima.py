@@ -8,9 +8,10 @@ from struct import unpack
 import numpy as np
 
 
-def read_keys(path):
+def read_names(path):
     """
-    Read key-files associated with .bin and .asc time-series files exported from SIMA/RIFLEX Dynmod.
+    Read time series names from key-files associated with .bin and .asc time-series files exported from
+    SIMA/RIFLEX Dynmod.
 
     Parameters
     ----------
@@ -20,7 +21,7 @@ def read_keys(path):
     Returns
     -------
     list
-        List of key entries on key-file.
+        Time series names
 
     Warnings
     --------
@@ -50,7 +51,7 @@ def read_keys(path):
         elkey = 'El'
     else:
         elkey = ''
-    suffices = _riflex_key_suffices(lines)
+    suffices = _name_suffices(lines)
 
     # find start line for storage information
     i_start = 1 + lines.index(fnmatch.filter(lines, "*------------------------------------------------------*")[0])
@@ -85,22 +86,22 @@ def read_keys(path):
 
 def read_bin_data(path, ind=None, verbose=False):
     """
-    Read binary .bin time-series file from RIFLEX Dynmod.
+    Read time series from binary .bin file exported from RIFLEX Dynmod.
 
     Parameters
     ----------
     path : str
-        Name of the binary file (incl. extension).
+        Path to .bin file
     ind : list of integers, optional
         Defines which responses to include in returned array. Each of the indices in `ind` refer the sequence number
         of the reponses. Note that `0` is the index of the time array.
     verbose : bool, optional
-        Write info to screen?
+        Increase verbosity
 
     Returns
     -------
     array
-        Array with time and responses.
+        Time and data
 
     Notes
     -----
@@ -168,10 +169,11 @@ def read_ascii_data(path, ind=None, verbose=False):
     Returns
     -------
     array
-        Data
+        Time and data
 
     Notes
     -----
+    Time is assummed to be in the first column
     If ``ind`` is specified, time array is only included if `0` is included in the specified indices.
 
     If ``ind`` is specified, the response arrays (1-D) are stored in the returned 2-D array in the same order as
@@ -203,22 +205,20 @@ def read_ascii_data(path, ind=None, verbose=False):
     return data
 
 
-def _riflex_key_suffices(txt):
+def _name_suffices(txt):
     """
-    Defines response key suffices.
-
-    The response suffices, as e.g. "Te", "Mx1", etc. are based on parsing the RIFLEX DYNMOD key-file, more specifically
-    the lines containing "DOF" information.
+    Creates time series name suffices e.g. "Te" and "Mx1", from parsing the "DOF" information in the key-file from
+    RIFLEX-DYNMOD.
 
     Parameters
     ----------
-    txt : list of strings
-        Each string is the line of a key-file.
+    txt : list
+        The lines of the key-file
 
     Returns
     -------
     list
-        The suffices, e.g. 'Xd', 'Yd', or 'Te', 'Sy1', 'Sy2', etc.
+        Suffices, e.g. 'Xd', 'Yd', or 'Te', 'Sy1', 'Sy2', etc.
     """
     # extract indices for blocks with DOF descriptions
     p = re.compile("following applies")

@@ -6,9 +6,9 @@ import os
 import numpy as np
 
 
-def read_ts_keys(path):
+def read_ts_names(path):
     """
-    Read keys from key-file associated with the direct access (binary) time series file format '.ts'.
+    Read time series names from key-file associated with the direct access (binary) time series file format '.ts'.
 
     Parameters
     ----------
@@ -18,24 +18,24 @@ def read_ts_keys(path):
     Returns
     -------
     list
-        Keys
+        Time series names
 
     Notes
     -----
-    Keys are stored on ASCII file as one key per line. The file is terminated by END.
+    Names are stored on ASCII file as one name per line. The file is terminated by END.
 
     The associated time series are stored on a binary direct access file with suffix '.ts'.
     """
     # read line-separated keys from ascii file
-    keys = _read_keys(path)
+    names = _read_names(path)
 
     # skip the key referring to the time array (always the first one on the ascii file)
-    return keys[1:]
+    return names[1:]
 
 
-def read_tda_keys(path):
+def read_tda_names(path):
     """
-    Read keys from key-file associated with the direct access (binary) time series file format '.tda'.
+    Read time series names from key-file associated with the direct access (binary) time series file format '.tda'.
 
     Parameters
     ----------
@@ -45,26 +45,24 @@ def read_tda_keys(path):
     Returns
     -------
     list
-        Keys
+        Time series names
 
     Notes
     -----
-    Keys are stored on ASCII file as one key per line. The file is terminated by END.
-
     The associated time series are stored on a binary direct access file with suffix '.tda'.
     """
-    # Read line-separated keys from ascii file
-    keys = _read_keys(path)
+    # Read line-separated names from ascii file
+    names = _read_names(path)
 
     # Skip the keys referring to the
     # - info array (always the first one on the ascii file)
     # - time array (always the second one on the ascii file)
-    return keys[2:]
+    return names[2:]
 
 
-def read_dis_keys(path):
+def read_dis_names(path):
     """
-    Read keys from key-file associated with the direct access (binary) cycle distribution file format '.dis'.
+    Read time series names from key-file associated with the direct access (binary) cycle distribution file format '.dis'.
 
     Parameters
     ----------
@@ -74,43 +72,40 @@ def read_dis_keys(path):
     Returns
     -------
     list
-        Keys
+        Time series names
+
+    Notes
+    -----
+    The associated cycle distributions are stored on a binary direct access file with suffix '.dis'.
+    """
+    # read line-separated names from ascii file
+    names = _read_names(path)
+
+    return names
+
+
+def _read_names(path):
+    """
+    Read line-separated time series names from ascii file
+
+    Parameters
+    ----------
+    path : str
+        Key file path
+
+    Returns
+    -------
+    list
+        Time series names
 
     Notes
     -----
     Keys are stored on ASCII file as one key per line. The file is terminated by END.
-
-    The associated cycle distributions are stored on a binary direct access file with suffix '.dis'.
-    """
-    # read line-separated keys from ascii file
-    keys = _read_keys(path)
-
-    return keys
-
-
-def _read_keys(path):
-    """
-    Read line-separated keys from ascii file
-
-    Parameters
-    ----------
-    path : str
-        Key file path
-
-    Returns
-    -------
-    list
-        Keys
-
-    Notes
-    -----
-    This reader can be used directly on the key-files associated with the direct access '.dis' files used for
-    storing cycle distributions.
     """
     with open(os.path.join(path, path), 'r') as f:
-        keys = [l.strip() for l in f if not l.startswith(("**", "'")) and not l.upper().strip() == "END"]
+        names = [l.strip() for l in f if not l.startswith(("**", "'")) and not l.upper().strip() == "END"]
 
-    return keys
+    return names
 
 
 def read_ts_data(path, ind=None, verbose=False):
@@ -129,7 +124,13 @@ def read_ts_data(path, ind=None, verbose=False):
     Returns
     -------
     array
-        Array with time and data
+        Time and data
+
+    Examples
+    --------
+    >>> data = read_ts_data('data.ts')
+    >>> t = data[0,:]   # time
+    >>> x1 = data[1,:]  # first data series
 
     Notes
     -----
@@ -158,7 +159,13 @@ def read_tda_data(path, ind=None, verbose=False):
     Returns
     -------
     array
-        Array with time and data
+        Time and data
+
+    Examples
+    --------
+    >>> data = read_tda_data('data.tda')
+    >>> t = data[0,:]   # time
+    >>> x1 = data[1,:]  # first data series
 
     Notes
     -----
@@ -187,7 +194,7 @@ def read_dis_data(path, ind=None, verbose=False):
     Returns
     -------
     array
-        Array with time and data
+        Cycle widths and counts
 
     Notes
     -----
@@ -219,7 +226,7 @@ def _read_data(path, ifmt, ind=None, verbose=False):
     Returns
     -------
     array
-        Array with time and data
+        Data
 
     Notes
     -----

@@ -10,21 +10,25 @@ from scipy.io import loadmat
 # TODO: Rename this module matlab_v72 when we have a use case on v. 7.3 or newer. The new module should be named matlab
 
 
-def read_keys(path):
+def read_names(path):
     """
-    Read keys from MATLAB .mat file.
+    Read time series names from MATLAB .mat file.
 
     Parameters
     ----------
     path : str
-        Keyfile path
+        MAT file path (relative or absolute)
 
     Returns
     -------
     str
-        Key of the time array
+        Name of the time array
     list
-        Time series keys
+        Time series names
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
 
     Notes
     -----
@@ -32,24 +36,24 @@ def read_keys(path):
     <http://pyhogs.github.io/reading-mat-files.html>.
     """
     mat = loadmat(path)
-    keys = list(mat.keys())  # make list, since type dict_keys does not support remove()
+    names = list(mat.keys())  # make list, since type dict_keys does not support remove()
 
     # identify time key, check that there is only one
-    timekeys = fnmatch.filter(keys, '[Tt]ime*')
-    if len(timekeys) < 1:
+    _tn = fnmatch.filter(names, '[Tt]ime*')
+    if len(_tn) < 1:
         raise KeyError("File does not contain a time vector: %s" % path)
-    elif len(timekeys) > 1:
+    elif len(_tn) > 1:
         raise KeyError("Duplicate time vectors on file: %s" % path)
 
-    # filter keys, keep only np.ndarrays of same size as time array
-    timekey = timekeys[0]
-    tsize = mat[timekey].size
-    keys = [k for k, v in mat.items() if (isinstance(v, np.ndarray) and v.size == tsize)]
+    # filter names, keep only np.ndarrays of same size as time array
+    timename = _tn[0]
+    tsize = mat[timename].size
+    names = [k for k, v in mat.items() if (isinstance(v, np.ndarray) and v.size == tsize)]
 
     # remove time key from list of time series
-    keys.remove(timekey)
+    names.remove(timename)
 
-    return timekey, keys
+    return timename, names
 
 
 def read_data(path, names, verbose=False):
@@ -69,6 +73,13 @@ def read_data(path, names, verbose=False):
     -------
     dict
         Time and data
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
+    >>> data = read_data('data.mat')
+    >>> t = data[tname]   # time
+    >>> x1 = data[names[0]]  # first data series
     """
     if verbose:
         print('Reading %s ...' % path)
