@@ -20,12 +20,14 @@ def read_keys(path):
 
     Notes
     -----
-    The series names are expected found on the header row.
+    The series names are expected found on the header row. Time is expected to be in the first column.
 
     """
     # pandas will infer the format e.g. delimiter.
     df = pd.read_csv(path, nrows=1, sep=None, engine='python')
-    return list(df)
+    names = list(df)
+    _ = names.pop(0)    # remove time which is assumed to be in the first column
+    return names
 
 
 def read_data(path, ind=None):
