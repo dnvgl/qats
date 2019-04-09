@@ -626,27 +626,18 @@ class TsDB(object):
             new.register_indices[key] = self.register_indices[key]
         return new
 
-    def create_common_time(self, keys=None, names=None, twin=None, maxdt=None, strict=False):
+    def create_common_time(self, names=None, twin=None, maxdt=None, strict=False):
         """
-        Creates common time array.
-
-        The time array is created based on:
-            - latest start time
-            - earliest end time
-            - minimum mean time step
+        Creates common time array from: latest start time, earliest end time and minimum mean time step.
 
         Parameters
         ----------
-        keys : str|list|tuple
-            Time series id, supports wildcard.
         names : str|list|tuple, optional
-            Time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         twin: tuple, optional
             If specified, the common time array within specified window (start, end) is created.
         maxdt: float, optional
             Max. time step desired. If minimum mean time step is larger than 'maxdt', the latter is used.
-            Note: Do not specify this parameter unless you know what you are doing.
         strict: bool, optional
             If True, ValueError is raised if obtained time step deviates from specified/recommended time step.
 
@@ -654,8 +645,12 @@ class TsDB(object):
         -------
         array
             New time array.
+
+        Notes
+        -----
+        Be careful when specifying the maximum time step.
         """
-        container = self.getm(keys=keys, names=names, fullkey=True, store=False)
+        container = self.getm(names=names, fullkey=True, store=False)
         timecheck = self._check_time_arrays(container)
         try:
             start, end, dt = timecheck["common"]
@@ -675,8 +670,8 @@ class TsDB(object):
             common_time = common_time[ind]
         return common_time
 
-    def export(self, filename, keys=None, names=None, delim="\t", skip_header=False, keep_order=False,
-               exist_ok=True, basename=True, verbose=False, **kwargs):
+    def export(self, filename, names=None, delim="\t", skip_header=False, exist_ok=True, basename=True,
+               verbose=False, **kwargs):
         """
         Export time series to file
 
@@ -684,19 +679,13 @@ class TsDB(object):
         ----------
         filename : str
             File name including suffix.
-        keys : str|list|tuple
-            Time series id, supports wildcard.
         names : str|list|tuple, optional
-            Time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         delim : str, optional
             column delimiter for column wise ascii file, default "\t"
         skip_header: bool, optional
             For ascii files, skip header with keys? Default is to include them on first line. This parameter is ignored
             for other file formats.
-        keep_order: bool, optional
-            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
-            added). NB: This option does not make sense if more than one key and more than one name is specified.
         exist_ok : bool, optional
             if false (the default), a FileExistsError is raised if target file already exists
         basename : bool, optional
@@ -750,13 +739,13 @@ class TsDB(object):
         4) Convert container to container of arrays (same as output from `get_many()`, taking **kwargs into account)
         '''
         # generate container, step 1 (generate container of TimeSeries objects)
-        container = self.getm(keys=keys, names=names, fullkey=True, store=False, keep_order=keep_order)
+        container = self.getm(names=names, fullkey=True, store=False)
         # generate container, step 2 (create export friendly keys)
         container = self._make_export_friendly_names(container, keep_basename=basename)
         # generate container, step 3 (perform time array check
         timecheck = self._check_time_arrays(container, **kwargs)
         # generate container, step 4 (convert to container of arrays)
-        container = OrderedDict((k, v.geta(**kwargs)) for k, v in container.items())
+        container = OrderedDict((k, v.get(**kwargs)) for k, v in container.items())
 
         # evaluate outcome of time array check, raise error if not common (time steps and time windows are not equal)
         if not timecheck["is_common"]:
@@ -1074,19 +1063,14 @@ class TsDB(object):
 
         return container
 
-    def is_common_time(self, keys=None, names=None, twin=None):
+    def is_common_time(self, names=None, twin=None):
         """
         Check if time array is common.
 
-        If `keys` or `names` are not specified, the entire database is considered.
-
         Parameters
         ----------
-        keys : str|list|tuple
-            Time series id, supports wildcard.
         names : str|list|tuple, optional
-            Time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         twin: tuple, optional
             Time window (start, end) to consider.
 
@@ -1095,7 +1079,7 @@ class TsDB(object):
         bool
             True if common time array (within specified time window), otherwise False.
         """
-        container = self.getm(keys=keys, names=names, fullkey=True, store=False)
+        container = self.getm(names=names, fullkey=True, store=False)
         timecheck = self._check_time_arrays(container, twin=twin)
         return timecheck["is_common"]
 

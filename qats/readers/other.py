@@ -79,7 +79,7 @@ def read_dat_data(path, ind=None):
                 break
 
         # load data from the remaining rows as an array, skip the header row with keys (first row after comments)
-        data = np.loadtxt(f, skiprows=1, usecols=ind, unpack=True)
+        data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
 
     return data
 

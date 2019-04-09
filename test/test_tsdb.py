@@ -420,7 +420,7 @@ class TestTsDB(unittest.TestCase):
             f = open(os.devnull, 'w')
             sys.stdout = f
             # export, should not raise errors
-            self.db.export(fnout, keys=keys)
+            self.db.export(fnout, names=keys)
         finally:
             # reset sys.stdout
             sys.stdout = was_stdout
@@ -436,7 +436,6 @@ class TestTsDB(unittest.TestCase):
     def test_export_reload(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Sway"
-        keys = self.db.list(names=name, display=False)
         fnout = os.path.join(self.data_directory, '_test_export.ts')
         try:
             # route screen dump from export to null
@@ -444,7 +443,7 @@ class TestTsDB(unittest.TestCase):
             f = open(os.devnull, 'w')
             sys.stdout = f
             # export, should not raise errors
-            self.db.export(fnout, keys=keys)
+            self.db.export(fnout, names=name)
         finally:
             # reset sys.stdout
             sys.stdout = was_stdout
@@ -468,7 +467,6 @@ class TestTsDB(unittest.TestCase):
     def test_export_ascii(self):
         self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))
         names = "WaveC[m]", "Wave-S[m]", "Surge[m]"
-        keys = self.db.list(names=names, display=False)
         fnout = os.path.join(self.data_directory, '_test_export.dat')
         try:
             # route screen dump from export to null
@@ -476,7 +474,7 @@ class TestTsDB(unittest.TestCase):
             f = open(os.devnull, 'w')
             sys.stdout = f
             # export, should not raise errors
-            self.db.export(fnout, keys=keys, verbose=False)
+            self.db.export(fnout, names=names, verbose=False)
         finally:
             # clean exported files and route screen dump back
             os.remove(fnout)
@@ -487,7 +485,6 @@ class TestTsDB(unittest.TestCase):
     def test_export_reload_ascii(self):
         self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))
         name = "Wave-S[m]"
-        keys = self.db.list(names=name, display=False)
         fnout = os.path.join(self.data_directory, '_test_export.dat')
         try:
             # route screen dump from export to null
@@ -495,7 +492,7 @@ class TestTsDB(unittest.TestCase):
             f = open(os.devnull, 'w')
             sys.stdout = f
             # export, should not raise errors
-            self.db.export(fnout, keys=keys)
+            self.db.export(fnout, names=name)
         finally:
             sys.stdout = was_stdout
             f.close()
@@ -510,6 +507,10 @@ class TestTsDB(unittest.TestCase):
         os.remove(fnout)
 
         # check arrays
+        print(ts1.t[:3])
+        print(ts2.t[:3])
+        print(ts1.x[:3])
+        print(ts2.x[:3])
         np.testing.assert_array_almost_equal(ts1.x, ts2.x, 6, "Export/reload did not yield same arrays")
 
 
