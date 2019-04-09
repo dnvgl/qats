@@ -60,6 +60,9 @@ def read_keys(path, verbose=False):
         print("   no. of datasets    : %4d" % n_dsets)
         print("   no. of time series : %4d" % len(dsetnames) + "   (datasets interpreted as time series)")
 
+    # replace all slashes with backslash
+    dsetnames = [_.replace('/', "\\") for _ in dsetnames]
+
     return dsetnames
 
 
