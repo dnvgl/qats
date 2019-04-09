@@ -1483,7 +1483,7 @@ class TsDB(object):
 
         return container
 
-    def update(self, tsdb, keys=None, names=None, shallow=False):
+    def update(self, tsdb, names=None, shallow=False):
         """
         Update TsDB with speicified keys/names from other TsDB instance.
 
@@ -1491,23 +1491,17 @@ class TsDB(object):
         ----------
         tsdb: TsDB
             TsDB instance to update from.
-        keys : str|list|tuple
-            Time series id, supports wildcard.
         names : str|list|tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         shallow: bool, optional
             If False (default), the copied TimeSeries objects do not point back to the TimeSeries instances in the
             source TsDB.
 
-        Returns
-        -------
-        None
         """
         if not isinstance(tsdb, TsDB):
             raise TypeError("expected TsDB instance, got: %s" % type(tsdb))
 
-        container = tsdb.getm(keys=keys, names=names, fullkey=True)
+        container = tsdb.getm(names=names, fullkey=True)
         for key, ts in container.items():
             if key in self.register.keys():
                 raise KeyError("The specified key is not unique: %s" % key)
