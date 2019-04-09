@@ -901,17 +901,14 @@ class TsDB(object):
             raise
         return ts.get(**kwargs)
 
-    def get_many(self, keys=None, names=None, ind=None, store=True, fullkey=False, keep_order=False, **kwargs):
+    def getd(self, names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
-        Get many time series as arrays processed according to parameters
+        Get and process multiple time series as numpy arrays
 
         Parameters
         ----------
-        keys : str|list|tuple
-            Time series id, supports wildcard.
-        names : str|list|tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+        keys : str|list|tuple, optional
+            Time series names, supports wildcard.
         ind : int|list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
             This parameter may not be combined with `keys` or `names`.
@@ -919,9 +916,6 @@ class TsDB(object):
             Disable time series storage. Default is to store the time series objects first time it is read.
         fullkey : bool, optional
             Use full key in returned container
-        keep_order: bool, optional
-            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
-            added). NB: This option does not make sense if more than one key and more than one name is specified.
         kwargs : optional
             see documentation of TimeSeries.get() method for available options
 
@@ -932,8 +926,6 @@ class TsDB(object):
 
         Notes
         -----
-        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
-
         When working on a large time series database it is recommended to set store=False to avoid too high memory
         usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
 
@@ -944,8 +936,7 @@ class TsDB(object):
         """
         # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
         container = OrderedDict((k, v.get(**kwargs)) for k, v in
-                                self.getm(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
-                                          keep_order=keep_order).items())
+                                self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items())
 
         return container
 
@@ -1333,7 +1324,7 @@ class TsDB(object):
         # todo: add possibility for subplots in plot method. nsub=None (int), sharex=True.
         # todo: consider need for `keep_order` parameter when plotting
         # dict with numpy arrays: time and data
-        container = self.get_many(keys=keys, names=names, store=store, **kwargs)
+        container = self.getd(keys=keys, names=names, store=store, **kwargs)
 
         plt.figure(1)
         for k, v in container.items():

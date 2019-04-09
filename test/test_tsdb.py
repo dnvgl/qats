@@ -123,31 +123,31 @@ class TestTsDB(unittest.TestCase):
         k = self.db.list(display=False)
         self.assertEqual(6, len(k), "Did not clear subset of registered keys correctly. %d keys remaining" % len(k))
 
-    def test_get_many_correct_key(self):
+    def test_getd_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)
-        container = self.db.get_many(names="Heave", fullkey=True)
+        container = self.db.getd(names="Heave", fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and get_many method returns different keys.")
 
-    def test_get_many_correct_number_of_arrays(self):
+    def test_getd_correct_number_of_arrays(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        rk = self.db.list(keys="*Heave", display=False)  # should be only 1 key returned in this case
-        container = self.db.get_many(keys="*Heave", fullkey=True)
+        rk = self.db.list(names="Heave", display=False)  # should be only 1 key returned in this case
+        container = self.db.getd(names="Heave", fullkey=True)
         self.assertEqual(2, len(container[rk[0]]), "Got more than 2 arrays (time and data) in return from get_many().")
 
-    def test_get_many_none(self):
+    def test_gets_none(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.get_many(keys=[])
+        container = self.db.getd(names=[])
         n = len(container)
         self.assertEqual(0, n, "Should have received empty container (OrderedDict) from get_many()")
 
-    def test_get_many_ts_correct_key(self):
+    def test_getm_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)
         container = self.db.getm(names="Heave", fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and get_many_ts method returns different keys.")
 
-    def test_get_many_ts_correct_key_by_ind(self):
+    def test_getm_correct_key_by_ind(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)
         container = self.db.getm(ind=2, fullkey=True)
@@ -159,7 +159,7 @@ class TestTsDB(unittest.TestCase):
         tsname = "Tension_2_qs"
         keys = self.db.list(names=tsname, display=False)
         key = keys[0]
-        _, data1 = self.db.get_many(keys=key, fullkey=True)[key]
+        _, data1 = self.db.getd(keys=key, fullkey=True)[key]
         # test 1: get() when ts is already loaded
         _, data2 = self.db.get(name=tsname)
         self.assertTrue(np.array_equal(data1, data2), "Did not get correct data time series using get() "
@@ -226,7 +226,7 @@ class TestTsDB(unittest.TestCase):
     def test_get_correct_number_of_timesteps(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)  # should be only 1 key returned in this case
-        container = self.db.get_many(keys="*Heave", fullkey=True)
+        container = self.db.getd(keys="*Heave", fullkey=True)
         self.assertEqual(65536, len(container[rk[0]][0]), "Deviating number of time steps.")
 
     def test_add_raises_keyerror_on_nonunique_key(self):
@@ -297,7 +297,7 @@ class TestTsDB(unittest.TestCase):
         Test correct types
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.get_many(names="Surge")
+        container = self.db.getd(names="Surge")
         for key, ts in container.items():
             self.assertIsInstance(key, str, "Key should be type string.")
             self.assertIsInstance(ts, tuple, "Time series container should be type tuple.")
