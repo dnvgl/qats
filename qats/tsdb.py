@@ -6,7 +6,6 @@ Provides :class:`TsDB` class.
 import os
 import glob
 import copy
-from scipy.io import loadmat
 import fnmatch
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,30 +14,30 @@ from array import array
 from collections import OrderedDict, defaultdict
 from .ts import TimeSeries
 from .readers.sima import (
-    read_keys as read_sima_keys,
+    read_names as read_sima_names,
     read_ascii_data as read_sima_ascii_data,
     read_bin_data as read_sima_bin_data
 )
 from .readers.sima_h5 import (
-    read_keys as read_sima_h5_keys,
+    read_names as read_sima_h5_names,
     read_data as read_sima_h5_data
 )
 from .readers.csv import (
-    read_keys as read_csv_keys,
+    read_names as read_csv_names,
     read_data as read_csv_data
 )
 from .readers.direct_access import (
-    read_ts_keys,
-    read_tda_keys,
+    read_ts_names,
+    read_tda_names,
     read_ts_data,
     read_tda_data,
 )
 from .readers.matlab import (
-    read_keys as read_mat_keys,
+    read_names as read_mat_names,
     read_data as read_mat_data
 )
 from .readers.other import (
-    read_dat_keys,
+    read_dat_names,
     read_dat_data
 )
 
@@ -87,6 +86,45 @@ class TsDB(object):
 
     def __repr__(self):
         return '<TsDB "%s">' % self.name
+
+    @classmethod
+    def fromfile(cls, filenames, read=False, verbose=False):
+        """
+        Create TsDB instance from one ore more files.
+
+        Parameters
+        ----------
+        filenames: str, list or tuple
+            File names including suffix. Wildcards can also be used.
+        read: bool, optional
+            If True, all time series are read from file and stored. The default is that they are read from file
+            when requested by any of the `get_<>` methods.
+        verbose : bool, optional
+            If True, print information to screen.
+
+        Returns
+        -------
+        TsDB
+            TsDB instance with files loaded.
+
+        Notes
+        -----
+        The purpose of the classmethod is efficient initiation of a new class instance. For example:
+
+        >>> from qats import TsDB
+        >>> tsdb = TsDB.fromfile("mooring.ts")
+
+        ... is equivalent to:
+
+        >>> tsdb = TsDB("")
+        >>> tsdb.load("mooring.ts")
+
+
+        See also notes for :meth:`~TsDB.load`.
+        """
+        tsdb = cls("")
+        tsdb.load(filenames, read=read, verbose=verbose)
+        return tsdb
 
     @property
     def common(self):
@@ -256,7 +294,79 @@ class TsDB(object):
 
         return timecheck
 
-    def _make_export_friendly_keys(self, container, keep_basename=False):
+    @staticmethod
+    def _path_basename(key):
+        """
+        As os.path.basename, but does not split on '/' or '\\' if they are within square brackets.
+        """
+        if "[" in key:
+            i = key.index("[")
+            return os.path.basename(key[:i]) + key[i:]
+        else:
+            return os.path.basename(key)
+
+    @staticmethod
+    def _path_dirname(key):
+        """
+        As os.path.dirname, but does not split on '/' or '\\' if they are within square brackets.
+        """
+        if "[" in key:
+            i = key.index("[")
+            return os.path.dirname(key[:i]) + key[i:]
+        else:
+            return os.path.dirname(key)
+
+    @staticmethod
+    def _path_relpath(key, start=os.curdir):
+        """
+        As os.path.relpath, but does not split on '/' or '\\' if they are within square brackets.
+        """
+        if "[" in key:
+            i = key.index("[")
+            return os.path.relpath(key[:i], start) + key[i:]
+        else:
+            return os.path.relpath(key, start)
+
+    @staticmethod
+    def _reorder_namelist(namelist, names=None):
+        """
+        Re-order time series names to match order in which they were specified.
+
+        Parameters
+        ----------
+        namelist: list
+            List of time series names to re-order.
+        names: list, optional
+            Time series name (patterns)
+
+        Returns
+        -------
+        list
+            Re-ordered time series names
+
+        Raises
+        ------
+        ValueError
+            If `keep_order` is True, in combination with more than one key and more than one name.
+        """
+
+        # define function need for sorting
+        def get_index(m, patterns):
+            """Return index of matched time series names."""
+            try:
+                _ind = [fnmatch.fnmatch(m, pat) for pat in patterns].index(True)
+            except ValueError:
+                raise Exception("Unexpected error: could not find sorting index for key '%s'" % m)
+            return _ind
+
+        # re-order names to match specified order
+        if names is not None and len(names) > 1:
+            return sorted(namelist, key=lambda m: get_index(m, names))
+        else:
+            # names or names not sufficiently specified, there is nothing to do
+            return namelist
+
+    def _make_export_friendly_names(self, container, keep_basename=False):
         """
         Shorten keys by removing common part of it and replace path separators with underscore. Use only basename
         if specified.
@@ -312,39 +422,6 @@ class TsDB(object):
 
         return new_container
 
-    @staticmethod
-    def _path_basename(key):
-        """
-        As os.path.basename, but does not split on '/' or '\\' if they are within square brackets.
-        """
-        if "[" in key:
-            i = key.index("[")
-            return os.path.basename(key[:i]) + key[i:]
-        else:
-            return os.path.basename(key)
-
-    @staticmethod
-    def _path_dirname(key):
-        """
-        As os.path.dirname, but does not split on '/' or '\\' if they are within square brackets.
-        """
-        if "[" in key:
-            i = key.index("[")
-            return os.path.dirname(key[:i]) + key[i:]
-        else:
-            return os.path.dirname(key)
-
-    @staticmethod
-    def _path_relpath(key, start=os.curdir):
-        """
-        As os.path.relpath, but does not split on '/' or '\\' if they are within square brackets.
-        """
-        if "[" in key:
-            i = key.index("[")
-            return os.path.relpath(key[:i], start) + key[i:]
-        else:
-            return os.path.relpath(key, start)
-
     def _read(self, keys, outkeys=None, store=True):
         """
         Read time series specified by absolute keys from file
@@ -352,10 +429,10 @@ class TsDB(object):
         Parameters
         ----------
         keys : list
-            Keys (path) to time series
+            Unique time series identifiers/keys/path
         outkeys : list, optional
-            Keys used in returned container. Note that full key will still be used in the db register.
-            Useful if you want to have shorter keys (less the common db path) in the container returned.
+            Unique identifiers/keys used in returned container. Useful if you want to have shorter keys
+            (less the common db path) in the container returned. Note that full key is used in the db register.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
 
@@ -401,45 +478,52 @@ class TsDB(object):
             # extract parent file extension
             fext = os.path.splitext(parent)[-1]
 
-            # which indices; relevant for .ts, .tda, .asc, .bin
+            # indices of time series to be read
             indices = [0] + [self.register_indices[key] for key in keys]
 
             tslist = [None] * len(keys)
 
-            if (fext == '.ts') or (fext == '.tda'):
-                data = read_ts(parent, ind=indices)
+            if fext == '.ts':
+                data = read_ts_data(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
+
+            elif fext == '.tda':
+                data = read_tda_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
 
             elif fext == '.asc':
-                data = read_ascii(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
-
-            elif fext == '.dat':
-                data = read_ascii(parent, ind=indices, skiprows=1)
+                data = read_sima_ascii_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
 
             elif fext == '.bin':
-                data = read_bin(parent, ind=indices)
+                data = read_sima_bin_data(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+
+            elif fext == '.dat':
+                data = read_dat_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
 
             elif fext == '.mat':
-                timekey = self._timekeys[parent]
-                data = loadmat(parent, squeeze_me=True, variable_names=[timekey]+names)  # dictionary
-                # zero and duplicate time vectors were sorted out on load
-                timekey = fnmatch.filter(data.keys(), '[Tt]ime*')[0]
+                _tk = self._timekeys[parent]
+                data = read_mat_data(parent, [_tk, *names])
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[timekey], data[name], parent=parent)
+                    tslist[i] = TimeSeries(name, data[_tk], data[name], parent=parent)
 
             elif fext in ('.h5', '.hdf5'):
-                dsetnames = [name.replace('\\', '/') for name in names]
-                data = read_h5(parent, dsetnames=dsetnames)
+                data = read_sima_h5_data(parent, names=names)
                 for i, name in enumerate(names):
                     timearr, arr = data[i]
                     tslist[i] = TimeSeries(name, timearr, arr, parent=parent)
+
+            elif fext == '.csv':
+                data = read_csv_data(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
             else:
                 raise NotImplementedError("Invalid file type: %s (ext = %s)" % (parent, fext))
@@ -452,67 +536,6 @@ class TsDB(object):
                     self.register[key] = ts
 
         return container
-
-    def _reorder_list(self, keylist, keys=None, names=None):
-        """
-        Re-order keys to match order in which they were specified.
-
-        Parameters
-        ----------
-        keylist: list
-            List to re-order.
-        keys: list, optional
-            See parameter description in `list()`.
-        names: list, optional
-            See parameter description in `list()`.
-
-        Returns
-        -------
-        list
-            Re-ordered list
-
-        Raises
-        ------
-        ValueError
-            If `keep_order` is True, in combination with more than one key and more than one name.
-        """
-        # define function need for sorting
-        def get_index(m, patterns, kind):
-            """ For specified match (key), return index based on specified keys or names patterns. """
-            if kind == 'name':
-                m = self._path_basename(m)
-            try:
-                _ind = [fnmatch.fnmatch(m, pat) for pat in patterns].index(True)
-            except ValueError:
-                # True was not found in generated list. This should not occur, because all the keys/matches
-                # currently
-                # this
-                raise Exception("Unexpected error: could not find sorting index for key '%s'" % m)
-            return _ind
-
-        # re-order keys to match specified order
-        if (keys is not None and len(keys) > 1) and (names is not None and len(names) > 1):
-            raise ValueError("`keep_order=True` may not be combined with more than one key and "
-                             "more than one name")
-
-        if (keys is not None and len(keys) > 1) or (names is not None and len(names) > 1):
-            if keys is not None and len(keys) > 1:
-                # sort on specified keys
-                _patterns = keys
-                _kind = 'key'
-            elif names is not None and len(names) > 1:
-                # sort on specified keys
-                _patterns = names
-                _kind = 'name'
-
-            # perform the sorting
-            reordered = sorted(keylist, key=lambda m: get_index(m, _patterns, _kind))
-
-        else:
-            # keys or names not sufficiently specified, there is nothing to do
-            reordered = keylist
-
-        return reordered
 
     def add(self, ts):
         """
@@ -548,29 +571,20 @@ class TsDB(object):
         self.register_indices[key] = None   # ... and therefore has no index (yet)
         self.register_keys.append(key)
 
-    def clear(self, keys=None, names=None, display=True):
+    def clear(self, names=None, display=True):
         """
         Clear/remove time series from register
 
         Parameters
         ----------
-        keys : str | list | tuple, optional
-            keys to remove from database register, supports wildcard.
-        names : str, optional
-            common part of unique path/key
+        names : str | list | tuple, optional
+            Name of time series to remove from database register, supports wildcard.
         display : bool, optional
             disable print to screen. Default True
-
-        Notes
-        -----
-        Either `keys` or `names` must be given.
-
-        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
-
         """
         if display:
             print("Removing:`\n")
-        match = self.list(keys=keys, names=names, display=display, relative=False)
+        match = self.list(names=names, display=display, relative=False)
         for k in match:
             _ = self.register.pop(k, None)
             _ = self.register_parent.pop(k, None)
@@ -667,45 +681,6 @@ class TsDB(object):
             common_time = common_time[ind]
         return common_time
 
-    @classmethod
-    def fromfile(cls, filenames, read=False, verbose=False):
-        """
-        Create TsDB instance from one ore more files.
-
-        Parameters
-        ----------
-        filenames: str, list or tuple
-            File names including suffix. Wildcards can also be used.
-        read: bool, optional
-            If True, all time series are read from file and stored. The default is that they are read from file
-            when requested by any of the `get_<>` methods.
-        verbose : bool, optional
-            If True, print information to screen.
-
-        Returns
-        -------
-        TsDB
-            TsDB instance with files loaded.
-
-        Notes
-        -----
-        The purpose of the classmethod is efficient initiation of a new class instance. For example:
-
-        >>> from qats import TsDB
-        >>> tsdb = TsDB.fromfile("mooring.ts")
-
-        ... is equivalent to:
-
-        >>> tsdb = TsDB("")
-        >>> tsdb.load("mooring.ts")
-
-
-        See also notes for :meth:`~TsDB.load`.
-        """
-        tsdb = cls("")
-        tsdb.load(filenames, read=read, verbose=verbose)
-        return tsdb
-
     def export(self, filename, keys=None, names=None, delim="\t", skip_header=False, keep_order=False,
                exist_ok=True, basename=True, verbose=False, **kwargs):
         """
@@ -783,7 +758,7 @@ class TsDB(object):
         # generate container, step 1 (generate container of TimeSeries objects)
         container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False, keep_order=keep_order)
         # generate container, step 2 (create export friendly keys)
-        container = self._make_export_friendly_keys(container, keep_basename=basename)
+        container = self._make_export_friendly_names(container, keep_basename=basename)
         # generate container, step 3 (perform time array check
         timecheck = self._check_time_arrays(container, **kwargs)
         # generate container, step 4 (convert to container of arrays)
@@ -1023,7 +998,7 @@ class TsDB(object):
 
         # get absolute keys
         if ind is None:
-            key_list = self.list(keys=keys, names=names, display=False, relative=False, keep_order=keep_order)
+            key_list = self.list(names=names, display=False, relative=False, keep_order=keep_order)
         else:
             # generate key_list directly from indices
             if isinstance(ind, int):
@@ -1144,40 +1119,28 @@ class TsDB(object):
         timecheck = self._check_time_arrays(container, twin=twin)
         return timecheck["is_common"]
 
-    def list(self, keys=None, names=None, display=False, relative=False, keep_order=False):
+    def list(self, names=None, display=False, relative=False):
         """
-        List time series in database by id
+        List time series in database by id/key
 
         Parameters
         ----------
-        keys : str/list/tuple, optional
-            time series id (full name) filter that supports regular expressions, default all time series will be listed
         names : str/list/tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names filter that supports regular expressions, default all time series will be listed
         display : bool, optional
-            disable print to screen, default False
+            Disable print to screen, default False
         relative : bool, optional
-            return unique parts of keys (i.e. path relative to common path of all database keys)
-        keep_order: bool, optional
-            Return keys/names in the order specified? Default is to return keys/names match in registered order
-            (i.e. order loaded/added).
-            NB: This option does not make sense if more than one key and more than one name is specified.
+            Truncate time series names to unique part i.e. path relative to common path of all time series.
 
         Returns
         -------
         list
-            time series keys (full names or relative to `commonpath`, depending on parameter `relative`)
+            Time series names
 
         Notes
         -----
-        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
-
-        Raises
-        ------
-        ValueError
-            If `keep_order` is True, in combination with more than one key and more than one name.
-
+        Full identifier/key is obtained by joining the common path of all time series in db and the unique part of the
+        identifiers.
         """
         def _remove_special_characters(strings):
             """
@@ -1206,55 +1169,40 @@ class TsDB(object):
                 out.append(s)
             return out
 
-        # full keys in db register
-        regkeys = copy.copy(self.register_keys)
+        # full names in db register
+        keys_in_register = copy.copy(self.register_keys)
 
-        if keys is None:
-            match = regkeys
+        if names is None:
+            # return all time series names if no patterns are specified
+            return keys_in_register
 
+        # handle types and add leading wildcard to enable pattern matching
+        if isinstance(names, str):
+            names = ['*' + names]
+        elif type(names) in (list, tuple):
+            names = ['*' + _ for _ in names]
         else:
-            if isinstance(keys, str):
-                keys = [keys]
-            if type(keys) not in (list, tuple):
-                raise TypeError("parameter `keys` should be of type str/list/tuple, not %s" % type(names))
+            raise TypeError(f"Parameter `names` should be of type str/list/tuple, not {type(names)}")
 
-            # todo: list(): consider if match on `keys` pattern preserves the order of the keys (or how to obtain it)
-            match = []
-            for key in _remove_special_characters(keys):
-                match.extend(fnmatch.filter(regkeys, key))
-
-        if names is not None:
-            if isinstance(names, str):
-                names = [names]
-            if type(names) not in (list, tuple):
-                raise TypeError("parameter `names` should be of type str/list/tuple, not %s" % type(names))
-
-            name_patterns = _remove_special_characters(names)
-            match_names = [key for key in match if
-                           sum([fnmatch.fnmatch(self._path_basename(key), name_pattern) for name_pattern in
-                                name_patterns]) > 0]
-            match = match_names
-
-        if keep_order:
-            try:
-                match = self._reorder_list(match, keys=keys, names=names)
-            except ValueError:
-                raise
+        # match time series keys with specified time series name patterns
+        match = []
+        for name in _remove_special_characters(names):
+            match.extend(fnmatch.filter(keys_in_register, name))
 
         if relative:
             common = self.common
-            match = [self._path_relpath(path, common) for path in match]
+            match = [self._path_relpath(_, common) for _ in match]
 
         if display:
             print()
             print("=============================================================================================")
             if relative:
-                print("Common path : %s" % common)
+                print(f"Common path : {common}")
                 print("---------------------------------------------------------------------------------------------")
             if len(match) > 0:
                 print("\n".join(match))
             else:
-                print("(no match found for specified keys/names)")
+                print("(no match found for specified names/names)")
             print("=============================================================================================")
 
         return match
@@ -1295,7 +1243,7 @@ class TsDB(object):
         if len(files) < 1:
             raise FileExistsError("Path does not exist: %s" % filenames)
 
-        # read time series keys/names and possibly also the data
+        # read time series names and possibly also the data
         for thefile in files:
             fext = os.path.splitext(thefile)[-1]
             basename = os.path.basename(thefile)
@@ -1306,62 +1254,62 @@ class TsDB(object):
 
             if fext == '.ts':
                 # direct access format without info array
-                keys = read_ts_keys(thefile.replace(fext, '.key'))
+                names = read_ts_names(thefile.replace(fext, '.key'))
 
             elif fext == '.tda':
                 # simo s2x direct access format (with info array)
-                keys = read_tda_keys(thefile.replace(fext, '.txt'))
+                names = read_tda_names(thefile.replace(fext, '.txt'))
 
             elif fext == '.asc':
                 # simo-riflex, sima ascii
-                keys = read_sima_keys(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+                names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
 
             elif fext == '.bin':
                 # riflex/simo, sima direct access format
-                keys = read_sima_keys(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+                names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
 
             elif fext == '.dat':
                 # plain column wise ascii format
-                keys = read_dat_keys(thefile)
+                names = read_dat_names(thefile)
 
             elif fext == '.mat':
                 # Matlab format for versions < 7.3
-                _tk, keys = read_mat_keys(thefile)
-                self._timekeys[thefile] = _tk   # add the time-key from the .mat file to the list of known time-keys
+                _tk, names = read_mat_names(thefile)
+                self._timekeys[thefile] = _tk   # remember the name of the time array
 
             elif fext in ('.h5', '.hdf5'):
                 # sima h5
-                keys = read_sima_h5_keys(thefile)
+                names = read_sima_h5_names(thefile)
 
             elif fext == '.csv':
                 # column wise csv
-                keys = read_csv_keys(thefile)
+                names = read_csv_names(thefile)
 
             else:
                 raise NotImplementedError("Invalid file type: %s" % thefile)
 
-            # update database register: unique id consists of filename and key
+            # update database register: unique id (key) consists of filename and time series name
             # before the time series is loaded the register store the time series index on the file
             # j +1 since record 0 is the time vector
-            for j, k in enumerate(keys):
-                fullkey = os.path.join(thefile, k)
+            for j, name in enumerate(names):
+                key = os.path.join(thefile, name)
                 # None until the time series is read and stored
-                self.register[fullkey] = None
+                self.register[key] = None
                 # Parent, i.e. source file
-                self.register_parent[fullkey] = thefile
+                self.register_parent[key] = thefile
                 # Time series index on file, to speed up reading the time series, dummy for .mat files, +1 to skip time
                 ind = j + 1 if fext not in ('.h5', '.hdf5', '.mat') else None
-                self.register_indices[fullkey] = ind
-                # time series keys in the order the associated time series where loaded
-                self.register_keys.append(fullkey)
+                self.register_indices[key] = ind
+                # time series names in the order the associated time series where loaded
+                self.register_keys.append(key)
 
             if read is True:
-                fullkeys = [os.path.join(thefile, k) for k in keys]
-                _ = self._read(fullkeys, store=True)
+                keys = [os.path.join(thefile, name) for name in names]
+                _ = self._read(keys, store=True)
 
             if verbose:
-                print("Loaded %d records from file '%s'." % (len(keys), thefile))
-                print('\n'.join(keys))
+                print("Loaded %d records from file '%s'." % (len(names), thefile))
+                print('\n'.join(names))
 
     def plot(self, keys=None, names=None, figurename=None, store=True, **kwargs):
         """
@@ -1453,52 +1401,36 @@ class TsDB(object):
         else:
             plt.show()
 
-    def rename(self, newname, key=None, name=None):
+    def rename(self, name, newname):
         """
         Rename a timeseries (and update register accordingly).
 
         Parameters
         ----------
+        name : str
+            Unique time series name (pattern)
         newname : str
-            New basename (i.e. key/name excl. path of parent file).
-        key : str, optional
-            As for method get()
-        name :
-            As for method get()
-
-        Returns
-        -------
-        None
+            New time series name (i.e. unique id/key less the path of parent file).
 
         Notes
         -----
-        `newname` must be only the base name; the parent part (path to parent file) is inherited from old key.
-
-        Parameters `key` and `name` behave as for get(), and at least one of them must be given.
-        A single match must be obtained for the specified parameters.
+        A single match must be obtained for the specified `name`.
         """
-        if key is None and name is None:
-            raise TypeError("Either of parameters `key` or `name` must be given")
-        if key is not None and not isinstance(key, str):
-            raise TypeError("Parameter `key` must be string if specified")
-        if name is not None and not isinstance(name, str):
-            raise TypeError("Parameter `name` must be string if specified")
-
-        # use list() method to get key(s)
-        key_list = self.list(keys=key, names=name, display=False, relative=False)
-        n = len(key_list)
+        # find matching time series names
+        names = self.list(names=name, display=False, relative=False)
+        n = len(names)
         if n == 0:
-            raise LookupError("No match found for specified key and/or name")
+            raise LookupError("No match found for specified name")
         elif n > 1:
-            raise ValueError("More than one match found for specified key and/or name:"
-                             "\n    %s" % "\n    ".join(key_list))
-        oldkey = key_list[0]
+            raise ValueError("More than one match found for specified name:"
+                             "\n    %s" % "\n    ".join(names))
 
         # define new key, and check that it doesn't exist
         # todo: consider replace (parent --> "") instead of dirname (only relevant for ts from .h5?)
+        oldkey = names[0]
         newkey = os.path.join(self._path_dirname(oldkey), newname)
         if newkey in self.register_keys:
-            raise ValueError("New key already exists: %s" % newkey)
+            raise ValueError(f"New key already exists: {newkey}" % newkey)
 
         # rename (change register)
         self.register[newkey] = self.register.pop(oldkey)

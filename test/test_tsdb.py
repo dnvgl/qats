@@ -82,7 +82,7 @@ class TestTsDB(unittest.TestCase):
 
     def test_list_subset(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        k = self.db.list(keys="*Mooring line*", display=False)
+        k = self.db.list(names="Mooring line*", display=False)
         self.assertEqual(8, len(k), "Deviating number of listed keys = %d" % len(k))
 
     def test_list_subset_misc_criteria(self):
@@ -92,44 +92,34 @@ class TestTsDB(unittest.TestCase):
         k = self.db.list(names="Tension*", display=False)
         self.assertEqual(10, len(k), "Deviating number of listed keys = %d" % len(k))
         # test 2
-        k = self.db.list(keys="*simo_p.ts*", names="*line*", display=False)
+        k = self.db.list(names="simo_p.ts*line*", display=False)
         self.assertEqual(2, len(k), "Deviating number of listed keys = %d" % len(k))
 
-    def test_list_subset_keep_order(self):
+    def test_list_subset_keep_specified_order(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        keys_orig = self.db.register_keys
-        names_orig = [os.path.basename(k) for k in keys_orig]
-        names_reversed = list(reversed(names_orig))
-        # test 1: default behaviour, order should be as loaded
-        keys_list = self.db.list(names=names_reversed)
-        names_list = [os.path.basename(k) for k in keys_list]
-        self.assertEqual(names_orig, names_list, "Did not keep loaded order")
-        # test 2: order should be as specified
-        keys_list = self.db.list(names=names_reversed, keep_order=True)
-        names_list = [os.path.basename(k) for k in keys_list]
-        self.assertEqual(names_reversed, names_list, "Failed to keep specified order")
+        names_reversed = list(reversed([os.path.basename(k) for k in self.db.register_keys]))
+        namelist = [os.path.basename(_) for _ in self.db.list(names=names_reversed)]
+        self.assertEqual(names_reversed, namelist, "Failed to keep specified order")
 
     def test_list_subset_special_characters(self):
         self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))
-        keys_list = self.db.list(names="RW1[m]")
         # should return exactly one key
-        self.assertEqual(1, len(keys_list), "TsDB.list() returned wrong number of keys")
+        self.assertEqual(1, len(self.db.list(names="RW1[m]")), "TsDB.list() returned wrong number of keys")
 
     def test_list_subset_special_characters_2(self):
         self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))
-        keys_list = self.db.list(names="Acc-X[m/s^2]")
         # should return exactly one key
-        self.assertEqual(1, len(keys_list), "TsDB.list() returned wrong number of keys")
+        self.assertEqual(1, len(self.db.list(names="Acc-X[m/s^2]")), "TsDB.list() returned wrong number of keys")
 
     def test_clear_all(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        self.db.clear(keys="*", display=False)
+        self.db.clear(display=False)
         k = self.db.list(display=False)
         self.assertEqual([], k, "Did not clear all registered keys.")
 
     def test_clear_subset(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        self.db.clear(keys="*Mooring line*", display=False)
+        self.db.clear(names="*Mooring line*", display=False)
         k = self.db.list(display=False)
         self.assertEqual(6, len(k), "Did not clear subset of registered keys correctly. %d keys remaining" % len(k))
 
