@@ -1275,23 +1275,20 @@ class TsDB(object):
                 print("Loaded %d records from file '%s'." % (len(names), thefile))
                 print('\n'.join(names))
 
-    def plot(self, keys=None, names=None, figurename=None, store=True, **kwargs):
+    def plot(self, names=None, figurename=None, store=True, **kwargs):
         """
         Plot time series
 
         Parameters
         ----------
-        keys : str/list/tuple, optional
-            time series id (full name) filter that supports regular expressions, default all time series will be listed
         names : str/list/tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
-            see documentation of TimeSeries.get() method for available options
+            See documentation of TimeSeries.get() method for available options
 
         Notes
         -----
@@ -1306,7 +1303,7 @@ class TsDB(object):
         # todo: add possibility for subplots in plot method. nsub=None (int), sharex=True.
         # todo: consider need for `keep_order` parameter when plotting
         # dict with numpy arrays: time and data
-        container = self.getd(keys=keys, names=names, store=store, **kwargs)
+        container = self.getd(names=names, store=store, **kwargs)
 
         plt.figure(1)
         for k, v in container.items():
@@ -1321,17 +1318,14 @@ class TsDB(object):
         else:
             plt.show()
 
-    def plot_psd(self, keys=None, names=None, figurename=None, store=True, **kwargs):
+    def plot_psd(self, names=None, figurename=None, store=True, **kwargs):
         """
         Return power spectral density processed according to arguments.
 
         Parameters
         ----------
-        keys : str/list/tuple, optional
-            time series id (full name) filter that supports regular expressions, default all time series will be listed
         names : str/list/tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         store : bool, optional
@@ -1350,7 +1344,7 @@ class TsDB(object):
 
         """
         # dict with TimeSeries objects
-        container = self.getm(keys=keys, names=names, store=store)
+        container = self.getm(names=names, store=store)
 
         plt.figure(1)
         for k, v in container.items():
