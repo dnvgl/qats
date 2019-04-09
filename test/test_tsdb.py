@@ -125,8 +125,8 @@ class TestTsDB(unittest.TestCase):
 
     def test_get_many_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        rk = self.db.list(keys="*Heave", display=False)
-        container = self.db.get_many(keys="*Heave", fullkey=True)
+        rk = self.db.list(names="Heave", display=False)
+        container = self.db.get_many(names="Heave", fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and get_many method returns different keys.")
 
     def test_get_many_correct_number_of_arrays(self):
@@ -143,8 +143,14 @@ class TestTsDB(unittest.TestCase):
 
     def test_get_many_ts_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        rk = self.db.list(keys="*Heave", display=False)
-        container = self.db.get_many_ts(keys="*Heave", fullkey=True)
+        rk = self.db.list(names="Heave", display=False)
+        container = self.db.getm(names="Heave", fullkey=True)
+        self.assertEqual(rk, list(container.keys()), "db list method and get_many_ts method returns different keys.")
+
+    def test_get_many_ts_correct_key_by_ind(self):
+        self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
+        rk = self.db.list(names="Heave", display=False)
+        container = self.db.getm(ind=2, fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and get_many_ts method returns different keys.")
 
     def test_get(self):
@@ -171,7 +177,7 @@ class TestTsDB(unittest.TestCase):
         tsname = "Tension_2_qs"
         keys = self.db.list(names=tsname, display=False)
         key = keys[0]
-        ts1 = self.db.get_many_ts(keys=key, fullkey=True)[key]
+        ts1 = self.db.getm(keys=key, fullkey=True)[key]
         # test 1: get_ts() when ts is already loaded
         ts2 = self.db.get_ts(name=tsname)
         self.assertIs(ts1, ts2, "Did not get correct TimeSeries  using get_ts()"
@@ -225,7 +231,7 @@ class TestTsDB(unittest.TestCase):
 
     def test_add_raises_keyerror_on_nonunique_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.get_many_ts(names="Surge", fullkey=True)
+        container = self.db.getm(names="Surge", fullkey=True)
         for k, v in container.items():
             try:
                 self.db.add(v)
@@ -278,7 +284,7 @@ class TestTsDB(unittest.TestCase):
 
     def test_maxima_minima(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.get_many_ts(names="Surge")
+        container = self.db.getm(names="Surge")
         for k, ts in container.items():
             _ = ts.maxima()
             _, _ = ts.maxima(rettime=True)
@@ -303,7 +309,7 @@ class TestTsDB(unittest.TestCase):
         Test correct types
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.get_many_ts(names="Surge")
+        container = self.db.getm(names="Surge")
         for key, ts in container.items():
             self.assertIsInstance(key, str, "Key should be type string.")
             self.assertIsInstance(ts, TimeSeries, "Time series container should be type TimeSeries.")

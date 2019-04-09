@@ -374,7 +374,7 @@ class TsDB(object):
         Parameters
         ----------
         container : dict
-            Container for time series
+            Container with time series
         keep_basename : bool, optional
             Keep only time series names e.g. 'tension' in key 'C:\data\results.ts\tension'. Default False.
 
@@ -422,7 +422,7 @@ class TsDB(object):
 
         return new_container
 
-    def _read(self, keys, outkeys=None, store=True):
+    def _read(self, keys, retkeys=None, store=True):
         """
         Read time series specified by absolute keys from file
 
@@ -430,7 +430,7 @@ class TsDB(object):
         ----------
         keys : list
             Unique time series identifiers/keys/path
-        outkeys : list, optional
+        retkeys : list, optional
             Unique identifiers/keys used in returned container. Useful if you want to have shorter keys
             (less the common db path) in the container returned. Note that full key is used in the db register.
         store : bool, optional
@@ -439,21 +439,21 @@ class TsDB(object):
         Returns
         -------
         dict
-            TimeSeries objects stored in dictionary by key
+            TimeSeries objects
 
         Notes
         -----
-        Absolute keys are typical obtained using the list() method.
+        Absolute keys are obtained using the list() method.
 
         """
-        # handle outkeys
-        if outkeys is not None:
-            assert len(outkeys) == len(keys), "The number of 'outkeys' is different from the number of 'keys'."
+        # handle retkeys
+        if retkeys is not None:
+            assert len(retkeys) == len(keys), "The number of 'retkeys' is different from the number of 'keys'."
         else:
-            outkeys = copy.copy(keys)
+            retkeys = copy.copy(keys)
 
         # correlation between full keys and specified keys for returned container
-        keypairs = dict(zip(keys, outkeys))
+        keypairs = dict(zip(keys, retkeys))
 
         # initiate and pre-populate ordered dictionary (to keep order of keys)
         container = OrderedDict()
@@ -623,7 +623,7 @@ class TsDB(object):
         Specified timeseries that are not preloaded (stored), will be loaded during this procedure.
         """
         new = TsDB(name=self.name)
-        container = self.get_many_ts(keys=keys, names=names, store=True, fullkey=True, keep_order=keep_order)
+        container = self.getm(keys=keys, names=names, store=True, fullkey=True, keep_order=keep_order)
         for key, ts in container.items():
             if shallow is False:
                 ts = ts.copy()
@@ -661,7 +661,7 @@ class TsDB(object):
         array
             New time array.
         """
-        container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False)
+        container = self.getm(keys=keys, names=names, fullkey=True, store=False)
         timecheck = self._check_time_arrays(container)
         try:
             start, end, dt = timecheck["common"]
@@ -756,7 +756,7 @@ class TsDB(object):
         4) Convert container to container of arrays (same as output from `get_many()`, taking **kwargs into account)
         '''
         # generate container, step 1 (generate container of TimeSeries objects)
-        container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False, keep_order=keep_order)
+        container = self.getm(keys=keys, names=names, fullkey=True, store=False, keep_order=keep_order)
         # generate container, step 2 (create export friendly keys)
         container = self._make_export_friendly_names(container, keep_basename=basename)
         # generate container, step 3 (perform time array check
@@ -944,22 +944,19 @@ class TsDB(object):
         """
         # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
         container = OrderedDict((k, v.get(**kwargs)) for k, v in
-                                self.get_many_ts(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
-                                                 keep_order=keep_order).items())
+                                self.getm(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
+                                          keep_order=keep_order).items())
 
         return container
 
-    def get_many_ts(self, keys=None, names=None, ind=None, store=True, fullkey=False, keep_order=False):
+    def getm(self, names=None, ind=None, store=True, fullkey=False):
         """
-        Get many time series as TimeSeries objects
+        Get multiple TimeSeries objects
 
         Parameters
         ----------
-        keys : str|list|tuple
-            Time series id, supports wildcard.
         names : str|list|tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series name(s), supports wildcard.
         ind : int|list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
             This parameter may not be combined with `keys` or `names`.
@@ -967,25 +964,19 @@ class TsDB(object):
             Disable time series storage. Default is to store the time series objects first time it is read.
         fullkey : bool, optional
             Use full key in returned container
-        keep_order: bool, optional
-            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
-            added). NB: This option does not make sense if more than one key and more than one name is specified.
-
 
         Returns
         -------
         dict
-            TimeSeries objects stored in dictionary by key
+            TimeSeries objects
 
         Notes
         -----
-        Full unique path/key is obtained by joining the common part of the paths/keys and the unique part of the keys
-
         When working on a large time series database it is recommended to set store=False to avoid too high memory
         usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
 
-        Note that this method is somewhat similar to get_many() but returns TimeSeries objects instead of arrays. As a
-        consequence this method does not support keyword arguments to be passed further to TimeSeries.get().
+        Note that this method is somewhat similar to `getd()` but returns TimeSeries objects instead of Numpy arrays.
+        Therefore this method does not support keyword arguments to be passed further to TimeSeries.get().
 
         See also
         --------
@@ -993,18 +984,18 @@ class TsDB(object):
 
         """
         # check that non-compatible parameters are not combined
-        if ind is not None and not (keys is None and names is None):
-            raise TypeError("Parameter `ind` may not be combined with `keys` or `names`")
+        if ind is not None and names is not None:
+            raise TypeError("Cannot combine parameters `ind` and `names`")
 
         # get absolute keys
         if ind is None:
-            key_list = self.list(names=names, display=False, relative=False, keep_order=keep_order)
+            keys = self.list(names=names, display=False, relative=False)
         else:
-            # generate key_list directly from indices
+            # generate keys directly from indices
             if isinstance(ind, int):
                 ind = [ind]
             try:
-                key_list = [self.register_keys[i] for i in ind]
+                keys = [self.register_keys[i] for i in ind]
             except IndexError as err:
                 raise IndexError("one or more index is out of range (number of entries = %d)" % self.n) from err
             except TypeError as err:
@@ -1012,15 +1003,15 @@ class TsDB(object):
 
         if fullkey:
             # use full key in returned container
-            outkeys = key_list
+            retkeys = keys
         else:
             # todo: consider including the '\\' in self.common (currently I am not sure what is the best)
             # create shorter keys (relative to db common path)
             _common = self.common + os.path.sep
-            outkeys = [k.replace(_common, "") for k in key_list]
+            retkeys = [k.replace(_common, "") for k in keys]
 
         # read time series and put in ordered dictionary
-        container = self._read(key_list, outkeys=outkeys, store=store)
+        container = self._read(keys, retkeys=retkeys, store=store)
 
         return container
 
@@ -1084,7 +1075,7 @@ class TsDB(object):
         if isinstance(ts, TimeSeries):
             return ts
         # if not yet returned, use get_many_ts() method to match(es)
-        container = self.get_many_ts(keys=key, names=name, ind=ind, fullkey=True, store=store)
+        container = self.getm(keys=key, names=name, ind=ind, fullkey=True, store=store)
         n = len(container)
         if n == 0:
             raise LookupError("No match found for specified key and/or name")
@@ -1115,7 +1106,7 @@ class TsDB(object):
         bool
             True if common time array (within specified time window), otherwise False.
         """
-        container = self.get_many_ts(keys=keys, names=names, fullkey=True, store=False)
+        container = self.getm(keys=keys, names=names, fullkey=True, store=False)
         timecheck = self._check_time_arrays(container, twin=twin)
         return timecheck["is_common"]
 
@@ -1386,7 +1377,7 @@ class TsDB(object):
 
         """
         # dict with TimeSeries objects
-        container = self.get_many_ts(keys=keys, names=names, store=store)
+        container = self.getm(keys=keys, names=names, store=store)
 
         plt.figure(1)
         for k, v in container.items():
@@ -1514,8 +1505,8 @@ class TsDB(object):
         # todo: create entry in dictionary with meta data such as applied time window, filter etc.
         # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
         container = OrderedDict((k, v.stats(statsdur=statsdur, **kwargs)) for k, v in
-                                self.get_many_ts(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
-                                                 keep_order=keep_order).items())
+                                self.getm(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
+                                          keep_order=keep_order).items())
 
         return container
 
@@ -1543,7 +1534,7 @@ class TsDB(object):
         if not isinstance(tsdb, TsDB):
             raise TypeError("expected TsDB instance, got: %s" % type(tsdb))
 
-        container = tsdb.get_many_ts(keys=keys, names=names, fullkey=True)
+        container = tsdb.getm(keys=keys, names=names, fullkey=True)
         for key, ts in container.items():
             if key in self.register.keys():
                 raise KeyError("The specified key is not unique: %s" % key)
