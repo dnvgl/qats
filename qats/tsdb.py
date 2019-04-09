@@ -1447,7 +1447,7 @@ class TsDB(object):
 
         return
 
-    def stats(self, statsdur=None, keys=None, names=None, ind=None, store=True, fullkey=False, keep_order=False, **kwargs):
+    def stats(self, statsdur=None, names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
         Get statistics for time series processed according to parameters
 
@@ -1456,21 +1456,14 @@ class TsDB(object):
         statsdur : float
             Duration in seconds for estimation of extreme value distribution (Gumbel) from peak distribution (Weibull).
             Default is 3 hours (see `TimeSeries.stats()`).
-        keys : str|list|tuple
-            Time series id, supports wildcard.
         names : str|list|tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names
         ind : int|list, optional
-            Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
-            This parameter may not be combined with `keys` or `names`.
+            Time series indices in database
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         fullkey : bool, optional
             Use full key in returned container
-        keep_order: bool, optional
-            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
-            added). NB: This option does not make sense if more than one key and more than one name is specified.
         kwargs : optional
             see documentation of TimeSeries.stats() and TimeSeries.get() methods for available options
 
@@ -1516,8 +1509,7 @@ class TsDB(object):
         # todo: create entry in dictionary with meta data such as applied time window, filter etc.
         # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
         container = OrderedDict((k, v.stats(statsdur=statsdur, **kwargs)) for k, v in
-                                self.getm(keys=keys, names=names, ind=ind, store=store, fullkey=fullkey,
-                                          keep_order=keep_order).items())
+                                self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items())
 
         return container
 
