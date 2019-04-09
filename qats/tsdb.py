@@ -591,23 +591,17 @@ class TsDB(object):
             _ = self.register_indices.pop(k, None)
             _ = self.register_keys.pop(self.register_keys.index(k))
 
-    def copy(self, keys=None, names=None, shallow=False, keep_order=False):
+    def copy(self, names=None, shallow=False):
         """
         Make a copy (new TsDB instance) with the specified keys/names included.
 
         Parameters
         ----------
-        keys : str | list | tuple
-            Time series id, supports wildcard.
         names : str | list | tuple, optional
-            time series name (short name) filter that supports regular expressions. Filter applied after filtering on
-            `keys`.
+            Time series names filter that supports regular expressions.
         shallow: bool, optional
             If False (default), the copied TimeSeries objects do not point back to the TimeSeries instances in the
             source TsDB.
-        keep_order: bool, optional
-            Export time series in the order specified? Default is to export in registered order (i.e. order loaded or
-            added). NB: This option does not make sense if more than one key and more than one name is specified.
 
         Returns
         -------
@@ -623,7 +617,7 @@ class TsDB(object):
         Specified timeseries that are not preloaded (stored), will be loaded during this procedure.
         """
         new = TsDB(name=self.name)
-        container = self.getm(keys=keys, names=names, store=True, fullkey=True, keep_order=keep_order)
+        container = self.getm(names=names, store=True, fullkey=True)
         for key, ts in container.items():
             if shallow is False:
                 ts = ts.copy()
