@@ -13,7 +13,7 @@ file_name = os.path.join("..", "..", "..", "data", "mooring.ts")
 db.load([file_name])
 
 # get a single the time series from the database
-ts = db.get_ts(name="surge")    # ts is now a TimeSeries object
+ts = db.get(name="surge")    # ts is now a TimeSeries object
 
 # count the cycles using the rainflow algorithm, grouping the cycles to 256 equidistant bins
 cycles = ts.rfc(nbins=256)  # cycles is a sorted list of tuples of cycle magnitude versus count

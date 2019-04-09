@@ -82,7 +82,7 @@ class TsDB(object):
         """
         keys = self.list()
         for key in keys:
-            yield self.get_ts(key=key)
+            yield self.get(key=key)
 
     def __repr__(self):
         return '<TsDB "%s">' % self.name
@@ -762,7 +762,7 @@ class TsDB(object):
         # generate container, step 3 (perform time array check
         timecheck = self._check_time_arrays(container, **kwargs)
         # generate container, step 4 (convert to container of arrays)
-        container = OrderedDict((k, v.get(**kwargs)) for k, v in container.items())
+        container = OrderedDict((k, v.geta(**kwargs)) for k, v in container.items())
 
         # evaluate outcome of time array check, raise error if not common (time steps and time windows are not equal)
         if not timecheck["is_common"]:
@@ -860,19 +860,93 @@ class TsDB(object):
         else:
             print("Exported %d records to file '%s'." % (len(container), filename))
 
-    def get(self, key=None, name=None, ind=None, store=True, **kwargs):
+    def get(self, name=None, ind=None, store=True):
         """
-        Return one time series as arrays processed according to parameters
+        Get one time series
 
         Parameters
         ----------
-        key : str, optional
-            String that is passed to TsDB.get_ts() method.
         name : str, optional
-            String that is passed to TsDB.get_ts() method.
+            Time series name
         ind : int, optional
-            Index (integer) that is pass to TsDB.get_ts() method.
-            This parameter may not be combined with `key` or `name`.
+            Time series index in database register.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+
+        Returns
+        -------
+        TimeSeries
+            Time series
+
+        Notes
+        -----
+        Either name or ind must be specified.
+
+        Error is raised if zero or more than one match is obtained.
+
+        Note that this method is somewhat similar to geta() but returns a TimeSeries object instead of arrays.
+        Therefore this method does not support keyword arguments to be passed further to TimeSeries.get().
+
+        """
+        # check that at least one of the required parameters is given,
+        # and that non-compatible parameters are not combined
+        if not name and not ind:
+            raise TypeError("Either `name` or `ind` must be given")
+
+        if name is not None and ind is not None:
+            raise TypeError("Cannot combine parameters `ind` and `name`")
+
+        # check type of specified parameters
+        if name is not None and not isinstance(name, str):
+            raise TypeError("Parameter `name` must be string if specified")
+
+        if ind is not None and not isinstance(ind, int):
+            raise TypeError("Parameter `ind` must be integer if specified")
+
+        # return quickly if specified key (or index) matches a register entry and data is already loaded
+        if name is not None:
+            _ = self.list(names=name, display=False)
+            if len(_) == 0:
+                raise LookupError(f"No match found for '{name}'")
+
+            elif len(_) > 1:
+                raise ValueError(f"Name '{name}' is not unique. Got {len(_)} matches.")
+            else:
+                key = _[0]
+        else:
+            # ind is not None
+            try:
+                _ = self.register_keys[ind]
+            except IndexError as err:
+                raise IndexError(f"Index {ind} is not available (number of entries = {self.n})") from err
+            else:
+                key = _
+
+        # check if data is read
+        ts = self.register.get(key, None)
+        if isinstance(ts, TimeSeries):
+            return ts
+        else:
+            container = self.getm(names=name, ind=ind, fullkey=True, store=store)
+            n = len(container)
+            if n == 0:
+                raise LookupError("No match found for specified name")
+            elif n > 1:
+                raise ValueError("More than one match found for specified name:"
+                                 "\n    %s" % "\n    ".join(container.keys()))
+            else:
+                return container.popitem()[1]
+
+    def geta(self, name=None, ind=None, store=True, **kwargs):
+        """
+        Get and process one time series as numpy array
+
+        Parameters
+        ----------
+        name : str, optional
+            Time series name
+        ind : int, optional
+            Time series index in database register.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
@@ -881,18 +955,18 @@ class TsDB(object):
         Returns
         -------
         tuple
-            Two arrays: time and data
+            Time and data arrays
 
         Notes
         -----
-        Either key or name must be specified.
+        Either name or ind must be specified.
 
         Error is raised if zero or more than one match is obtained.
 
         """
         # use self.get() to avoid duplicate code
         try:
-            ts = self.get_ts(key=key, name=name, ind=ind, store=store)
+            ts = self.get(name=name, ind=ind, store=store)
         except TypeError:
             raise
         except LookupError:
@@ -907,7 +981,7 @@ class TsDB(object):
 
         Parameters
         ----------
-        keys : str|list|tuple, optional
+        names : str|list|tuple, optional
             Time series names, supports wildcard.
         ind : int|list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
@@ -1005,76 +1079,6 @@ class TsDB(object):
         container = self._read(keys, retkeys=retkeys, store=store)
 
         return container
-
-    def get_ts(self, key=None, name=None, ind=None, store=True):
-        """
-        Return one time series processed according to parameters
-
-        Parameters
-        ----------
-        key : str, optional
-            String that is passed to TsDB.get_many() method.
-        name : str, optional
-            String that is passed to TsDB.get_many() method.
-        ind : int, optional
-            Index of desired time series (index refers to index of key in list attribute `register_keys`).
-            This parameter may not be combined with `key` or `name`.
-        store : bool, optional
-            Disable time series storage. Default is to store the time series objects first time it is read.
-
-        Returns
-        -------
-        TimeSeries
-            Time series
-
-        Notes
-        -----
-        Either key, name or ind must be specified.
-
-        Error is raised if zero or more than one match is obtained.
-
-        If asarray=True is passed as kwargs routed further to TimeSeries.get() method, this method returns a
-        TimeSeries object instead of tuple of two numpy arrays.
-
-        Note that this method is somewhat similar to get() but returns a TimeSeries object instead of arrays. As a
-        consequence this method does not support keyword arguments to be passed further to TimeSeries.get().
-
-        """
-        # check that at least one of the required parameters is given,
-        # and that non-compatible parameters are not combined
-        if (key is None and name is None) and (ind is None):
-            raise TypeError("Either of parameters `key`, `name` or `ind` must be given")
-        if ind is not None and not (key is None and name is None):
-            raise TypeError("Parameter `ind` may not be combined with `key` or `name`")
-        # check type of specified parameters
-        if key is not None and not isinstance(key, str):
-            raise TypeError("Parameter `key` must be string if specified")
-        if name is not None and not isinstance(name, str):
-            raise TypeError("Parameter `name` must be string if specified")
-        if ind is not None and not isinstance(ind, int):
-            raise TypeError("Parameter `ind` must be integer if specified")
-
-        # return quickly if specified key (or index) matches a register entry and data is already loaded
-        if ind is not None:
-            try:
-                _key = self.register_keys[ind]
-            except IndexError as err:
-                raise IndexError("index %d is not available (number of entries = %d)" % (ind, self.n)) from err
-        else:
-            _key = key
-        ts = self.register.get(_key, None)
-        if isinstance(ts, TimeSeries):
-            return ts
-        # if not yet returned, use get_many_ts() method to match(es)
-        container = self.getm(keys=key, names=name, ind=ind, fullkey=True, store=store)
-        n = len(container)
-        if n == 0:
-            raise LookupError("No match found for specified key and/or name")
-        elif n > 1:
-            raise ValueError("More than one match found for specified key and/or name:"
-                             "\n    %s" % "\n    ".join(container.keys()))
-        else:
-            return container.popitem()[1]
 
     def is_common_time(self, keys=None, names=None, twin=None):
         """

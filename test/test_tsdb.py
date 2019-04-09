@@ -153,56 +153,56 @@ class TestTsDB(unittest.TestCase):
         container = self.db.getm(ind=2, fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and get_many_ts method returns different keys.")
 
-    def test_get(self):
+    def test_geta(self):
         tsfile = os.path.join(self.data_directory, 'simo_p.ts')
         self.db.load(tsfile)
         tsname = "Tension_2_qs"
         keys = self.db.list(names=tsname, display=False)
-        key = keys[0]
-        _, data1 = self.db.getd(keys=key, fullkey=True)[key]
-        # test 1: get() when ts is already loaded
-        _, data2 = self.db.get(name=tsname)
+        _, data1 = self.db.geta(name=keys[0])
+
+        # test 1: geta() when ts is already loaded
+        _, data2 = self.db.geta(name=tsname)
         self.assertTrue(np.array_equal(data1, data2), "Did not get correct data time series using get() "
                                                       "(ts pre-loaded)")
-        # test 2: get() when ts is not already loaded
+        # test 2: geta() when ts is not already loaded
         db2 = TsDB()
         db2.load(tsfile)
-        _, data3 = db2.get(name=tsname)
+        _, data3 = db2.geta(name=tsname)
         self.assertTrue(np.array_equal(data1, data3), "Did not get correct data time series using get() "
                                                       "(ts not pre-loaded)")
 
-    def test_get_ts(self):
+    def test_get_by_name(self):
         tsfile = os.path.join(self.data_directory, 'simo_p.ts')
         self.db.load(tsfile)
         tsname = "Tension_2_qs"
         keys = self.db.list(names=tsname, display=False)
         key = keys[0]
-        ts1 = self.db.getm(keys=key, fullkey=True)[key]
+        ts1 = self.db.getm(names=key, fullkey=True)[key]
         # test 1: get_ts() when ts is already loaded
-        ts2 = self.db.get_ts(name=tsname)
+        ts2 = self.db.get(name=tsname)
         self.assertIs(ts1, ts2, "Did not get correct TimeSeries  using get_ts()"
                                 " (ts pre-loaded)")
         # test 2: get_ts() when ts is not already loaded
         db2 = TsDB.fromfile(tsfile)
-        ts3 = db2.get_ts(name=tsname)
+        ts3 = db2.get(name=tsname)
         self.assertTrue(np.array_equal(ts1.x, ts3.x), "Did not get correct TimeSeries using get_ts()"
                                                       " (ts not pre-loaded)")
 
-    def test_get_ts_index(self):
+    def test_get_by_index(self):
         tsfile = os.path.join(self.data_directory, 'simo_p.ts')
         self.db.load(tsfile)
         tsname = "Tension_2_qs"
         key = self.db.list(names=tsname, display=False)[0]
-        ts1 = self.db.get_ts(name=tsname)
+        ts1 = self.db.get(name=tsname)
         ind = self.db.register_keys.index(key)
         # test 1: get_ts() using index when ts is already loaded
-        ts2 = self.db.get_ts(ind=ind)
+        ts2 = self.db.get(ind=ind)
         self.assertIs(ts1, ts2, "Did not get correct TimeSeries using get_ts() and specifying index"
                                 " (ts pre-loaded)")
 
         # test 2: get_ts() using index when ts is not already loaded
         db2 = TsDB.fromfile(tsfile)
-        ts3 = db2.get_ts(ind=ind)
+        ts3 = db2.get(ind=ind)
         self.assertTrue(np.array_equal(ts1.x, ts3.x), "Did not get correct TimeSeries using get_ts() and specifying"
                                                       " index (ts not pre-loaded)")
 
@@ -210,14 +210,14 @@ class TestTsDB(unittest.TestCase):
         self.db.load(os.path.join(self.data_directory, 'simo_p.ts'))
         # test 1: no match
         try:
-            _ = self.db.get(name="nonexisting_key")
+            _ = self.db.geta(name="nonexisting_key")
         except LookupError:
             pass
         else:
             self.fail("Did not raise LookupError when no match was found")
         # test 2: more than one match
         try:
-            _ = self.db.get(name="Tension*")
+            _ = self.db.geta(name="Tension*")
         except ValueError:
             pass
         else:
@@ -226,7 +226,7 @@ class TestTsDB(unittest.TestCase):
     def test_get_correct_number_of_timesteps(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)  # should be only 1 key returned in this case
-        container = self.db.getd(keys="*Heave", fullkey=True)
+        container = self.db.getd(names="Heave", fullkey=True)
         self.assertEqual(65536, len(container[rk[0]][0]), "Deviating number of time steps.")
 
     def test_add_raises_keyerror_on_nonunique_key(self):
@@ -255,13 +255,13 @@ class TestTsDB(unittest.TestCase):
         oldkey = os.path.join(tsfile, oldname)
         newkey = os.path.join(tsfile, newname)
         # get data before rename()
-        _, data1 = self.db.get(name=oldname)
+        _, data1 = self.db.geta(name=oldname)
         parent1 = self.db.register_parent[oldkey]
         index1 = self.db.register_indices[oldkey]
         # rename
         self.db.rename(newname, name=oldname)
         # get data after rename()
-        _, data2 = self.db.get(name=newname)
+        _, data2 = self.db.geta(name=newname)
         parent2 = self.db.register_parent[newkey]
         index2 = self.db.register_indices[newkey]
         # checks
@@ -320,9 +320,9 @@ class TestTsDB(unittest.TestCase):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Surge"
         db1 = self.db
-        ts1 = self.db.get_ts(name=name)
+        ts1 = self.db.get(name=name)
         db2 = self.db.copy()
-        ts2 = db2.get_ts(name=name)
+        ts2 = db2.get(name=name)
         self.assertIsNot(ts1, ts2, "Copy with shallow=False kept binding on ts to source database")
         self.assertTrue(np.array_equal(ts1.x, ts2.x), "Copy did returned TimeSeries with different value array")
 
@@ -330,9 +330,9 @@ class TestTsDB(unittest.TestCase):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Surge"
         db1 = self.db
-        ts1 = self.db.get_ts(name=name)
+        ts1 = self.db.get(name=name)
         db2 = self.db.copy(shallow=True)
-        ts2 = db2.get_ts(name=name)
+        ts2 = db2.get(name=name)
         self.assertIs(ts1, ts2, "Copy with shallow=True did not return source instance")
 
     def test_update(self):
@@ -453,8 +453,8 @@ class TestTsDB(unittest.TestCase):
         db2 = TsDB()
         db2.load(fnout)
         # compare ts
-        ts1 = self.db.get_ts(name=name)
-        ts2 = db2.get_ts(name=name)
+        ts1 = self.db.get(name=name)
+        ts2 = db2.get(name=name)
         # clean exported files
         try:
             os.remove(fnout)
@@ -503,8 +503,8 @@ class TestTsDB(unittest.TestCase):
         db2 = TsDB()
         db2.load(fnout)
         # compare ts
-        ts1 = self.db.get_ts(name=name)
-        ts2 = db2.get_ts(name=name)
+        ts1 = self.db.get(name=name)
+        ts2 = db2.get(name=name)
 
         # clean exported files
         os.remove(fnout)

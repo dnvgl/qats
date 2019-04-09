@@ -21,7 +21,7 @@ class TestTs(unittest.TestCase):
         # necessary to do it like this for the tests to work both locally and in virtual env for conda build
         self.tsfile = os.path.join(os.path.dirname(__file__), '..', 'data', 'mooring.ts')
         self.db.load(self.tsfile)
-        self.ts = self.db.get_ts(name="Mooring line 4")
+        self.ts = self.db.get(name="Mooring line 4")
         # add datetime reference to ts for later testing
         self.ts._dtg_ref = datetime.now()
 

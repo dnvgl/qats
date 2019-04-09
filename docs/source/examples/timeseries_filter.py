@@ -8,7 +8,7 @@ from qats import TsDB
 # locate time series file
 file_name = os.path.join("..", "..", "..", "data", "mooring.ts")
 db = TsDB.fromfile(file_name)
-ts = db.get_ts(name="Surge")
+ts = db.get(name="Surge")
 
 # Low-pass and high-pass filter the time series at 0.03Hz
 # Note that the transient 1000 first seconds are skipped
