@@ -13,9 +13,34 @@ import numpy as np
 from struct import pack
 from array import array
 from collections import OrderedDict, defaultdict
-from .readers import read_bin_keys, read_ts_keys, read_bin, read_ts, read_ascii
-from .readers import read_h5_keys, read_h5
 from .ts import TimeSeries
+from .readers.sima import (
+    read_keys as read_sima_keys,
+    read_ascii_data as read_sima_ascii_data,
+    read_bin_data as read_sima_bin_data
+)
+from .readers.sima_h5 import (
+    read_keys as read_sima_h5_keys,
+    read_data as read_sima_h5_data
+)
+from .readers.csv import (
+    read_keys as read_csv_keys,
+    read_data as read_csv_data
+)
+from .readers.direct_access import (
+    read_ts_keys,
+    read_tda_keys,
+    read_ts_data,
+    read_tda_data,
+)
+from .readers.matlab import (
+    read_keys as read_mat_keys,
+    read_data as read_mat_data
+)
+from .readers.other import (
+    read_dat_keys,
+    read_dat_data
+)
 
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
@@ -1244,7 +1269,7 @@ class TsDB(object):
             File names including suffix. Wildcards can also be used.
         read: bool, optional
             If True, all time series are read from file and stored. The default is that they are read from file
-            when requested by any of the `get_<>` methods.
+            when requested by any of the `get` methods.
         verbose : bool, optional
             If True, print information to screen.
 
@@ -1270,6 +1295,7 @@ class TsDB(object):
         if len(files) < 1:
             raise FileExistsError("Path does not exist: %s" % filenames)
 
+        # read time series keys/names and possibly also the data
         for thefile in files:
             fext = os.path.splitext(thefile)[-1]
             basename = os.path.basename(thefile)
@@ -1280,58 +1306,36 @@ class TsDB(object):
 
             if fext == '.ts':
                 # direct access format without info array
-                keys = read_ts_keys(thefile.replace(fext, '.key'), filetype='ts')
+                keys = read_ts_keys(thefile.replace(fext, '.key'))
 
             elif fext == '.tda':
-                # simo s2x direct access format
-                keys = read_ts_keys(thefile.replace(fext, '.txt'), filetype='tda')
+                # simo s2x direct access format (with info array)
+                keys = read_tda_keys(thefile.replace(fext, '.txt'))
 
-            elif (fext == '.asc') or (fext == '.bin'):
-                # riflex/simo ascii and direct access format
-                keys = read_bin_keys(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+            elif fext == '.asc':
+                # simo-riflex, sima ascii
+                keys = read_sima_keys(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+
+            elif fext == '.bin':
+                # riflex/simo, sima direct access format
+                keys = read_sima_keys(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
 
             elif fext == '.dat':
                 # plain column wise ascii format
-                # get keys from first non-commented row, # is default comment in numpy.loadtxt
-                with open(thefile) as f:
-                    for line in f:
-                        if not line.startswith("#"):
-                            keys = line.split()
-                            break
-                # identify time key, check that there is only one
-                timekeys = fnmatch.filter(keys, '[Tt]ime*')
-                if len(timekeys) < 1:
-                    raise KeyError("File does not contain a time vector: %s" % thefile)
-                elif len(timekeys) > 1:
-                    raise KeyError("Duplicate time vectors on file: %s" % thefile)
-                # remove time key from list of time series
-                keys.remove(timekeys[0])
+                keys = read_dat_keys(thefile)
 
             elif fext == '.mat':
-                # Matlab format
-                # Note: this code is for Matlab version < 7.3. For version >= 7.3, .mat is on hdf5 format
-                #       ref: http://pyhogs.github.io/reading-mat-files.html
-                mat = loadmat(thefile)
-                keys = list(mat.keys())  # make list, since type dict_keys does not support remove()
-                # identify time key, check that there is only one
-                timekeys = fnmatch.filter(keys, '[Tt]ime*')
-                if len(timekeys) < 1:
-                    raise KeyError("File does not contain a time vector: %s" % thefile)
-                elif len(timekeys) > 1:
-                    raise KeyError("Duplicate time vectors on file: %s" % thefile)
-                # filter keys, keep only np.ndarrays of same size as time array
-                timekey = timekeys[0]
-                tsize = mat[timekey].size
-                keys = [k for k, v in mat.items() if (isinstance(v, np.ndarray) and v.size == tsize)]
-                # remove time key from list of time series
-                keys.remove(timekey)
-                # store time key for use when reading
-                self._timekeys[thefile] = timekey
+                # Matlab format for versions < 7.3
+                _tk, keys = read_mat_keys(thefile)
+                self._timekeys[thefile] = _tk   # add the time-key from the .mat file to the list of known time-keys
 
             elif fext in ('.h5', '.hdf5'):
-                keys = read_h5_keys(thefile)
-                # replace all slashes with backslash
-                keys = [k.replace('/', "\\") for k in keys]
+                # sima h5
+                keys = read_sima_h5_keys(thefile)
+
+            elif fext == '.csv':
+                # column wise csv
+                keys = read_csv_keys(thefile)
 
             else:
                 raise NotImplementedError("Invalid file type: %s" % thefile)
