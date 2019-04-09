@@ -1416,7 +1416,7 @@ class TsDB(object):
         oldkey = names[0]
         newkey = os.path.join(self._path_dirname(oldkey), newname)
         if newkey in self.register_keys:
-            raise ValueError(f"New key already exists: {newkey}" % newkey)
+            raise ValueError(f"New key already exists: {newkey}")
 
         # rename (change register)
         self.register[newkey] = self.register.pop(oldkey)

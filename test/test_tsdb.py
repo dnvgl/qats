@@ -259,7 +259,7 @@ class TestTsDB(unittest.TestCase):
         parent1 = self.db.register_parent[oldkey]
         index1 = self.db.register_indices[oldkey]
         # rename
-        self.db.rename(newname, name=oldname)
+        self.db.rename(oldname, newname)
         # get data after rename()
         _, data2 = self.db.geta(name=newname)
         parent2 = self.db.register_parent[newkey]
@@ -276,11 +276,11 @@ class TestTsDB(unittest.TestCase):
         oldname = "Tension_2_qs"
         newname = "Tension_3_qs"
         try:
-            self.db.rename(newname, name=oldname)
+            self.db.rename(oldname, newname)
         except ValueError:
             pass
         else:
-            self.fail("rename() did not raise ValueError when specifying existing key/name")
+            self.fail("Did not throw ValueError when attempting renaming to non-unique name.")
 
     def test_maxima_minima(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
