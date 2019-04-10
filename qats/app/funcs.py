@@ -1,8 +1,8 @@
 """
 Module with functions for handling file operations and calculations. Made for multithreading.
 """
-from qats import TsDB
-from qats.weibull import pwm as weibull_pwm
+from ..tsdb import TsDB
+from ..weibull import pwm as weibull_pwm
 
 # todo: Create calculate gumbel fit (meant for tools->create extreme value distribution)
 
@@ -113,24 +113,24 @@ def calculate_weibull_fit(container, twin, fargs, minima=False):
     return container_out
 
 
-def export_to_file(name, db, keys, twin, fargs):
+def export_to_file(filename, db, names, twin, fargs):
     """
     Export selected time series to file
 
     Parameters
     ----------
-    name : str
+    filename : str
         File name
     db : TsDB
         Time series data base
-    keys : list
+    names : list
         Name of time series to export
     twin : tuple
         Time window. Time series are cropped to time window before export.
     fargs : tuple
         Filter arguments. Time series are filtered before export
     """
-    db.export(name, keys=keys, exist_ok=True, basename=False, twin=twin, filterargs=fargs)
+    db.export(filename, names=names, exist_ok=True, basename=False, twin=twin, filterargs=fargs)
 
 
 def import_from_file(files):
@@ -152,7 +152,7 @@ def import_from_file(files):
     return db
 
 
-def read_timeseries(db, keys):
+def read_timeseries(db, names):
     """
     Read time series from files
 
@@ -160,7 +160,7 @@ def read_timeseries(db, keys):
     ----------
     db : TsDB
         Time series data base
-    keys : list
+    names : list
         Name of time series to read
 
     Returns
@@ -168,5 +168,5 @@ def read_timeseries(db, keys):
     dict
         Container with TimeSeries objects
     """
-    return db.get_many_ts(keys=keys, store=False)
+    return db.getm(names=names, store=False)
 

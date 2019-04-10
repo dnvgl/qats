@@ -679,7 +679,7 @@ class TsDB(object):
         ----------
         filename : str
             File name including suffix.
-        names : str|list|tuple, optional
+        names : str or list or tuple, optional
             Time series names
         delim : str, optional
             column delimiter for column wise ascii file, default "\t"
@@ -1003,7 +1003,7 @@ class TsDB(object):
 
         Parameters
         ----------
-        names : str|list|tuple, optional
+        names : str or list or tuple, optional
             Time series name(s), supports wildcard.
         ind : int|list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
@@ -1089,7 +1089,7 @@ class TsDB(object):
 
         Parameters
         ----------
-        names : str/list/tuple, optional
+        names : str or list or tuple, optional
             Time series names filter that supports regular expressions, default all time series will be listed
         display : bool, optional
             Disable print to screen, default False
