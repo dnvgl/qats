@@ -21,14 +21,14 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 from pkg_resources import resource_filename, get_distribution, DistributionNotFound
 
-from qats.stats import empirical_cdf
 from .logger import QLogger
 from .funcs import export_to_file, import_from_file, read_timeseries, calculate_psd, calculate_rfc, calculate_weibull_fit
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
 from .widgets import CustomTabWidget
-from qats.tsdb import TsDB
-from qats.gumbel import pwm as gumbel_pwm
+from ..tsdb import TsDB
+from ..stats import empirical_cdf
+from ..gumbel import pwm as gumbel_pwm
 
 
 LOGGING_LEVELS = dict(
@@ -530,7 +530,7 @@ class Qats(QMainWindow):
         self.db.update(newdb)
 
         # fill item model with time series by unique id (common path is removed)
-        names = self.db.list(keys="*", relative=True, display=False)
+        names = self.db.list(names="*", relative=True, display=False)
         self.db_source_model.clear()    # clear before re-adding
 
         for name in names:
@@ -610,7 +610,7 @@ class Qats(QMainWindow):
             return
         else:
             # get data series as dictionary of TimeSeries obj
-            series = self.db.get_many_ts(keys=checked_series, store=False)
+            series = self.db.getm(names=checked_series, store=False)
             sample = []     # initiate empty sample
             names = []
 
@@ -1003,7 +1003,7 @@ class Qats(QMainWindow):
         """
         Clear all time series from database
         """
-        self.db.clear(keys="*", display=False)
+        self.db.clear(names="*", display=False)
         self.db_common_path = ""
         self.db_source_model.clear()
         self.reset_axes()
