@@ -507,10 +507,6 @@ class TestTsDB(unittest.TestCase):
         os.remove(fnout)
 
         # check arrays
-        print(ts1.t[:3])
-        print(ts2.t[:3])
-        print(ts1.x[:3])
-        print(ts2.x[:3])
         np.testing.assert_array_almost_equal(ts1.x, ts2.x, 6, "Export/reload did not yield same arrays")
 
 
