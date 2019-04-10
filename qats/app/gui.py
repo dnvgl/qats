@@ -400,7 +400,7 @@ class Qats(QMainWindow):
         plot_gumbel_action = QAction("Plot extremes CDF", self)
         plot_gumbel_action.setToolTip("Plot fitted Gumbel cumulative distribution function to extremes"
                                       " in selected time series")
-        plot_gumbel_action.triggered.connect(self.create_gumbel_plot)
+        plot_gumbel_action.triggered.connect(self.plot_gumbel)
 
         about_action = QAction("&About", self)
         about_action.setShortcut("F1")
@@ -594,103 +594,6 @@ class Qats(QMainWindow):
         """
         return self.from_time.value(), self.to_time.value()
 
-    def create_gumbel_plot(self):
-        """
-        Create new closable tab widget with plot of fitted Gumbel cumulative distribution function to extremes
-        of selected time series
-        """
-        # get ui selections
-        checked_series = self.get_selected_items_in_model()
-        filterargs = self.get_filter_settings()
-        time_window = self.get_time_window()
-
-        if len(checked_series) < 2:
-            # no series were selected
-            logging.info("Too few time series selected to fit extreme CDF.")
-            return
-        else:
-            # get data series as dictionary of TimeSeries obj
-            series = self.db.get_many_ts(keys=checked_series, store=False)
-            sample = []     # initiate empty sample
-            names = []
-
-            for name, ts in series.items():
-                # path calculation to get relative path for enhanced legend readability
-                names.append(os.path.relpath(name, self.db_common_path))
-
-                # get data extreme (largest maxima or smallest minima)
-                _, tsdata = ts.get(twin=time_window, filterargs=filterargs)
-
-                if self.maxima.isChecked():
-                    sample.append(np.max(tsdata))
-                else:
-                    sample.append(np.min(tsdata))
-
-            try:
-                sample = np.asarray(sample)
-                # estimate distribution parameters
-                if self.maxima.isChecked():
-                    # distribution of largest maximum
-                    location, scale = gumbel_pwm(sample)
-                    logging.info("Fitted Gumbel distribution to sample of %d maxima."
-                                 "Fitted distribution parameters (location, scale) = (%5.3g, %5.3g)"
-                                 % (sample.size, location, scale))
-                else:
-                    # distribution of smallest minimum
-                    sample *= -1.   # To model the minimum value, use the negative of the original values
-                    location, scale = gumbel_pwm(sample)
-                    logging.info("Fitted Gumbel distribution to sample of %d minima."
-                                 "Fitted distribution parameters (location, scale) = (%5.3g, %5.3g).\n"
-                                 "Note that the distribution parameters are based on the negative of the original "
-                                 "sample. Multiply the distribution quantiles by -1 before use."
-                                 % (sample.size, location, scale))
-
-                sample = np.sort(sample)
-                z_sample = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
-                z_fit = (sample - location) / scale
-
-            except (ValueError, ZeroDivisionError) as err:
-                logging.warning(err.__str__)
-                return
-
-            # create widget and attach to tab
-            w = QWidget()
-            fig = Figure()
-            canvas = FigureCanvas(fig)
-            canvas.setParent(w)
-            axes = fig.add_subplot(111)
-            toolbar = NavigationToolbar(canvas, self.upper_left_frame)
-            vbox = QVBoxLayout()
-            vbox.addWidget(canvas)
-            vbox.addWidget(toolbar)
-            w.setLayout(vbox)
-            self.tabs.addTab(w, "Extremes CDF")
-            tabindex = self.tabs.indexOf(w)
-            self.tabs.setTabToolTip(tabindex, "Plot fitted Gumbel cumulative distribution function "
-                                              "to extremes (maxima/minima) of selected time series")
-
-            if self.maxima.isChecked():
-                # plot largest maxima
-                axes.plot(sample, z_sample, 'ko', label='Data')
-                axes.plot(sample, z_fit, '-m', label='Fitted')
-            else:
-                # plot smallest minima. remember that the negative of the original sample was used when fitting
-                # invert the horizontal axis to have the smallest minima (largest in absolute sense) to the right
-                axes.invert_xaxis()
-                axes.plot(-1.*sample, z_sample, 'ko', label='Data')
-                axes.plot(-1.*sample, z_fit, '-m', label='Fitted')
-
-            # plotting positions and plot configurations
-            ylabels = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999])
-            yticks = -np.log(-np.log(ylabels))
-            axes.set_yticks(yticks)
-            axes.set_yticklabels(ylabels)
-            axes.legend(loc="upper left")
-            axes.grid(True)
-            axes.set_xlabel("Data")
-            axes.set_ylabel("Cumulative probability (-)")
-            canvas.draw()
-
     def reset_axes(self):
         """
         Clear and reset plot axes
@@ -772,6 +675,103 @@ class Qats(QMainWindow):
             self.history_canvas.draw()
 
         self.set_status("History plot updated", msecs=3000)
+
+    def plot_gumbel(self):
+        """
+        Create new closable tab widget with plot of fitted Gumbel cumulative distribution function to extremes
+        of selected time series
+        """
+        # get ui selections
+        checked_series = self.get_selected_items_in_model()
+        filterargs = self.get_filter_settings()
+        time_window = self.get_time_window()
+
+        if len(checked_series) < 2:
+            # no series were selected
+            logging.info("Too few time series selected to fit extreme CDF.")
+            return
+        else:
+            # get data series as dictionary of TimeSeries obj
+            series = self.db.getm(keys=checked_series, store=False)
+            sample = []     # initiate empty sample
+            names = []
+
+            for name, ts in series.items():
+                # path calculation to get relative path for enhanced legend readability
+                names.append(os.path.relpath(name, self.db_common_path))
+
+                # get data extreme (largest maxima or smallest minima)
+                _, tsdata = ts.geta(twin=time_window, filterargs=filterargs)
+
+                if self.maxima.isChecked():
+                    sample.append(np.max(tsdata))
+                else:
+                    sample.append(np.min(tsdata))
+
+            try:
+                sample = np.asarray(sample)
+                # estimate distribution parameters
+                if self.maxima.isChecked():
+                    # distribution of largest maximum
+                    location, scale = gumbel_pwm(sample)
+                    logging.info("Fitted Gumbel distribution to sample of %d maxima."
+                                 "Fitted distribution parameters (location, scale) = (%5.3g, %5.3g)"
+                                 % (sample.size, location, scale))
+                else:
+                    # distribution of smallest minimum
+                    sample *= -1.   # To model the minimum value, use the negative of the original values
+                    location, scale = gumbel_pwm(sample)
+                    logging.info("Fitted Gumbel distribution to sample of %d minima."
+                                 "Fitted distribution parameters (location, scale) = (%5.3g, %5.3g).\n"
+                                 "Note that the distribution parameters are based on the negative of the original "
+                                 "sample. Multiply the distribution quantiles by -1 before use."
+                                 % (sample.size, location, scale))
+
+                sample = np.sort(sample)
+                z_sample = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
+                z_fit = (sample - location) / scale
+
+            except (ValueError, ZeroDivisionError) as err:
+                logging.warning(err.__str__)
+                return
+
+            # create widget and attach to tab
+            w = QWidget()
+            fig = Figure()
+            canvas = FigureCanvas(fig)
+            canvas.setParent(w)
+            axes = fig.add_subplot(111)
+            toolbar = NavigationToolbar(canvas, self.upper_left_frame)
+            vbox = QVBoxLayout()
+            vbox.addWidget(canvas)
+            vbox.addWidget(toolbar)
+            w.setLayout(vbox)
+            self.tabs.addTab(w, "Extremes CDF")
+            tabindex = self.tabs.indexOf(w)
+            self.tabs.setTabToolTip(tabindex, "Plot fitted Gumbel cumulative distribution function "
+                                              "to extremes (maxima/minima) of selected time series")
+
+            if self.maxima.isChecked():
+                # plot largest maxima
+                axes.plot(sample, z_sample, 'ko', label='Data')
+                axes.plot(sample, z_fit, '-m', label='Fitted')
+            else:
+                # plot smallest minima. remember that the negative of the original sample was used when fitting
+                # invert the horizontal axis to have the smallest minima (largest in absolute sense) to the right
+                axes.invert_xaxis()
+                axes.plot(-1.*sample, z_sample, 'ko', label='Data')
+                axes.plot(-1.*sample, z_fit, '-m', label='Fitted')
+
+            # plotting positions and plot configurations
+            ylabels = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999])
+            yticks = -np.log(-np.log(ylabels))
+            axes.set_yticks(yticks)
+            axes.set_yticklabels(ylabels)
+            axes.legend(loc="upper left")
+            axes.grid(True)
+            axes.set_xlabel("Data")
+            axes.set_ylabel("Cumulative probability (-)")
+            canvas.draw()
 
     def plot_psd(self, container):
         """
