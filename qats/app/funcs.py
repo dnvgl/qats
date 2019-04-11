@@ -186,12 +186,8 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False):
         sample *= -1
 
     # estimate gumbel distribution parameters
-    try:
-        loc, scale = gumbel_pwm(sample)
-    except (ValueError, ZeroDivisionError):
-        raise
-    else:
-        return dict(loc=loc, scale=scale, sample=sample, minima=minima)
+    loc, scale = gumbel_pwm(sample)
+    return dict(loc=loc, scale=scale, sample=sample, minima=minima)
 
 
 def export_to_file(filename, db, names, twin, fargs):

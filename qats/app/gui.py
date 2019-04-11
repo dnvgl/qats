@@ -5,7 +5,6 @@ Module containing windows, widgets etc. to create the QATS application
 
 @author: perl
 """
-
 import logging
 import os
 from itertools import cycle
@@ -33,7 +32,8 @@ from .funcs import (
     calculate_trace,
     calculate_psd,
     calculate_rfc,
-    calculate_weibull_fit
+    calculate_weibull_fit,
+    calculate_gumbel_fit
 )
 
 
@@ -44,7 +44,8 @@ LOGGING_LEVELS = dict(
     error=logging.ERROR,
 )
 
-# todo: implement multithreading for creating special plots (tools)
+# TODO: New method that generalize threading
+# TODO: Explore how to create consecutive threads without handshake in main loop
 # todo: settings on file menu: nperseg= and detrend= for welch psd, Hz, rad/s or s for filters
 # todo: add technical guidance and result interpretation to help menu, link docs website
 # todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions, gumbel distributions etc.)
@@ -200,8 +201,8 @@ class Qats(QMainWindow):
         # unselect all items
         self.select_button = QPushButton("&Select all")
         self.unselect_button = QPushButton("&Unselect all")
-        self.select_button.clicked.connect(self.select_all_items_in_model)
-        self.unselect_button.clicked.connect(self.unselect_all_items_in_model)
+        self.select_button.clicked.connect(self.on_select_all)
+        self.unselect_button.clicked.connect(self.on_unselect_all)
         view_group = QGroupBox("Select time series")
         view_layout = QVBoxLayout()
         view_filter_hbox = QHBoxLayout()
@@ -406,7 +407,7 @@ class Qats(QMainWindow):
         plot_gumbel_action = QAction("Plot extremes CDF", self)
         plot_gumbel_action.setToolTip("Plot fitted Gumbel cumulative distribution function to extremes"
                                       " in selected time series")
-        plot_gumbel_action.triggered.connect(self.create_gumbel_plot)
+        plot_gumbel_action.triggered.connect(self.on_create_gumbel_plot)
 
         about_action = QAction("&About", self)
         about_action.setShortcut("F1")
@@ -551,7 +552,7 @@ class Qats(QMainWindow):
         self.db_common_path = self.db.common
         self.set_status()
 
-    def get_selected_items_in_model(self):
+    def selected_series(self):
         """
         Return list of names of checked series in item model
         """
@@ -574,7 +575,7 @@ class Qats(QMainWindow):
 
         return selected_items
 
-    def select_all_items_in_model(self):
+    def on_select_all(self):
         """
         Check all items in item model
         """
@@ -584,7 +585,7 @@ class Qats(QMainWindow):
             item = self.db_source_model.itemFromIndex(source_index)
             item.setCheckState(Qt.Checked)
 
-    def unselect_all_items_in_model(self):
+    def on_unselect_all(self):
         """
         Uncheck all items in item model
         """
@@ -594,108 +595,11 @@ class Qats(QMainWindow):
             item = self.db_source_model.itemFromIndex(source_index)
             item.setCheckState(Qt.Unchecked)
 
-    def get_time_window(self):
+    def time_window(self):
         """
         Time window from spin boxes
         """
         return self.from_time.value(), self.to_time.value()
-
-    def create_gumbel_plot(self):
-        """
-        Create new closable tab widget with plot of fitted Gumbel cumulative distribution function to extremes
-        of selected time series
-        """
-        # get ui selections
-        checked_series = self.get_selected_items_in_model()
-        filterargs = self.get_filter_settings()
-        time_window = self.get_time_window()
-
-        if len(checked_series) < 2:
-            # no series were selected
-            logging.info("Too few time series selected to fit extreme CDF.")
-            return
-        else:
-            # get data series as dictionary of TimeSeries obj
-            series = self.db.getm(names=checked_series, store=False)
-            sample = []     # initiate empty sample
-            names = []
-
-            for name, ts in series.items():
-                # path calculation to get relative path for enhanced legend readability
-                names.append(os.path.relpath(name, self.db_common_path))
-
-                # get data extreme (largest maxima or smallest minima)
-                _, tsdata = ts.get(twin=time_window, filterargs=filterargs)
-
-                if self.maxima.isChecked():
-                    sample.append(np.max(tsdata))
-                else:
-                    sample.append(np.min(tsdata))
-
-            try:
-                sample = np.asarray(sample)
-                # estimate distribution parameters
-                if self.maxima.isChecked():
-                    # distribution of largest maximum
-                    location, scale = gumbel_pwm(sample)
-                    logging.info("Fitted Gumbel distribution to sample of %d maxima."
-                                 "Fitted distribution parameters (location, scale) = (%5.3g, %5.3g)"
-                                 % (sample.size, location, scale))
-                else:
-                    # distribution of smallest minimum
-                    sample *= -1.   # To model the minimum value, use the negative of the original values
-                    location, scale = gumbel_pwm(sample)
-                    logging.info("Fitted Gumbel distribution to sample of %d minima."
-                                 "Fitted distribution parameters (location, scale) = (%5.3g, %5.3g).\n"
-                                 "Note that the distribution parameters are based on the negative of the original "
-                                 "sample. Multiply the distribution quantiles by -1 before use."
-                                 % (sample.size, location, scale))
-
-                sample = np.sort(sample)
-                z_sample = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
-                z_fit = (sample - location) / scale
-
-            except (ValueError, ZeroDivisionError) as err:
-                logging.warning(err.__str__)
-                return
-
-            # create widget and attach to tab
-            w = QWidget()
-            fig = Figure()
-            canvas = FigureCanvas(fig)
-            canvas.setParent(w)
-            axes = fig.add_subplot(111)
-            toolbar = NavigationToolbar(canvas, self.upper_left_frame)
-            vbox = QVBoxLayout()
-            vbox.addWidget(canvas)
-            vbox.addWidget(toolbar)
-            w.setLayout(vbox)
-            self.tabs.addTab(w, "Extremes CDF")
-            tabindex = self.tabs.indexOf(w)
-            self.tabs.setTabToolTip(tabindex, "Plot fitted Gumbel cumulative distribution function "
-                                              "to extremes (maxima/minima) of selected time series")
-
-            if self.maxima.isChecked():
-                # plot largest maxima
-                axes.plot(sample, z_sample, 'ko', label='Data')
-                axes.plot(sample, z_fit, '-m', label='Fitted')
-            else:
-                # plot smallest minima. remember that the negative of the original sample was used when fitting
-                # invert the horizontal axis to have the smallest minima (largest in absolute sense) to the right
-                axes.invert_xaxis()
-                axes.plot(-1.*sample, z_sample, 'ko', label='Data')
-                axes.plot(-1.*sample, z_fit, '-m', label='Fitted')
-
-            # plotting positions and plot configurations
-            ylabels = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999])
-            yticks = -np.log(-np.log(ylabels))
-            axes.set_yticks(yticks)
-            axes.set_yticklabels(ylabels)
-            axes.legend(loc="upper left")
-            axes.grid(True)
-            axes.set_xlabel("Data")
-            axes.set_ylabel("Cumulative probability (-)")
-            canvas.draw()
 
     def reset_axes(self):
         """
@@ -721,7 +625,7 @@ class Qats(QMainWindow):
         self.cycles_axes.set_ylabel('Cycle count (-)')
         self.cycles_canvas.draw()
 
-    def get_filter_settings(self):
+    def filter_settings(self):
         """
         Return filter type and cut off frequencies
         """
@@ -738,9 +642,9 @@ class Qats(QMainWindow):
 
         return args
 
-    def plot_history(self, container):
+    def plot_trace(self, container):
         """
-        Plot time series history and peaks/troughs
+        Plot time series trace and peaks/troughs
 
         Parameters
         ----------
@@ -856,40 +760,37 @@ class Qats(QMainWindow):
         # draw
         for name, value in container.items():
             x = value.get("sample")
-            a = value.get("loc")
-            b = value.get("scale")
-            c = value.get("shape")
+            loc = value.get("loc")
+            scale = value.get("scale")
+            shape = value.get("shape")
             is_minima = value.get("minima")
 
-            # to simplify logging message
-            if is_minima:
-                txt = "minima"
-            else:
-                txt = "maxima"
-
-            if x is not None:
-                logging.info("Fitted Weibull distribution to sample of %d %s from '%s'. "
-                             "(location, scale, shape) = (%5.3g, %5.3g, %5.3g)" % (x.size, txt, name, a, b, c))
-            else:
-                # skip is sample is NoneType, warning sent by thread
+            if x is None:
+                # skip
                 continue
 
             # flip sample to be able to plot sample on weibull scales
             if is_minima:
+                txt = "minima"
                 x *= -1.
+            else:
+                txt = "maxima"
 
             # normalize maxima/minima sample on weibull scales
             x = np.sort(x)  # sort ascending
-            mask = (x >= a)  # weibull paper plot will fail for mv-a < 0
-            x_norm = np.log(x[mask] - a)
+            mask = (x >= loc)  # weibull paper plot will fail for mv-loc < 0
+            x_norm = np.log(x[mask] - loc)
             ecdf_norm = np.log(np.log(1. / (1. - (np.arange(x.size) + 1.) / (x.size + 1.))))
-            q_fitted = b * (-np.log(1. - p_labels)) ** (1. / c)  # x-a
+            q_fitted = scale * (-np.log(1. - p_labels)) ** (1. / shape)  # x-loc
 
             # consider switching to np.any(), not sure what is more correct
             if np.all(q_fitted <= 0.):
                 logging.warning("Invalid sample for time series '%s'. Cannot fit Weibull distribution." % name)
-                pass
+
             else:
+                logging.info(f"Fitted Weibull distribution to {txt} sample of {x.size} from '{name}'. "
+                             f"(location, scale, shape) = ({loc}, {scale}, {shape})")
+
                 # normalized quantiles from fitted distribution (inside if-statement to avoid log(negative_num)
                 q_norm_fitted = np.log(q_fitted)
 
@@ -929,29 +830,88 @@ class Qats(QMainWindow):
 
             self.set_status("Weibull distribution plot updated", msecs=3000)
 
-    def process_timeseries(self, container):
+    def plot_gumbel(self, container):
         """
-        Process timeseries to calculate cycle distribution, power spectral density and max/min distributions
+        Create new closable tab widget with plot of fitted Gumbel cumulative distribution function to extremes
+        of selected time series
+
+        Parameters
+        ----------
+        container : dict
+            Sample and fitted Gumbel distribution parameters
+        """
+        # get sample and fitted distribution parameters
+        sample = container.get('sample')
+        loc = container.get('loc')
+        scale = container.get('scale')
+        is_minima = container.get('minima')
+
+        # nomalize sample distribution and fitted distribution
+        sample_dist = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
+        fitted_dist = (sample - loc) / scale
+
+        # create widget and attach to tab
+        w = QWidget()
+        fig = Figure()
+        canvas = FigureCanvas(fig)
+        canvas.setParent(w)
+        axes = fig.add_subplot(111)
+        toolbar = NavigationToolbar(canvas, self.upper_left_frame)
+        vbox = QVBoxLayout()
+        vbox.addWidget(canvas)
+        vbox.addWidget(toolbar)
+        w.setLayout(vbox)
+        self.tabs.addTab(w, "Extremes CDF")
+        tabindex = self.tabs.indexOf(w)
+        self.tabs.setTabToolTip(tabindex, "Plot fitted Gumbel cumulative distribution function "
+                                          "to extremes (maxima/minima) of selected time series")
+        if is_minima:
+            # TODO: Double check that this is correct considering sample multiplied with -1 etc.
+            axes.invert_xaxis()
+            txt = 'minima'
+        else:
+            txt = 'maxima'
+
+        # plot
+        # TODO: Double check if sample should be multiplied with -1 or not.
+        axes.plot(sample, sample_dist, 'ko', label='Data')
+        axes.plot(sample, fitted_dist, '-m', label='Fitted')
+
+        # plotting positions and plot configurations
+        ylabels = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999])
+        yticks = -np.log(-np.log(ylabels))
+        axes.set_yticks(yticks)
+        axes.set_yticklabels(ylabels)
+        axes.legend(loc="upper left")
+        axes.grid(True)
+        axes.set_xlabel("Data")
+        axes.set_ylabel("Cumulative probability (-)")
+        canvas.draw()
+
+        self.set_status("Gumbel distribution plot created", msecs=3000)
+        logging.info(f"Fitted Gumbel distribution to {txt} extreme sample of {sample.size}'. "
+                     f"(location, scale) = ({loc}, {scale})")
+
+    def start_times_series_processing_thread(self, container):
+        """
+        Start thread separate from main loop and process timeseries to calculate cycle distribution, power spectral
+        density and max/min distributions.
 
         Parameters
         ----------
         container : dict
             Container with TimeSeries objects
-
-        Notes
-        -----
-        Starts new threads for RFC, PSD and Weibull calculations while history plot is created directly.
         """
         self.set_status("Processing...", msecs=3000)
 
         # ui selections
-        twin = self. get_time_window()
-        fargs = self.get_filter_settings()
+        twin = self. time_window()
+        fargs = self.filter_settings()
 
         # start calculation of filtered and windows time series trace
         worker = Worker(calculate_trace, container, twin, fargs)
         worker.signals.error.connect(self.log_thread_exception)
-        worker.signals.result.connect(self.plot_history)
+        worker.signals.result.connect(self.plot_trace)
         self.threadpool.start(worker)
 
         # start calculations of psd
@@ -970,6 +930,27 @@ class Qats(QMainWindow):
         worker = Worker(calculate_rfc, container, twin, fargs)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_rfc)
+        self.threadpool.start(worker)
+
+    def start_gumbel_fit_thread(self, container):
+        """
+        Start thread separate from main loop to sample extremes and fit Gumbel distribution to sample
+
+        Parameters
+        ----------
+        container : dict
+            Container with TimeSeries objects
+        """
+        self.set_status("Processing...", msecs=3000)
+
+        # ui selections
+        twin = self. time_window()
+        fargs = self.filter_settings()
+
+        # start calculation of filtered and windows time series trace
+        worker = Worker(calculate_gumbel_fit, container, twin, fargs)
+        worker.signals.error.connect(self.log_thread_exception)
+        worker.signals.result.connect(self.plot_gumbel)
         self.threadpool.start(worker)
 
     def on_about(self):
@@ -998,7 +979,7 @@ class Qats(QMainWindow):
         msgbox.setIcon(QMessageBox.Information)
         msgbox.setTextFormat(Qt.RichText)
         msgbox.setText(msg.strip())
-        msgbox.setWindowTitle("About QATS - version %s" % version)
+        msgbox.setWindowTitle(f"About QATS - version {version}")
         msgbox.exec_()
 
     def on_clear(self):
@@ -1018,7 +999,7 @@ class Qats(QMainWindow):
         """
 
         # list of selected series
-        selected_series = self.get_selected_items_in_model()
+        selected_series = self.selected_series()
 
         if len(selected_series) >= 1:
             # update statusbar
@@ -1032,13 +1013,41 @@ class Qats(QMainWindow):
             worker.signals.error.connect(self.log_thread_exception)
 
             # grab results start further calculations
-            worker.signals.result.connect(self.process_timeseries)
+            worker.signals.result.connect(self.start_times_series_processing_thread)
 
             # Execute
             self.threadpool.start(worker)
         else:
             # inform user to select at least one time series before plotting
             logging.info("Select at least 1 time series before plotting.")
+
+    def on_create_gumbel_plot(self):
+        """
+        Create new tab with canvas and plot extremes sample on Gumbel scales
+        """
+
+        # list of selected series
+        selected_series = self.selected_series()
+
+        if len(selected_series) > 1:
+            # update statusbar
+            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
+
+            # Pass the function to execute, args, kwargs are passed to the run function
+            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
+            worker = Worker(read_timeseries, self.db, selected_series)
+
+            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
+            worker.signals.error.connect(self.log_thread_exception)
+
+            # grab results start further calculations
+            worker.signals.result.connect(self.start_gumbel_fit_thread)
+
+            # Execute
+            self.threadpool.start(worker)
+        else:
+            # inform user to select at least one time series before plotting
+            logging.info("Select more than 1 time series to fit a Gumbel distribution to sample of extremes.")
 
     def on_export(self):
         """
@@ -1055,11 +1064,11 @@ class Qats(QMainWindow):
                                       "All Files (*)", options=options)
 
         # get list of selected time series
-        keys = self.get_selected_items_in_model()
+        keys = self.selected_series()
 
         # get ui settings
-        fargs = self.get_filter_settings()
-        twin = self.get_time_window()
+        fargs = self.filter_settings()
+        twin = self.time_window()
 
         if name:    # nullstring if file dialog is cancelled
             # update statusbar
