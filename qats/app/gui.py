@@ -1101,6 +1101,7 @@ class Qats(QMainWindow):
                                         "Matlab files (*.mat);;"
                                         "ASCII file with header (*.dat);;"
                                         "SIMA H5 files (*.h5);;"
+                                        "CSV file with header (*.csv);;"
                                         "All Files (*)", options=options)
 
         # load files into db and update application model and view
