@@ -49,7 +49,6 @@ LOGGING_LEVELS = dict(
 # todo: settings on file menu: nperseg= and detrend= for welch psd, Hz, rad/s or s for filters
 # todo: add technical guidance and result interpretation to help menu, link docs website
 # todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions, gumbel distributions etc.)
-# todo: read .csv file and .xlsx files assuming keys in first row and time vector in first column
 # todo: read orcaflex time series files
 
 
@@ -575,25 +574,7 @@ class Qats(QMainWindow):
 
         return selected_items
 
-    def on_select_all(self):
-        """
-        Check all items in item model
-        """
-        for row_number in range(self.db_proxy_model.rowCount()):
-            proxy_index = self.db_proxy_model.index(row_number, 0)
-            source_index = self.db_proxy_model.mapToSource(proxy_index)
-            item = self.db_source_model.itemFromIndex(source_index)
-            item.setCheckState(Qt.Checked)
 
-    def on_unselect_all(self):
-        """
-        Uncheck all items in item model
-        """
-        for row_number in range(self.db_proxy_model.rowCount()):
-            proxy_index = self.db_proxy_model.index(row_number, 0)
-            source_index = self.db_proxy_model.mapToSource(proxy_index)
-            item = self.db_source_model.itemFromIndex(source_index)
-            item.setCheckState(Qt.Unchecked)
 
     def time_window(self):
         """
@@ -993,34 +974,6 @@ class Qats(QMainWindow):
         logging.info("Cleared all time series from database...")
         self.set_status()
 
-    def on_display(self):
-        """
-        Plot checked data series when pressing the 'show' button.
-        """
-
-        # list of selected series
-        selected_series = self.selected_series()
-
-        if len(selected_series) >= 1:
-            # update statusbar
-            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
-
-            # Pass the function to execute, args, kwargs are passed to the run function
-            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
-            worker = Worker(read_timeseries, self.db, selected_series)
-
-            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
-            worker.signals.error.connect(self.log_thread_exception)
-
-            # grab results start further calculations
-            worker.signals.result.connect(self.start_times_series_processing_thread)
-
-            # Execute
-            self.threadpool.start(worker)
-        else:
-            # inform user to select at least one time series before plotting
-            logging.info("Select at least 1 time series before plotting.")
-
     def on_create_gumbel_plot(self):
         """
         Create new tab with canvas and plot extremes sample on Gumbel scales
@@ -1048,6 +1001,34 @@ class Qats(QMainWindow):
         else:
             # inform user to select at least one time series before plotting
             logging.info("Select more than 1 time series to fit a Gumbel distribution to sample of extremes.")
+
+    def on_display(self):
+        """
+        Plot checked data series when pressing the 'show' button.
+        """
+
+        # list of selected series
+        selected_series = self.selected_series()
+
+        if len(selected_series) >= 1:
+            # update statusbar
+            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
+
+            # Pass the function to execute, args, kwargs are passed to the run function
+            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
+            worker = Worker(read_timeseries, self.db, selected_series)
+
+            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
+            worker.signals.error.connect(self.log_thread_exception)
+
+            # grab results start further calculations
+            worker.signals.result.connect(self.start_times_series_processing_thread)
+
+            # Execute
+            self.threadpool.start(worker)
+        else:
+            # inform user to select at least one time series before plotting
+            logging.info("Select at least 1 time series before plotting.")
 
     def on_export(self):
         """
@@ -1166,3 +1147,23 @@ class Qats(QMainWindow):
             self.bandpass_hf.setEnabled(False)
             self.bandblock_lf.setEnabled(True)
             self.bandblock_hf.setEnabled(True)
+
+    def on_select_all(self):
+        """
+        Check all items in item model
+        """
+        for row_number in range(self.db_proxy_model.rowCount()):
+            proxy_index = self.db_proxy_model.index(row_number, 0)
+            source_index = self.db_proxy_model.mapToSource(proxy_index)
+            item = self.db_source_model.itemFromIndex(source_index)
+            item.setCheckState(Qt.Checked)
+
+    def on_unselect_all(self):
+        """
+        Uncheck all items in item model
+        """
+        for row_number in range(self.db_proxy_model.rowCount()):
+            proxy_index = self.db_proxy_model.index(row_number, 0)
+            source_index = self.db_proxy_model.mapToSource(proxy_index)
+            item = self.db_source_model.itemFromIndex(source_index)
+            item.setCheckState(Qt.Unchecked)
