@@ -989,7 +989,7 @@ class Qats(QMainWindow):
               "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
               "Import qats Python package and use the API when you need advanced features or want to extend it's " \
               "functionality.<br><br>" \
-              "Feature requests, technical queries and bug reports should be directed to the developers on " \
+              "Please send feature requests, technical queries and bug reports to the developers on " \
               "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
               "ENJOY!"
 
