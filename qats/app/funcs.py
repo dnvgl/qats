@@ -68,6 +68,37 @@ def calculate_rfc(container, twin, fargs, nbins=256):
     return container_out
 
 
+def calculate_trace(container, twin, fargs):
+    """
+    Calculate trace and peaks/troughs of filtered time series
+
+    Parameters
+    ----------
+    container : dict
+        TimeSeries objects
+    twin : tuple
+        Time window. Time series are cropped to time window before extracting maxima.
+    fargs : tuple
+        Filter arguments. Time series are filtered before extracting maxima.
+
+    Returns
+    -------
+    dict
+        Filtered and windowed time series and peaks/throughs
+    """
+    container_out = dict()
+
+    for name, ts in container.items():
+        t, x = ts.get(twin=twin, filterargs=fargs)
+        xmin, tmin = ts.minima(twin=twin, filterargs=fargs, rettime=True)
+        xmax, tmax = ts.maxima(twin=twin, filterargs=fargs, rettime=True)
+
+        container_out[name] = dict(t=t, x=x, tmin=tmin, xmin=xmin,
+                                   tmax=tmax, xmax=xmax)
+
+    return container_out
+
+
 def calculate_weibull_fit(container, twin, fargs, minima=False):
     """
     Calculate time series maxima and fit Weibull distribution

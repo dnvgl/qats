@@ -9,7 +9,6 @@ Module containing windows, widgets etc. to create the QATS application
 import logging
 import os
 from itertools import cycle
-
 import numpy as np
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
@@ -22,13 +21,20 @@ from matplotlib.figure import Figure
 from pkg_resources import resource_filename, get_distribution, DistributionNotFound
 
 from .logger import QLogger
-from .funcs import export_to_file, import_from_file, read_timeseries, calculate_psd, calculate_rfc, calculate_weibull_fit
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
 from .widgets import CustomTabWidget
 from ..tsdb import TsDB
 from ..stats import empirical_cdf
-from ..gumbel import pwm as gumbel_pwm
+from .funcs import (
+    export_to_file,
+    import_from_file,
+    read_timeseries,
+    calculate_trace,
+    calculate_psd,
+    calculate_rfc,
+    calculate_weibull_fit
+)
 
 
 LOGGING_LEVELS = dict(
@@ -732,18 +738,14 @@ class Qats(QMainWindow):
 
         return args
 
-    def plot_history(self, container, twin, fargs):
+    def plot_history(self, container):
         """
-        Plot time series history
+        Plot time series history and peaks/troughs
 
         Parameters
         ----------
         container : dict
-            TimeSeries objects
-        twin : tuple
-            Time window. Time series are cropped to time window before estimating psd.
-        fargs : tuple
-            Filter arguments. Time series are filtered before estimating psd.
+            Time, data, peak and trough values
         """
         # clear axes
         self.history_axes.clear()
@@ -751,22 +753,17 @@ class Qats(QMainWindow):
         self.history_axes.set_xlabel('Time (s)')
 
         # draw
-        for name, ts in container.items():
+        for name, data in container.items():
             # plot timetrace
-            time, data = ts.get(twin=twin, filterargs=fargs)
-            self.history_axes.plot(time, data, '-', label=name)
+            self.history_axes.plot(data.get('t'), data.get('x'), '-', label=name)
 
             # include maxima/minima if requested
-            if self.show_minmax.isChecked():
-                if self.maxima.isChecked():
-                    # find maxima and corresponding time
-                    m, tm = ts.maxima(twin=twin, filterargs=fargs, rettime=True)
-                else:
-                    # find minima and corresponding time
-                    m, tm = ts.maxima(twin=twin, filterargs=fargs, rettime=True)
-
-                # plot maxima/minima
-                self.history_axes.plot(tm, m, 'v')
+            if self.show_minmax.isChecked() and self.maxima.isChecked():
+                # maxima
+                self.history_axes.plot(data.get('tmax'), data.get('xmax'), 'o')
+            elif self.show_minmax.isChecked() and self.minima.isChecked():
+                # minima
+                self.history_axes.plot(data.get('tmin'), data.get('xmin'), 'o')
 
             self.history_axes.legend(loc="upper left")
             self.history_canvas.draw()
@@ -951,9 +948,11 @@ class Qats(QMainWindow):
         twin = self. get_time_window()
         fargs = self.get_filter_settings()
 
-        # update history plot, send twin and fargs through to avoid application of different twin and fargs in history
-        # plot and the other plots
-        self.plot_history(container, twin, fargs)
+        # start calculation of filtered and windows time series trace
+        worker = Worker(calculate_trace, container, twin, fargs)
+        worker.signals.error.connect(self.log_thread_exception)
+        worker.signals.result.connect(self.plot_history)
+        self.threadpool.start(worker)
 
         # start calculations of psd
         worker = Worker(calculate_psd, container, twin, fargs)
