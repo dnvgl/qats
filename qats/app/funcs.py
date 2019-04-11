@@ -1,10 +1,10 @@
 """
 Module with functions for handling file operations and calculations. Made for multithreading.
 """
+import numpy as np
 from ..tsdb import TsDB
 from ..weibull import pwm as weibull_pwm
-
-# todo: Create calculate gumbel fit (meant for tools->create extreme value distribution)
+from ..gumbel import pwm as gumbel_pwm
 
 
 def calculate_psd(container, twin, fargs):
@@ -113,12 +113,11 @@ def calculate_weibull_fit(container, twin, fargs, minima=False):
         Filter arguments. Time series are filtered before extracting maxima.
     minima : bool, optional
         Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
-        The returned sample is
 
     Returns
     -------
     dict
-        Frequency versus power spectral density
+        Sample and fitted weibull distribution parameters
     """
     container_out = dict()
 
@@ -142,6 +141,57 @@ def calculate_weibull_fit(container, twin, fargs, minima=False):
         container_out[name] = dict(sample=m, loc=a, scale=b, shape=c, minima=minima)
 
     return container_out
+
+
+def calculate_gumbel_fit(container, twin, fargs, minima=False):
+    """
+    Calculate time series extremes and fit Gumbel distribution
+
+    Parameters
+    ----------
+    container : dict
+        TimeSeries objects
+    twin : tuple
+        Time window. Time series are cropped to time window before extracting maxima.
+    fargs : tuple
+        Filter arguments. Time series are filtered before extracting maxima.
+    minima : bool, optional
+        Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
+
+    Returns
+    -------
+    dict
+        Sample and fitted gumbel distribution parameters
+    """
+    if len(container.keys()) < 2:
+        raise ValueError(f"Select more than 1 time series to fit Gumbel CDF to extremes sample.")
+
+    # create sample of extremes
+    sample = list()
+    for name, ts in container.items():
+        _, x = ts.get(twin=twin, filterargs=fargs)
+
+        if minima:
+            # sample minimum value
+            sample.append(np.min(x))
+        else:
+            # sample maximum value
+            sample.append(np.max(x))
+
+    # numpy array sorted ascending
+    sample = np.sort(np.array(sample))
+
+    # flip sample of minima to enable Gumbel fit
+    if minima:
+        sample *= -1
+
+    # estimate gumbel distribution parameters
+    try:
+        loc, scale = gumbel_pwm(sample)
+    except (ValueError, ZeroDivisionError):
+        raise
+    else:
+        return dict(loc=loc, scale=scale, sample=sample, minima=minima)
 
 
 def export_to_file(filename, db, names, twin, fargs):
