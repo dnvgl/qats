@@ -20,7 +20,7 @@ setup(
     setup_requires=["setuptools_scm"],
     packages=find_packages(exclude=("test",)),
     package_data={
-        "qats.app": ["qats.ico", "qats_gui.png"],
+        "qats.app": ["qats.ico"],
     },
     entry_points={
         'gui_scripts': [
