@@ -24,7 +24,7 @@ setup(
     },
     entry_points={
         'gui_scripts': [
-            'qats-gui = qats.app.launcher:main'
+            'qats-gui = qats.app.cli:main'
         ],
     },
     cmdclass={
