@@ -574,8 +574,6 @@ class Qats(QMainWindow):
 
         return selected_items
 
-
-
     def time_window(self):
         """
         Time window from spin boxes

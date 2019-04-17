@@ -30,3 +30,4 @@ class QLogger(logging.Handler):
         """
         record = self.format(record)
         self.widget.append(record)
+
