@@ -55,7 +55,6 @@ test:
     - qats -h
     - qats app -h
     - qats config -h
-    - qats-app -h
 
 about:
   home: {{ data.get('url') }}
