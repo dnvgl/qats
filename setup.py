@@ -12,13 +12,6 @@ version = get_version()
 setup(
     name="qats",
     version=version,
-    author="Per Voie & Erling Lone",
-    author_email="",
-    url="https://github.com/dnvgl/qats",
-    license="MIT",
-    description="A python library for time series processing and visualization, including spectral analysis and "
-                "statistical processing.",
-    setup_requires=[],
     packages=find_packages(exclude=("test",)),
     package_data={
         "qats.app": ["qats.ico"],
@@ -38,5 +31,21 @@ setup(
             "builder": ("setup.py", "html")
         }
     },
-    zip_safe=True
+    zip_safe=True,
+
+    # meta-data
+    author="Per Voie & Erling Lone",
+    description="Process and visualize time series.",
+    long_description="A python library for time series processing and visualization, including spectral analysis and "
+                     "statistical processing.",
+    license="MIT",
+    url="https://github.com/dnvgl/qats",
+    download_url="",
+    project_urls={
+        "Source Code": "https://github.com/dnvgl/qats",
+        "Issue Tracker": "https://github.com/dnvgl/qats/issues",
+        "Documentation": "",
+        "Conda channel": "",
+    }
+
 )

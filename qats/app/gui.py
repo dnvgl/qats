@@ -18,7 +18,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from pkg_resources import resource_filename, get_distribution, DistributionNotFound
-
 from .logger import QLogger
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
