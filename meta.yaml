@@ -14,11 +14,11 @@ package:
 # where to fetch the source code
 source:
   # use path when building locally (remember to switch off git tag versioning)
-  # path: ../
+  path: .
   # clone repository
-  git_url: ../
+  #git_url: .
   # and checkout certain revision by tag (if not branch head is used)
-  git_tag:
+  #git_tag:
 
 # build specifications
 build:
@@ -34,13 +34,13 @@ requirements:
   build:
     - python
     - setuptools_scm >=3,<4
-    - sphinx >=1,<2
   run:
     - python
     - setuptools_scm >=3,<4
-    - matplotlib >=3,<4
     - openpyxl >=2,<3
+    - numpy >=1,<2
     - scipy >=1,<2
+    - matplotlib >=3,<4
     - h5py >=2.7,<3
     - pyqt >=5.6.0,<6
     - pandas >=0.24,<1
@@ -50,6 +50,8 @@ exclude:
   - menuinst
 
 test:
+  imports:
+    - qats
   commands:
     - python -m unittest
     - qats -h

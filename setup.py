@@ -35,9 +35,11 @@ setup(
 
     # meta-data
     author="Per Voie & Erling Lone",
-    description="Process and visualize time series.",
-    long_description="A python library for time series processing and visualization, including spectral analysis and "
-                     "statistical processing.",
+    description="Library for efficient processing and visualization of time series.",
+    long_description="A python library for efficient processing and visualizing time series. The libary provides a "
+                     "TimeSeries class and TsDB class holding several TimeSeries objects. And functions for "
+                     "estimation of power spectral density, fitting of probability distributions, sample statistics, "
+                     "extreme value statistics and rainflow cycle counting.",
     license="MIT",
     url="https://github.com/dnvgl/qats",
     download_url="",
