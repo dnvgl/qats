@@ -33,19 +33,17 @@ build:
 requirements:
   build:
     - python
-    - setuptools >=40,<41
     - setuptools_scm >=3,<4
     - sphinx >=1,<2
   run:
     - python
-    - setuptools >=40,<41
     - setuptools_scm >=3,<4
     - matplotlib >=3,<4
     - openpyxl >=2,<3
-    - numpy >=1,<2
     - scipy >=1,<2
     - h5py >=2.7,<3
     - pyqt >=5.6.0,<6
+    - pandas >=0.24,<1
     - pywin32 # [win]
 
 exclude:
