@@ -1,0 +1,12 @@
+h5py==2.9.0
+matplotlib==3.0.3
+numpy==1.16.3
+openpyxl==2.6.2
+pandas==0.24.2
+PyQt5==5.12.1
+scipy==1.2.1
+setuptools-scm==3.2.0
+wheel==0.33.1
+Sphinx==2.0.1
+sphinx_bootstrap_theme==0.7.1
+tox==3.9.0
