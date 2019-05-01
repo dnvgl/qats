@@ -11,9 +11,7 @@
 import os
 import sys
 import sphinx_bootstrap_theme
-
-sys.path.insert(0, os.path.relpath(os.path.join('..', '..')))
-
+sys.path.append(os.path.abspath(os.path.join('..', '..')))
 
 # -- General configuration ------------------------------------------------
 
@@ -34,9 +32,9 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
     'sphinx.ext.ifconfig',
-    'm2r',
-    # 'sphinx.ext.viewcode',  # remove this one to disable code view
     # 'numpydoc',
+    # 'm2r',
+    # 'sphinx.ext.viewcode',  # remove this one to disable code view
 ]
 
 # Add any paths that contain templates here, relative to this directory.
