@@ -3,23 +3,18 @@
 Setup script for building and installing package and building html documentation
 """
 from setuptools import setup, find_packages
-from setuptools_scm import get_version
-
-# Set the package version according to semantic versioning scheme
-version = get_version()
 
 setup(
     # package data
     name="qats",
-    version=version,
+    use_scm_version=True,
     packages=find_packages(exclude=("test",)),
     package_data={
         "qats.app": ["qats.ico"],
     },
     python_requires="~=3.6",
-    setup_requires=["setuptools_scm>=3,<4"],
+    setup_requires=["setuptools_scm"],
     install_requires=[
-        "setuptools_scm>=3,<4",
         "openpyxl>=2,<3",
         "numpy>=1,<2",
         "scipy>=1,<2",
