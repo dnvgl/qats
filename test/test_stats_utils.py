@@ -4,8 +4,7 @@ Module for testing stats functions
 """
 import unittest
 import numpy as np
-from qats.filters import smooth
-from qats.stats import average_frequency
+from qats.signal import smooth, average_frequency
 from qats.gumbel import _euler_masceroni
 
 

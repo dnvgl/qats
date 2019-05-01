@@ -6,7 +6,9 @@ import numpy as np
 from scipy.special import gamma, binom
 from scipy.optimize import leastsq, fsolve, brentq
 import matplotlib.pyplot as plt
-from .stats import empirical_cdf, find_maxima
+from .stats import empirical_cdf
+from .signal import find_maxima
+
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -370,7 +372,7 @@ class Weibull(object):
 
         Note that the example above is equivalent to:
 
-        >>> from qats.stats import find_maxima
+        >>> from qats.signal import find_maxima
         >>> sample = find_maxima(x, local=False, threshold=None, up=True, retind=False)
         >>> weib = Weibull.fit(sample, method='msm')
         """
