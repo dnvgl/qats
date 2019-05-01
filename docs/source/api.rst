@@ -3,33 +3,14 @@
 Documentation of **qats** API
 #############################
 
-Overview
-********
+General
+*******
 
-The **qats** python package consists of several modules, documented in the sections below:
-
-
-.. currentmodule:: qats
-
-.. autosummary::
-    qats.tsdb
-    qats.ts
-    qats.rainflow
-    qats.weibull
-    qats.gumbel
-    qats.stats
-    qats.readers
-
-
-qats.tsdb
-*********
-
-.. automodule:: qats.tsdb
-    :exclude-members: TsDB
-
+The **qats** python package consists of several modules with classes and functions which are documented in the sections
+below.
 
 TsDB class
-==========
+**********
 
 .. autoclass:: qats.tsdb.TsDB
     :members:
@@ -48,15 +29,8 @@ TsDB class
     .. rubric:: API
 
 
-qats.ts
-*******
-
-.. automodule:: qats.ts
-    :exclude-members: TimeSeries
-
-
 TimeSeries class
-================
+****************
 
 .. autoclass:: qats.ts.TimeSeries
     :members:
@@ -74,26 +48,48 @@ TimeSeries class
 
     .. rubric:: API
 
+Statistics
+**********
 
-qats.rainflow
-*************
+.. automodule:: qats.stats
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.stats
+       :functions:
+
+    .. rubric:: API
+
+Signal processing
+*****************
+
+.. automodule:: qats.signal
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.signal
+       :functions:
+
+    .. rubric:: API
+
+
+Rainflow counting
+*****************
 
 .. automodule:: qats.rainflow
     :members:
 
-    .. rubric:: Functions
+    .. rubric:: Function overview
 
     .. autoautosummary:: qats.rainflow
        :functions:
 
     .. rubric:: API
 
-
-qats.weibull
-************
-
-.. .. automodule:: qats.weibull
-..     :no-members:
+Weibull distribution
+********************
 
 Weibull class
 =============
@@ -102,7 +98,7 @@ Weibull class
     :members:
     :undoc-members:
 
-    .. rubric:: Properties
+    .. rubric:: Attributes
 
     .. autoautosummary:: qats.weibull.Weibull
         :attributes:
@@ -125,9 +121,8 @@ Functions
 
     .. rubric:: API
 
-
-qats.gumbel
-***********
+Gumbel distribution
+*******************
 
 Gumbel class
 ============
@@ -136,7 +131,7 @@ Gumbel class
     :members:
     :undoc-members:
 
-    .. rubric:: Properties
+    .. rubric:: Attributes
 
     .. autoautosummary:: qats.gumbel.Gumbel
         :attributes:
@@ -159,36 +154,85 @@ Functions
 
     .. rubric:: API
 
+Readers
+*******
 
-qats.stats
-**********
+Readers for common standard file formats used for storing time series.
 
-.. Statistical functions and signal processing
-.. ===========================================
+SIMA
+====
 
-.. automodule:: qats.stats
+.. automodule:: qats.readers.sima
     :members:
 
-    .. rubric:: Functions
+    .. rubric:: Function overview
 
-    .. autoautosummary:: qats.stats
+    .. autoautosummary:: qats.readers.sima
         :functions:
 
     .. rubric:: API
 
+SIMA H5
+=======
 
-qats.readers
-************
-
-.. Reader functions
-.. ================
-
-.. automodule:: qats.readers
+.. automodule:: qats.readers.sima_h5
     :members:
 
-    .. rubric:: Functions
+    .. rubric:: Function overview
 
-    .. autoautosummary:: qats.readers
+    .. autoautosummary:: qats.readers.sima_h5
+        :functions:
+
+    .. rubric:: API
+
+Direct access
+=============
+
+.. automodule:: qats.readers.direct_access
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.readers.direct_access
+        :functions:
+
+    .. rubric:: API
+
+Matlab
+======
+
+.. automodule:: qats.readers.matlab
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.readers.matlab
+        :functions:
+
+    .. rubric:: API
+
+CSV
+===
+
+.. automodule:: qats.readers.csv
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.readers.csv
+        :functions:
+
+    .. rubric:: API
+
+Other
+=====
+
+.. automodule:: qats.readers.other
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.readers.other
         :functions:
 
     .. rubric:: API
