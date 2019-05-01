@@ -49,10 +49,12 @@ All you need is a Python 3.x installation from either https://www.python.org or 
 
 To get the development environment running
 
-.. create an isolated Python environment,
+.. create an isolated Python environment and activate it,
 
 ```console
 python -m venv /path/to/new/virtual/environment
+
+/path/to/new/virtual/environment/Scripts/activate
 ```
 
 .. install the dev dependencies in [requirements.txt](requirements.txt)
@@ -115,8 +117,8 @@ TODO
 
 ## Versioning
 
-We use [SemVer](http://semver.org/) for versioning. For the versions available, see the 
-[tags on this repository](https://github.com/dnvgl/qats/tags).
+We use [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) for versioning. For the versions 
+available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
 
 ## Authors
 
