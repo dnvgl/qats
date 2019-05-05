@@ -43,7 +43,11 @@ purposes. See deployment for notes on how to deploy the project on a live system
 
 ### Prerequisites
 
-All you need is a Python 3.x installation from either https://www.python.org or https://www.anaconda.com.
+Install Python version 3.6 or later from either https://www.python.org or https://www.anaconda.com.
+
+### Clone the source code repository
+
+At the desired location run ```git clone https://github.com/dnvgl/qats.git```
 
 ### Installing
 
@@ -69,16 +73,14 @@ pip install -r requirements.txt
 python setup.py develop
 ```
 
-Does the stuff work?
-
-Ensure that you can import the package in the Python console
+Now you should be able to import the package in the Python console
 
 ```python
 import qats
 help(qats)
 ```
 
-.. and that the command line interface (CLI) is working.
+.. and the command line interface (CLI).
 
 ```console
 qats -h

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Tools for working with time series and various time series file formats.
+Library for efficient processing and visualization of time series.
 """
 from .tsdb import TsDB
 from .ts import TimeSeries
