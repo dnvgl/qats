@@ -6,34 +6,49 @@
 Welcome to QATS's documentation!
 ################################
 
-.. todo:: Update links to GitHub, ReadTheDocs and Conda with correct account name, project name and channel name
-
 General description
 *******************
 
-QATS is a python package and GUI for inspection and analysis of time series. It provides readers and writers for the
-most common time series file formats used within marine engineering e.g. output from SIMA (SIMO & RIFLEX)
-and more. QATS is a tool for analysis of time series and easy reporting of time domain calculations.
+QATS is a python library and GUI for efficient inspection and analysis of time series. It simplifies and improves
+post-processing, quality assurance and reporting of time-domain simulations.
 
-Use the :ref:`gui` to quickly inspect and analyse time series and prepare plots for reporting.
+Library
+*******
 
-See :ref:`examples` for more examples on how to invoke QATS in your own scripts to do more advance operations.
+The python library provides tools for:
 
-:ref:`api` provide information on the content of the QATS package.
+* Import and export from/to various pre-defined time series file formats
+* Signal processing
+* Inferring statistical distributions
+* Cycle counting using the Rainflow algorithm
 
+It was originally created to handle time series files exported from `SIMO <https://www.dnvgl.com/services/complex-multibody-calculations-simo-2311/>`_
+and `RIFLEX <https://www.dnvgl.com/services/riser-analysis-software-for-marine-riser-systems-riflex-2312>`_. Now it also
+handles `SIMA <https://www.dnvgl.com/services/marine-operations-and-mooring-analysis-software-sima-2324>`_ hdf5 (.h5) files,
+Matlab (version < 7.3) .mat files, CSV files and more. If you need handlers for other formats, create a feature
+request (issue) or make it yourself and create a pull request.
+
+See :ref:`examples` for more examples on how to invoke QATS in your own scripts to do more advance operations. :ref:`api`
+provide information on the content of the QATS library.
+
+GUI
+***
+
+QATS also features a :ref:`gui` which offers low threshold processing and vizualisation of time series. It is perfect for
+inspecting, quality assurance and reporting. Use the library for more advanced operations.
+
+.. image:: qats_gui.png
 
 Source code
 ***********
 
-The `source code <https://github.com/account/qats>`_ and `issue tracker <https://github.com/account/qats/issues>`_ is on
+The `source code <https://github.com/dnvgl/qats>`_ and `issue tracker <https://github.com/dnvgl/qats/issues>`_ is on
 GitHub.
 
-Installation
-************
+Downloads
+*********
 
-To install the package with conda run `conda install -c <channel> qats`.
-
-See `<https://anaconda.org/account/qats>`_ for details about the conda package.
+You can download and install QATS from `PYPI <https://pypi.org/project/qats/>`_.
 
 Table of contents
 *****************

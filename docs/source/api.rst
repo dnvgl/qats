@@ -1,7 +1,7 @@
 .. _api:
 
-Documentation of **qats** API
-#############################
+API
+###
 
 General
 *******

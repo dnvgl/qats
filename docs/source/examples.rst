@@ -1,7 +1,7 @@
 .. _examples:
 
-Examples on use
-###############
+Code examples
+#############
 
 .. note:: More examples will be provided on request.
 
@@ -37,6 +37,7 @@ a varying time step the the time series are resampled to a constant time step of
 
 Count cycles using the Rainflow algorithm
 *****************************************
+
 Fetch a single time series from the time series database and count the cycles in the time series using the the
 Rainflow algorithm.
 
@@ -47,6 +48,9 @@ Rainflow algorithm.
 
 Apply low-pass and high-pass filters to time series
 ***************************************************
+
+Initiate time series database and load time series file in one go. Plot the low-passed and high-passed time series and
+the sum of those.
 
 .. literalinclude:: examples\timeseries_filter.py
    :language: python
