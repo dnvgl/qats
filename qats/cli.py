@@ -8,9 +8,9 @@ import argparse
 import sysconfig
 from PyQt5.QtWidgets import QApplication
 from pkg_resources import resource_filename
-from qats.app.exceptions import handle_exception
-from qats.app.gui import Qats, LOGGING_LEVELS
-from qats import __version__
+from .app.exceptions import handle_exception
+from .app.gui import Qats, LOGGING_LEVELS
+from . import __version__
 
 
 def link_app():
