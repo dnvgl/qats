@@ -393,7 +393,7 @@ class Qats(QMainWindow):
         export_action.triggered.connect(self.on_export)
 
         clear_action = QAction("&Clear", self)
-        clear_action.setShortcut("Ctrl+C")
+        clear_action.setShortcut("Ctrl+Del")
         clear_action.setStatusTip("Clear all time series from database")
         clear_action.triggered.connect(self.on_clear)
 
