@@ -946,8 +946,8 @@ class Qats(QMainWindow):
         # todo: Insert link to github issue tracker
         msg = "This is a low threshold tool for inspection of time series, power spectra and statistics. " \
               "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
-              "Import qats Python package and use the API when you need advanced features or want to extend it's " \
-              "functionality.<br><br>" \
+              "Import qats Python package and use the <a href='https://readthedocs.org/projects/qats/'>API</a> " \
+              "when you need advanced features or want to extend it's functionality.<br><br>" \
               "Please send feature requests, technical queries and bug reports to the developers on " \
               "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
               "ENJOY!"
