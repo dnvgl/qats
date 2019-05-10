@@ -557,9 +557,9 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
     # no global or local maxima if the signal crosses mean only once
     if n_crossings < 2:
         if retind:
-            return None, None
+            return np.array([]), np.array([], dtype=int)
         else:
-            return None
+            return np.array([])
 
     crossing_indices = np.where(crossings == indicator)[0] + 1  # indices for crossings
 

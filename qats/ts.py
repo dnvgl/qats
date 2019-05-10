@@ -774,8 +774,7 @@ class TimeSeries(object):
         # find maxima (and associated time, if specified)
         if rettime is True:
             m, ind = find_maxima(x, local=local, threshold=threshold, retind=True)
-            tm = t[ind]
-            return m, tm
+            return m, t[ind]
         else:
             m = find_maxima(x, local=local, threshold=threshold, retind=False)
             return m
@@ -868,17 +867,10 @@ class TimeSeries(object):
         # find minima (and associated time, if specified)
         if rettime is True:
             m, ind = find_maxima(x, local=local, threshold=threshold, retind=True)
-            tm = t[ind]
+            return -1. * m, t[ind]  # reverse flip
         else:
             m = find_maxima(x, local=local, threshold=threshold, retind=False)
-
-        # flip back so that maxima becomes minima
-        m *= -1.
-
-        if rettime is True:
-            return m, tm
-        else:
-            return m
+            return -1. * m          # reverse flip
 
     def modify(self, **kwargs):
         """
