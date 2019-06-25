@@ -3,40 +3,45 @@
 Setup script for building and installing package and building html documentation
 """
 from setuptools import setup, find_packages
-from setuptools_scm import get_version
-from sphinx.setup_command import BuildDoc
-
-# version number
-version = get_version()
 
 setup(
+    # package data
     name="qats",
-    version=version,
-    author="Per Voie & Erling Lone",
-    author_email="",
-    url="",
-    license="MIT",
-    description="Tools for working with time series and various time series file formats.",
-    setup_requires=["setuptools_scm"],
+    use_scm_version=True,
     packages=find_packages(exclude=("test",)),
     package_data={
-        "qats.app": ["qats.ico", "qats_gui.png"],
+        "qats.app": ["qats.ico"],
     },
+    python_requires="~=3.6",
+    setup_requires=["setuptools_scm"],
+    install_requires=[
+        "openpyxl>=2,<3",
+        "numpy>=1,<2",
+        "scipy>=1,<2",
+        "matplotlib>=3,<4",
+        "h5py>=2.7,<3",
+        "PyQt5>=5.6,<6",
+        "pandas>=0.24,<1",
+        "pywin32; platform_system == 'Windows'"
+    ],
     entry_points={
-        'gui_scripts': [
-            'qats-gui = qats.app.launcher:main'
-        ],
+        "console_scripts": ["qats = qats.cli:main"],
+        "gui_scripts": ["qats-app = qats.cli:launch_app"]
     },
-    cmdclass={
-        "build_docs": BuildDoc      # directive that builds the sphinx documentation
-    },
-    command_options={
-        "build_docs": {
-            "version": ("setup.py", version),
-            "source_dir": ("setup.py", "docs/source"),
-            "build_dir": ("setup.py", "docs/_build"),
-            "builder": ("setup.py", "html")
-        }
-    },
-    zip_safe=True
+    zip_safe=True,
+
+    # meta-data
+    author="Per Voie & Erling Lone",
+    description="Library for efficient processing and visualization of time series.",
+    long_description="The libary provides a TimeSeries class and TsDB class holding several TimeSeries objects. And "
+                     "functions for estimation of power spectral density, fitting of probability distributions, sample "
+                     "statistics, extreme value statistics and rainflow cycle counting.",
+    license="MIT",
+    url="https://github.com/dnvgl/qats",
+    download_url="https://pypi.org/project/qats/",
+    project_urls={
+        "Issue Tracker": "https://github.com/dnvgl/qats/issues",
+        "Documentation": "https://readthedocs.org/projects/qats/",
+    }
+
 )
