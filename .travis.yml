@@ -14,4 +14,5 @@ deploy:
   distributions: "bdist_wheel"
   on:
     tags: true
+  skip_existing: true
   verbose: true
