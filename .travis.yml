@@ -13,6 +13,5 @@ deploy:
   password: $PYPI_PASSWORD
   distributions: "bdist_wheel"
   on:
-    branch: master
     tags: true
   verbose: true
