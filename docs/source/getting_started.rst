@@ -81,7 +81,7 @@ Your first script
 
 Import the time series database, load data to it from file and plot it all.
 
-.. literalinclude:: examples\plot.py
+.. literalinclude:: examples/plot.py
    :language: python
    :linenos:
    :lines: 1-17
