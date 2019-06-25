@@ -33,7 +33,7 @@ perfect for inspecting, comparing and reporting:
 
 * [**Source**](https://github.com/dnvgl/qats)
 * [**Issues**](https://github.com/dnvgl/qats/issues)
-* [**Documentation**](https://readthedocs.org/projects/qats/)
+* [**Documentation**](https://qats.readthedocs.io)
 * [**Download**](https://pypi.org/project/qats/)
 
 ## Getting started
