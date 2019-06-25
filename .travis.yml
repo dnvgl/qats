@@ -7,6 +7,10 @@ python:
 install: pip install tox-travis
 script: tox
 
+branches:
+  only: 
+    - master
+
 deploy:
   provider: pypi
   user: $PYPI_USER
