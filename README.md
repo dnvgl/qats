@@ -147,12 +147,12 @@ Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/)
 
 We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/).
 
-Versions are tagged We use [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) to versioning. For the versions 
-available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
+We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage)
+takes care of the rest. For the versions available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
 
 ## Authors
 
-* **Per Voie** - [tovoop](https://github.com/tovop)
+* **Per Voie** - [tovop](https://github.com/tovop)
 * **Erling Lone** - [eneelo](https://github.com/eneelo)
 
 ## License
