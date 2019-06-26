@@ -29,7 +29,7 @@ perfect for inspecting, comparing and reporting:
 - cycle distributions
 
 <!-- create a gif that demonstrate the GUI -->
-![qats GUI](docs/source/qats_gui.png)
+![qats GUI](qats/app/gui.png)
 
 ### Getting started
 
