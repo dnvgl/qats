@@ -47,6 +47,13 @@ setup(
     project_urls={
         "Issue Tracker": "https://github.com/dnvgl/qats/issues",
         "Documentation": "https://qats.readthedocs.io",
-    }
+    },
+    classifiers = [
+        'Topic :: Scientific/Engineering',
+        'Development Status :: 5 - Production/Stable',
+        'Programming Language :: Python :: 3',
+        'Operating System :: OS Independent',
+        'License :: OSI Approved :: MIT License',
+    ]
 
 )
