@@ -41,6 +41,7 @@ setup(
     author="Per Voie & Erling Lone",
     description="Library for efficient processing and visualization of time series.",
     long_description=read('README.md'),
+    long_description_content_type="text/markdown",
     license="MIT",
     url="https://github.com/dnvgl/qats",
     download_url="https://pypi.org/project/qats/",
