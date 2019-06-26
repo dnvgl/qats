@@ -10,6 +10,7 @@ script: tox
 branches:
   only: 
     - master
+    - '/^\d+\.\d+\.\d+$/'  # build tag commits (matches 'x.y.z' tags only)
 
 deploy:
   provider: pypi
