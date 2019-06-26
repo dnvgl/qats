@@ -2,7 +2,9 @@
 
 Python library and GUI for efficient processing and visualization of time series.
 
-<!-- badges -->
+[![Build Status](https://travis-ci.com/dnvgl/qats.svg?branch=master)](https://travis-ci.com/dnvgl/qats)
+[![Documentation Status](https://readthedocs.org/projects/qats/badge/?version=latest)](https://qats.readthedocs.io/en/latest/?badge=latest)
+
 
 ## General
 
@@ -29,6 +31,28 @@ perfect for inspecting, comparing and reporting:
 <!-- create a gif that demonstrate the GUI -->
 ![qats GUI](docs/source/qats_gui.png)
 
+### Getting started
+
+Run the below command in a Python environment to install the latest QATS release.
+
+```console
+pip install qats
+```
+
+Launch the GUI...
+
+```console
+qats app
+```
+
+and create a start menu link which you can even pin to the taskbar to ease access to the QATS GUI.
+
+```console
+qats config --link-app
+```
+
+Take a look at the resources listed below to learn more.
+
 ### Resources
 
 * [**Source**](https://github.com/dnvgl/qats)
@@ -36,7 +60,7 @@ perfect for inspecting, comparing and reporting:
 * [**Documentation**](https://qats.readthedocs.io)
 * [**Download**](https://pypi.org/project/qats/)
 
-## Getting started
+## Contribute
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing 
 purposes. See deployment for notes on how to deploy the project on a live system.
@@ -104,6 +128,9 @@ Build tarball and wheel distributions by
 python setup.py sdist bdist_wheel
 ```
 
+The distribution file names adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention) 
+convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl`.
+
 ## Building the documentation
 
 The html documentation is build using [Sphinx](http://www.sphinx-doc.org/en/master)
@@ -113,18 +140,19 @@ sphinx-build -b html docs\source docs\_build
 ```
 
 ## Deployment
-```
-TODO
-```
+Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using 
+[Travis-CI](https://travis-ci.com).
 
 ## Versioning
 
-We use [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) for versioning. For the versions 
-available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
+We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/).
+
+We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage)
+takes care of the rest. For the versions available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
 
 ## Authors
 
-* **Per Voie** - [tovoop](https://github.com/tovop)
+* **Per Voie** - [tovop](https://github.com/tovop)
 * **Erling Lone** - [eneelo](https://github.com/eneelo)
 
 ## License

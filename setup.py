@@ -3,6 +3,13 @@
 Setup script for building and installing package and building html documentation
 """
 from setuptools import setup, find_packages
+import os
+
+
+def read(fname):
+    """Utility function to read the README file."""
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
 
 setup(
     # package data
@@ -33,15 +40,20 @@ setup(
     # meta-data
     author="Per Voie & Erling Lone",
     description="Library for efficient processing and visualization of time series.",
-    long_description="The libary provides a TimeSeries class and TsDB class holding several TimeSeries objects. And "
-                     "functions for estimation of power spectral density, fitting of probability distributions, sample "
-                     "statistics, extreme value statistics and rainflow cycle counting.",
+    long_description=read('README.md'),
     license="MIT",
     url="https://github.com/dnvgl/qats",
     download_url="https://pypi.org/project/qats/",
     project_urls={
         "Issue Tracker": "https://github.com/dnvgl/qats/issues",
-        "Documentation": "https://readthedocs.org/projects/qats/",
-    }
+        "Documentation": "https://qats.readthedocs.io",
+    },
+    classifiers = [
+        'Topic :: Scientific/Engineering',
+        'Development Status :: 5 - Production/Stable',
+        'Programming Language :: Python :: 3',
+        'Operating System :: OS Independent',
+        'License :: OSI Approved :: MIT License',
+    ]
 
 )
