@@ -41,7 +41,7 @@ setup(
     download_url="https://pypi.org/project/qats/",
     project_urls={
         "Issue Tracker": "https://github.com/dnvgl/qats/issues",
-        "Documentation": "https://readthedocs.org/projects/qats/",
+        "Documentation": "https://qats.readthedocs.io",
     }
 
 )
