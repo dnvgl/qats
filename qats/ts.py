@@ -508,7 +508,7 @@ class TimeSeries(object):
             - ('lp', f)           - Low-pass filter at frequency f
             - ('hp', f)           - High-pass filter at frequency f
             - ('bp', flo, fhi)    - Band-pass filter between frequencies flo and fhi
-            - ('bp', flo, fhi)    - Band-stop filter between frequencies flo and fhi
+            - ('bs', flo, fhi)    - Band-stop filter between frequencies flo and fhi
             - ('tp', a)           - Threshold-pass filter at amplitude a
 
         resample : float|ndarray|list, optional
@@ -637,7 +637,7 @@ class TimeSeries(object):
                 x = thresholdpass(x, filterargs[1])
             else:
                 # invalid filter type
-                raise ValueError("Invalid filter type specified.")
+                raise ValueError(f"Invalid filter type: {filterargs[0]}")
 
         # re-add mean value (except if high-pass filter has been applied)
         if filterargs is None or filterargs[0] != 'hp':
