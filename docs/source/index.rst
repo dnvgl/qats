@@ -37,7 +37,7 @@ GUI
 QATS also features a :ref:`gui` which offers low threshold processing and vizualisation of time series. It is perfect for
 inspecting, quality assurance and reporting. Use the library for more advanced operations.
 
-.. image:: qats_gui.png
+.. image:: demo.gif
 
 Source code
 ***********

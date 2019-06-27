@@ -28,8 +28,9 @@ perfect for inspecting, comparing and reporting:
 - peak and extreme distributions
 - cycle distributions
 
-<!-- create a gif that demonstrate the GUI -->
-![qats GUI](https://raw.githubusercontent.com/dnvgl/qats/master/docs/source/qats_gui.png)
+### Demo
+
+![QATS GUI](https://raw.githubusercontent.com/dnvgl/qats/master/docs/source/demo.gif)
 
 ### Getting started
 
