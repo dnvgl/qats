@@ -21,7 +21,7 @@ and [RIFLEX](https://www.dnvgl.com/services/riser-analysis-software-for-marine-r
 handles [SIMA](https://www.dnvgl.com/services/marine-operations-and-mooring-analysis-software-sima-2324) hdf5 (.h5) files, 
 Matlab (version < 7.3) .mat files, CSV files and more.  
 
-QATS also features a GUI which offers efficient and low threshold processing and vizualisation of time series. It is
+QATS also features a GUI which offers efficient and low threshold processing and visualization of time series. It is
 perfect for inspecting, comparing and reporting:
 - time series
 - power spectral density distributions
@@ -148,8 +148,9 @@ Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/)
 
 We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/).
 
-We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage)
-takes care of the rest. For the versions available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
+We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then 
+[setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) takes care of the rest. For the versions 
+available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
 
 ## Authors
 
