@@ -21,15 +21,16 @@ and [RIFLEX](https://www.dnvgl.com/services/riser-analysis-software-for-marine-r
 handles [SIMA](https://www.dnvgl.com/services/marine-operations-and-mooring-analysis-software-sima-2324) hdf5 (.h5) files, 
 Matlab (version < 7.3) .mat files, CSV files and more.  
 
-QATS also features a GUI which offers efficient and low threshold processing and vizualisation of time series. It is
+QATS also features a GUI which offers efficient and low threshold processing and visualization of time series. It is
 perfect for inspecting, comparing and reporting:
 - time series
 - power spectral density distributions
 - peak and extreme distributions
 - cycle distributions
 
-<!-- create a gif that demonstrate the GUI -->
-![qats GUI](qats/app/gui.png)
+### Demo
+
+![QATS GUI](https://raw.githubusercontent.com/dnvgl/qats/master/docs/source/demo.gif)
 
 ### Getting started
 
@@ -110,7 +111,7 @@ help(qats)
 qats -h
 ```
 
-## Running the tests
+### Running the tests
 
 The automated tests are run using [Tox](https://tox.readthedocs.io/en/latest/).
 
@@ -120,7 +121,7 @@ tox
 
 The test automation is configured in the file `tox.ini`.
 
-## Building the package
+### Building the package
 
 Build tarball and wheel distributions by 
 
@@ -131,7 +132,7 @@ python setup.py sdist bdist_wheel
 The distribution file names adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention) 
 convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl`.
 
-## Building the documentation
+### Building the documentation
 
 The html documentation is build using [Sphinx](http://www.sphinx-doc.org/en/master)
 
@@ -139,16 +140,17 @@ The html documentation is build using [Sphinx](http://www.sphinx-doc.org/en/mast
 sphinx-build -b html docs\source docs\_build
 ```
 
-## Deployment
+### Deployment
 Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using 
 [Travis-CI](https://travis-ci.com).
 
-## Versioning
+### Versioning
 
 We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/).
 
-We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage)
-takes care of the rest. For the versions available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
+We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then 
+[setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) takes care of the rest. For the versions 
+available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
 
 ## Authors
 

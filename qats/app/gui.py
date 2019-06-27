@@ -614,7 +614,7 @@ class Qats(QMainWindow):
         elif self.bandpass.isChecked():
             args = ('bp', self.bandpass_lf.value(), self.bandpass_hf.value())
         elif self.bandblock.isChecked():
-            args = ('bb', self.bandblock_lf.value(), self.bandblock_hf.value())
+            args = ('bs', self.bandblock_lf.value(), self.bandblock_hf.value())
         else:
             args = None
 
