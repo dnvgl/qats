@@ -3,7 +3,7 @@
 Graphical User Interface
 ########################
 
-.. note:: Make GIF examples
+.. todo:: Include description on how to launch etc. + include GIF examples
 
 .. .. only:: html
 ..

@@ -48,7 +48,7 @@ GitHub.
 Downloads
 *********
 
-You can download and install QATS from `PYPI <https://pypi.org/project/qats/>`_.
+You can download and install QATS from `PyPI <https://pypi.org/project/qats/>`_.
 
 Table of contents
 *****************
