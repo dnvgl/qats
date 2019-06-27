@@ -3,13 +3,28 @@
 Graphical User Interface
 ########################
 
-.. todo:: Include description on how to launch etc. + include GIF examples
+.. todo:: Make more examples demonstrating typical operations.
 
-.. .. only:: html
-..
-..    .. figure:: gui_demo.gif
-..        :alt: Import time series
-..        :figclass: align-center
-..
-..        Here 14 time series from a single file are imported to QATS GUI. Two time series 'heave' and 'pitch' are selected and plotted.
+Create link to GUI in start menu and desktop
+********************************************
+
+.. figure:: img/link_app.gif
+    :alt: Create start menu link to GUI
+    :figclass: align-center
+
+    In the terminal, run ``qats config --link-app`` to create start menu and desktop links to QATS. Pin the start menu
+    link to the taskbar to further ease accessibility.
+
+
+Import time series from file
+****************************
+
+.. figure:: img/import.gif
+    :alt: Import time series from file
+    :figclass: align-center
+
+    Here 41 time series from two files (different format) are imported. The first file is imported using the file open
+    dialogue (hotkey *CTRL+I*) and the second by drag-and-drop. Finally the time series database is cleared (hotkey *Ctrl+Del*).
+
+
 

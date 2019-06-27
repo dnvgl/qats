@@ -89,7 +89,7 @@ todo_include_todos = True
 #
 html_theme = 'bootstrap'
 html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
-html_logo = 'qats.ico'
+html_logo = 'img/qats.ico'
 
 # Include sidebar
 # todo: consider including sidebar (just remove comment on next line to do so)
