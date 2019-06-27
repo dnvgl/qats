@@ -29,7 +29,7 @@ perfect for inspecting, comparing and reporting:
 - cycle distributions
 
 <!-- create a gif that demonstrate the GUI -->
-![qats GUI](qats/app/gui.png)
+![qats GUI](https://raw.githubusercontent.com/dnvgl/qats/master/docs/source/qats_gui.png)
 
 ### Getting started
 
@@ -110,7 +110,7 @@ help(qats)
 qats -h
 ```
 
-## Running the tests
+### Running the tests
 
 The automated tests are run using [Tox](https://tox.readthedocs.io/en/latest/).
 
@@ -120,7 +120,7 @@ tox
 
 The test automation is configured in the file `tox.ini`.
 
-## Building the package
+### Building the package
 
 Build tarball and wheel distributions by 
 
@@ -131,7 +131,7 @@ python setup.py sdist bdist_wheel
 The distribution file names adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention) 
 convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl`.
 
-## Building the documentation
+### Building the documentation
 
 The html documentation is build using [Sphinx](http://www.sphinx-doc.org/en/master)
 
@@ -139,11 +139,11 @@ The html documentation is build using [Sphinx](http://www.sphinx-doc.org/en/mast
 sphinx-build -b html docs\source docs\_build
 ```
 
-## Deployment
+### Deployment
 Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using 
 [Travis-CI](https://travis-ci.com).
 
-## Versioning
+### Versioning
 
 We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/).
 

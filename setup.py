@@ -17,7 +17,7 @@ setup(
     use_scm_version=True,
     packages=find_packages(exclude=("test",)),
     package_data={
-        "qats.app": ["qats.ico", "gui.png"],
+        "qats.app": ["qats.ico"],
     },
     python_requires="~=3.6",
     setup_requires=["setuptools_scm"],
