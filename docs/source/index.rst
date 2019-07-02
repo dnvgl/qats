@@ -38,6 +38,8 @@ QATS also features a :ref:`gui` which offers low threshold processing and vizual
 inspecting, quality assurance and reporting. Use the library for more advanced operations.
 
 .. image:: demo.gif
+    :target: _images/demo.gif
+
 
 Source code
 ***********
