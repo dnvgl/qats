@@ -845,7 +845,7 @@ class TsDB(object):
 
     def get(self, name=None, ind=None, store=True):
         """
-        Get one time series
+        Get (single) TimeSeries object.
 
         Parameters
         ----------
@@ -870,6 +870,10 @@ class TsDB(object):
         Note that this method is somewhat similar to geta() but returns a TimeSeries object instead of arrays.
         Therefore this method does not support keyword arguments to be passed further to TimeSeries.get().
 
+        See also
+        --------
+        qats.ts.TimeSeries
+        geta, getd, getl, getm
         """
         # check that at least one of the required parameters is given,
         # and that non-compatible parameters are not combined
@@ -922,7 +926,8 @@ class TsDB(object):
 
     def geta(self, name=None, ind=None, store=True, **kwargs):
         """
-        Get and process one time series as numpy array
+        Get (single) time series as numpy arrays (tuple of time and data arrays).
+        Optionally, the returned data array may be processed according to specified optional arguments (see `kwargs`).
 
         Parameters
         ----------
@@ -946,6 +951,10 @@ class TsDB(object):
 
         Error is raised if zero or more than one match is obtained.
 
+        See also
+        --------
+        qats.ts.TimeSeries, qats.ts.TimeSeries.get
+        get, getd, getl, getm
         """
         # use self.get() to avoid duplicate code
         try:
@@ -960,7 +969,8 @@ class TsDB(object):
 
     def getd(self, names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
-        Get and process multiple time series as numpy arrays
+        Get dictionary of (numpy) arrays.
+        Optionally, the returned data arrays may be processed according to specified optional arguments (see `kwargs`).
 
         Parameters
         ----------
@@ -978,7 +988,7 @@ class TsDB(object):
 
         Returns
         -------
-        dictionary
+        dict
             Each entry is a tuple with 2 arrays: time and data for each time series
 
         Notes
@@ -988,10 +998,10 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
-
+        qats.ts.TimeSeries, qats.ts.TimeSeries.get
+        get, geta, getl, getm
         """
-        # read time series and put in ordered dictionary (reuse get_many_ts() to avoid duplicating code)
+        # read time series and put in ordered dictionary (reuse getm() to avoid duplicating code)
         container = OrderedDict((k, v.get(**kwargs)) for k, v in
                                 self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items())
 
@@ -999,7 +1009,7 @@ class TsDB(object):
 
     def getm(self, names=None, ind=None, store=True, fullkey=False):
         """
-        Get multiple TimeSeries objects
+        Get (dictionary of) multiple TimeSeries objects.
 
         Parameters
         ----------
@@ -1016,7 +1026,7 @@ class TsDB(object):
         Returns
         -------
         dict
-            TimeSeries objects
+            TimeSeries instances
 
         Notes
         -----
@@ -1029,7 +1039,7 @@ class TsDB(object):
         See also
         --------
         qats.ts.TimeSeries
-
+        get, geta, getd, getl
         """
         # check that non-compatible parameters are not combined
         if ind is not None and names is not None:
