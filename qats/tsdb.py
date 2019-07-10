@@ -1178,14 +1178,16 @@ class TsDB(object):
         # full names in db register
         keys_in_register = copy.copy(self.register_keys)
 
-        '''
-        if names is None:
-            # return all time series names if no patterns are specified
-            return keys_in_register
-        '''
+        # get common path
+        common = self.common
 
         # handle types and add leading wildcard to enable pattern matching across paths
-        _prefix = '*' + os.path.sep
+        if common == "":
+            # prefix should not be included (and is not needed) if there is no common path
+            _prefix = ""
+        else:
+            # add prefix *\\ (or */ in unix)
+            _prefix = '*' + os.path.sep
         if isinstance(names, str):
             names = [_prefix + names]
         elif type(names) in (list, tuple):
@@ -1206,7 +1208,6 @@ class TsDB(object):
                 match.extend(fnmatch.filter(keys_in_register, name))
 
         if relative:
-            common = self.common
             match = [self._path_relpath(_, common) for _ in match]
 
         if display:
