@@ -1136,22 +1136,31 @@ class TsDB(object):
         # full names in db register
         keys_in_register = copy.copy(self.register_keys)
 
+        '''
         if names is None:
             # return all time series names if no patterns are specified
             return keys_in_register
+        '''
 
         # handle types and add leading wildcard to enable pattern matching
         if isinstance(names, str):
             names = ['*' + names]
         elif type(names) in (list, tuple):
             names = ['*' + _ for _ in names]
+        elif names is None:
+            pass
         else:
             raise TypeError(f"Parameter `names` should be of type str/list/tuple, not {type(names)}")
 
-        # match time series keys with specified time series name patterns
-        match = []
-        for name in _remove_special_characters(names):
-            match.extend(fnmatch.filter(keys_in_register, name))
+        # generate list of names/keys
+        if names is None:
+            # all time series names if no patterns are specified
+            match = keys_in_register
+        else:
+            # match time series keys with specified time series name patterns
+            match = []
+            for name in _remove_special_characters(names):
+                match.extend(fnmatch.filter(keys_in_register, name))
 
         if relative:
             common = self.common
