@@ -139,19 +139,25 @@ class TestTsDB(unittest.TestCase):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         container = self.db.getd(names=[])
         n = len(container)
-        self.assertEqual(0, n, "Should have received empty container (OrderedDict) from get_many()")
+        self.assertEqual(0, n, "Should have received empty container (OrderedDict) from getd()")
+
+    def test_getl_correct_key(self):
+        self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
+        rk = self.db.list(names="Heave", display=False, relative=True)
+        tslist = self.db.getl(names="Heave")
+        self.assertEqual(rk, [ts.name for ts in tslist], "db list method and getl returns different keys.")
 
     def test_getm_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)
         container = self.db.getm(names="Heave", fullkey=True)
-        self.assertEqual(rk, list(container.keys()), "db list method and get_many_ts method returns different keys.")
+        self.assertEqual(rk, list(container.keys()), "db list method and getm method returns different keys.")
 
     def test_getm_correct_key_by_ind(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)
         container = self.db.getm(ind=2, fullkey=True)
-        self.assertEqual(rk, list(container.keys()), "db list method and get_many_ts method returns different keys.")
+        self.assertEqual(rk, list(container.keys()), "db list method and getm method returns different keys.")
 
     def test_geta(self):
         tsfile = os.path.join(self.data_directory, 'simo_p.ts')
@@ -319,7 +325,6 @@ class TestTsDB(unittest.TestCase):
     def test_copy(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Surge"
-        db1 = self.db
         ts1 = self.db.get(name=name)
         db2 = self.db.copy()
         ts2 = db2.get(name=name)
@@ -329,7 +334,6 @@ class TestTsDB(unittest.TestCase):
     def test_copy_shallow(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Surge"
-        db1 = self.db
         ts1 = self.db.get(name=name)
         db2 = self.db.copy(shallow=True)
         ts2 = db2.get(name=name)
