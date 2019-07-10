@@ -1142,11 +1142,12 @@ class TsDB(object):
             return keys_in_register
         '''
 
-        # handle types and add leading wildcard to enable pattern matching
+        # handle types and add leading wildcard to enable pattern matching across paths
+        _prefix = '*' + os.path.sep
         if isinstance(names, str):
-            names = ['*' + names]
+            names = [_prefix + names]
         elif type(names) in (list, tuple):
-            names = ['*' + _ for _ in names]
+            names = [_prefix + _ for _ in names]
         elif names is None:
             pass
         else:
