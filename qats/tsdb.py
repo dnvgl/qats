@@ -1182,20 +1182,24 @@ class TsDB(object):
         common = self.common
 
         # handle types and add leading wildcard to enable pattern matching across paths
-        if common == "":
-            # prefix should not be included (and is not needed) if there is no common path
-            _prefix = ""
-        else:
-            # add prefix *\\ (or */ in unix)
-            _prefix = '*' + os.path.sep
-        if isinstance(names, str):
-            names = [_prefix + names]
-        elif type(names) in (list, tuple):
-            names = [_prefix + _ for _ in names]
-        elif names is None:
-            pass
-        else:
-            raise TypeError(f"Parameter `names` should be of type str/list/tuple, not {type(names)}")
+        # Note: wildcard should not be prepended:
+        #           - if there is no common path
+        #           - for names starting with the common path (name will then the name
+        if names is not None:
+            if common == "":
+                # no common path -> prefix should not be included (and is not needed)
+                _prefix = ""
+            else:
+                # add prefix *\\ (or */ in unix)
+                _prefix = '*' + os.path.sep
+            if isinstance(names, str):
+                if not names.startswith(common):
+                    names = _prefix + names
+                names = [names]
+            elif type(names) in (list, tuple):
+                names = [_prefix + n if not n.startswith(common) else n for n in names]
+            else:
+                raise TypeError(f"Parameter `names` should be of type str/list/tuple, not {type(names)}")
 
         # generate list of names/keys
         if names is None:
