@@ -1184,7 +1184,7 @@ class TsDB(object):
         # handle types and add leading wildcard to enable pattern matching across paths
         # Note: wildcard should not be prepended:
         #           - if there is no common path
-        #           - for names starting with the common path (name will then the name
+        #           - for names starting with the common path (name is then a full path)
         if names is not None:
             if common == "":
                 # no common path -> prefix should not be included (and is not needed)
