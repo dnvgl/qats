@@ -215,3 +215,59 @@ class SNCurve(object):
         print(s)
         return
 
+
+def dcalc_sn(srange, count, sn, td=1., scf=1., th=None, retbins=False):
+    """
+    Fatigue damage calculation based on stress cycle histogram and S-N curve.
+
+    Parameters
+    ----------
+    srange: list of floats
+        List of stress ranges in histogram (Note: only one value per bin).
+    count: list of floats
+        Cycle count for each of the stress ranges. May be specified as number of cycles [-] or cycle rate [1/s].
+        If cycle rate is specified, specify duration `td` for scaling to number of cycles.
+    sn: dict or SNCurve
+        Dictionary with S-N curve parameters, alternatively an SNCurve instance.
+        If dict is specified, expected keys are: 'm1' and 'a1' (or 'loga1') for linear S-N curve, and also 'm2' and
+        'nswitch' if bi-linear S-N curve.
+    td: float, optional
+        Duration [s]. Used to scale the histogram from cycle rate to number of cycles.
+        Use 1 (the default) if histogram already represents number of cycles.
+    scf: float, optional
+        Stress concentration factor to be applied on stress ranges. Default: 1.
+    th: float, optional
+        Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
+        defined for the S-N curve given.
+    retbins: bool, optional
+        If True, damage per bin is also returned.
+
+    Returns
+    -------
+    float
+        Fatigue damage (Palmgren-Miner sum).
+    list (optional)
+        Fatigue damage for each stress range bin. Returned if `retbin=True`.
+
+    Raises
+    ------
+    ValueError:
+        If thickness is given but thickness correction not specified for S-N curve.
+    """
+    if not len(srange) == len(count):
+        raise ValueError("`srange` and `count` must be lists of same length")
+
+    if not isinstance(sn, SNCurve):
+        sn = SNCurve("", **sn)
+
+    if th is not None and (sn.k_thickn is None and sn.t_ref is None):
+        raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
+
+    damage_per_bin = [(td * n) / sn.n(s * scf, t=th) for s, n in zip(srange, count)]
+    d = sum(damage_per_bin)
+
+    if retbins is True:
+        return d, damage_per_bin
+    else:
+        return d
+
