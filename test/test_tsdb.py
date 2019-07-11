@@ -111,6 +111,40 @@ class TestTsDB(unittest.TestCase):
         # should return exactly one key
         self.assertEqual(1, len(self.db.list(names="Acc-X[m/s^2]")), "TsDB.list() returned wrong number of keys")
 
+    def test_list_prepended_wildcard_1(self):
+        """
+        Test that wildcard is prepended in a reasonable manner. Test cases:
+            - Specifying 'XG' should not return 'vel_XG'
+            - Specifying '*XG' should return both 'XG' and 'vel_XG'
+            - Specifying full key should be possible
+            - If multiple files are loaded, specifying 'XG' should return all occurrences (across files)
+
+        The first three are tested here, while the fourth is tested in `test_list_prepended_wildcard_2()`
+        """
+        path = os.path.join(self.data_directory, 'simo_r1.ts')
+        db = self.db
+        db.load(path)
+        k1 = db.list(names="XG")   # should return 1 key
+        k2 = db.list(names="*XG")  # should return 2 keys
+        k3 = db.list(names=os.path.abspath(os.path.join(path, "XG")))  # should return 1 key
+        # test of the cases described in docstring
+        self.assertEqual(len(k1), 1, "TsDB.list() failed to return correct number of keys for names='XG'")
+        self.assertEqual(len(k2), 2, "TsDB.list() failed to return correct number of keys for names='*XG'")
+        self.assertEqual(len(k3), 1, "TsDB.list() failed to return correct number of keys when specifying full path")
+
+    def test_list_prepended_wildcard_2(self):
+        """
+        See description of `test_list_prepended_wildcard_2()`
+        """
+        db = self.db
+        db.load(os.path.join(self.data_directory, 'simo_r1.ts'))
+        db.load(os.path.join(self.data_directory, 'simo_r2.ts'))
+        k1 = db.list(names="XG")  # should return 2 keys
+        k2 = db.list(names="*XG")  # should return 4 keys
+        # test of the cases described in docstring
+        self.assertEqual(len(k1), 2, "TsDB.list() failed to return correct number of keys for names='XG'")
+        self.assertEqual(len(k2), 4, "TsDB.list() failed to return correct number of keys for names='*XG'")
+
     def test_clear_all(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         self.db.clear(display=False)
