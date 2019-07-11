@@ -6,8 +6,8 @@ Classes and functions for fatigue calculations:
     - Fatigue damage calculation (functions)
 """
 import numpy as np
+from scipy.special import gamma as gammafunc, gammainc, gammaincc
 
-# todo: implement fatigue damage calculations (histogram, fitted distribution)
 # todo: write unittest module for fatigue functions (SNClass, damage calculations, ...)
 
 
@@ -271,3 +271,74 @@ def dcalc_sn(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     else:
         return d
 
+
+def dcalc_sn_weib(q, h, sn, v0, td=None, scf=1., th=None):
+    """
+    Fatigue damage calculation based on (2-parameter) Weibull stress cycle distribution and S-N curve.
+    Ref. DNV-RP-C03 (2016) eq. F.12-1.
+
+    Parameters
+    ----------
+    q: float
+        Weibull scale parameter (in 2-parameter distribution).
+    h: float
+        Weibull shape parameter (in 2-parameter distribution).
+    sn: dict or SNCurve
+        Dictionary with S-N curve parameters, alternatively an SNCurve instance.
+        If dict, expected attributes are: 'm1', 'm2', 'a1' (or 'loga1'), 'nswitch'.
+    v0: float,
+        Cycle rate [1/s].
+    td: float, optional
+        Duration [s] (or design life, in seconds). Default is 31536000 (no. of seconds in a year, or 365 days).
+    scf: float, optional
+        Stress concentration factor to be applied on stress ranges.
+    th: float, optional
+        Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
+        defined for the S-N curve given.
+
+    Returns
+    -------
+    float
+        Fatigue damage (Palmgren-Miner sum).
+
+    Raises
+    ------
+    ValueError:
+        If thickness is given but thickness correction not specified for S-N curve.
+    """
+    def cigf(a, x):
+        """ Complementary incomplete gamma function """
+        return gammaincc(a, x) * gammafunc(a)
+
+    def igf(a, x):
+        """ Incomplete gamma function """
+        return gammainc(a, x) * gammafunc(a)
+
+    if not isinstance(sn, SNCurve):
+        sn = SNCurve("", **sn)
+
+    if td is None:
+        td = 3600. * 24 * 365
+
+    if th is not None:
+        try:
+            # include thickness correction in SCF
+            scf *= sn.thickn_corr(th)
+        except ValueError:
+            raise
+
+    # todo: verify implementation of thickness correction and SCF
+    # scale Weibull scale parameter by SCF (incl. thickness correction if specified)
+    q *= scf
+
+    if sn.bilinear is True:
+        # gamma functions
+        g1 = cigf(1 + sn.m1 / h, (sn.sswitch / q) ** h)  # complementary incomplete gamma function
+        g2 = igf(1 + sn.m2 / h, (sn.sswitch / q) ** h)   # incomplete gamma function
+        # fatigue damage (for specified duration)
+        d = v0 * td * (q ** sn.m1 / sn.a1 * g1 + q ** sn.m2 / sn.a2 * g2)
+    else:
+        # single slope S-N curve, fatigue damage for specified duration
+        d = v0 * td * (q ** sn.m1 / sn.a1) * gammafunc(1 + sn.m1 / h)
+
+    return d
