@@ -80,9 +80,8 @@ class TsDB(object):
         TimeSeries
             time series in database
         """
-        keys = self.list()
-        for key in keys:
-            yield self.get(key=key)
+        for key in self.register_keys:
+            yield self.register[key]
 
     def __repr__(self):
         return '<TsDB "%s">' % self.name
