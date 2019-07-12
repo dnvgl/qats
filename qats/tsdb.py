@@ -878,7 +878,7 @@ class TsDB(object):
         """
         # check that at least one of the required parameters is given,
         # and that non-compatible parameters are not combined
-        if not name and not ind:
+        if name is None and ind is None:
             raise TypeError("Either `name` or `ind` must be given")
 
         if name is not None and ind is not None:

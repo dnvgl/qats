@@ -235,6 +235,7 @@ class TestTsDB(unittest.TestCase):
         key = self.db.list(names=tsname, display=False)[0]
         ts1 = self.db.get(name=tsname)
         ind = self.db.register_keys.index(key)
+        print("index = ", ind)
         # test 1: get_ts() using index when ts is already loaded
         ts2 = self.db.get(ind=ind)
         self.assertIs(ts1, ts2, "Did not get correct TimeSeries using get_ts() and specifying index"
@@ -245,6 +246,13 @@ class TestTsDB(unittest.TestCase):
         ts3 = db2.get(ind=ind)
         self.assertTrue(np.array_equal(ts1.x, ts3.x), "Did not get correct TimeSeries using get_ts() and specifying"
                                                       " index (ts not pre-loaded)")
+
+    def test_get_by_index_0(self):
+        """ Should not fail when index 0 is specified """
+        tsfile = os.path.join(self.data_directory, 'simo_p.ts')
+        self.db.load(tsfile)
+        _ = self.db.get(ind=0)
+        # should not fail
 
     def test_get_exceptions(self):
         self.db.load(os.path.join(self.data_directory, 'simo_p.ts'))
