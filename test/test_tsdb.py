@@ -235,7 +235,6 @@ class TestTsDB(unittest.TestCase):
         key = self.db.list(names=tsname, display=False)[0]
         ts1 = self.db.get(name=tsname)
         ind = self.db.register_keys.index(key)
-        print("index = ", ind)
         # test 1: get_ts() using index when ts is already loaded
         ts2 = self.db.get(ind=ind)
         self.assertIs(ts1, ts2, "Did not get correct TimeSeries using get_ts() and specifying index"
