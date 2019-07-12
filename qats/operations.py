@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+# coding: utf-8
+"""
+Functions for time series operations:
+    - transformation of motion
+    - numerical time differentiation (velocity, acceleration)
+"""
+import numpy as np
+from numpy import sin, cos, radians as rad
+
+# todo: write unittest module for transforms.py
+# todo: add function for time derivative
+
+
+def transform_motion(motion, newref, rotunit="deg"):
+    """
+    Transform motion to new reference position.
+
+    The following sequence of rotation is used: z-y-z (known as yaw-pitch-roll). For more detailed description,
+    see https://en.wikipedia.org/wiki/Euler_angles or SIMO Theory Manual (ch. 6.2 in version 4.14.0).
+
+    Parameters
+    ----------
+    motion : tuple or np.ndarray
+        Motion of old reference point, 6 dofs (hence shape (6, nt), where nt is number of time steps):
+            - x (position of old reference point in global coord. system)
+            - y (position of old reference point in global coord. system)
+            - z (position of old reference point in global coord. system)
+            - rx (rotation about local x-axis, aka. roll)
+            - ry (rotation about local x-axis, aka. roll)
+            - rz (rotation about local x-axis, aka. roll)
+    newref : 3-tuple
+        Position vector (in body coordinate system) of new reference point: (x, y, z).
+    rotunit : {'deg', 'rad'}
+        Unit of rotations. Default is degrees.
+
+    Returns
+    -------
+    xyz : np.ndarray
+        Position vector for new reference position, shape (3, n).
+    """
+    motion = np.asarray(motion)  # ensure motion is numpy array
+    newref = np.asarray(newref)  # ensure newref is numpy array, for efficiency in loop with np.dot
+    ndof, nt = motion.shape      # number of dofs and time steps
+    assert ndof == 6, f"Motion must be of shape (6, nt) (6-dof motion), got {motion.shape}"
+    assert newref.size == 3, f"Specified position must be list/tuple with three values, got {len(newref)}"
+
+    # extract rotations, scale to radians if needed given as degrees
+    if rotunit == "deg":
+        rx, ry, rz = rad(motion[-3:, :])
+    elif rotunit == "rad":
+        rx, ry, rz = motion[-3:, :]
+    else:
+        raise ValueError(f"Parameter `rotunit` must be 'deg' or 'rad', not '{rotunit}'")
+
+    # calculate transformation matrix -> shape (3, 3, nt)
+    trans = np.array([
+        [cos(rz) * cos(ry), -sin(rz) * cos(rx) + cos(rz) * sin(ry) * sin(rx),
+         sin(rz) * sin(rx) + cos(rz) * sin(ry) * cos(rx)],
+        [sin(rz) * cos(ry), cos(rz) * cos(rx) + sin(rz) * sin(ry) * sin(rx),
+         -cos(rz) * sin(rx) + sin(rz) * sin(ry) * cos(rx)],
+        [-sin(ry), cos(ry) * sin(rx), cos(ry) * cos(rx)],
+    ])
+
+    # transform to new reference position for each time step -> shape (3, nt)
+    xyz = np.zeros((3, nt))
+    for i in range(nt):
+        xyz[:, i] = np.dot(trans[:, :, i], newref)
+    # ... and add xyz motion of old reference point
+    xyz += motion[:3, :]
+
+    return xyz
