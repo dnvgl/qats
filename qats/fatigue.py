@@ -9,74 +9,59 @@ import numpy as np
 from scipy.special import gamma as gammafunc, gammainc, gammaincc
 
 # todo: write unittest module for fatigue functions (SNClass, damage calculations, ...)
+# todo: Update SNCurve docstring to include description of class and attributes
 
 
 class SNCurve(object):
     """
-    todo: Update SNCurve docstring to include description of class and attributes
+    S-N curve representing fatigue capacity versus cyclic stresses.
 
-    Attributes
+    Parameters
     ----------
-    name: str
+    name : str
+        S-N curve name
     m1 : float
-    m2 : float
-    a1 : float
-    a2 : float
-    loga1 : float
-    loga2 : float
-    nswitch : float
-    sswitch : float
-    t_ref : float
-    k_thickn : float
+        Negative inverse slope parameter (for bilinear curves: used for N < `nswitch`).
+    m2 : float, optional
+        Negative inverse slope parameter for N > `nswitch`
+    a1 : float, optional
+        Intercept parameter for N <= `nswitch`.
+    loga1 : float, optional
+        Log10 of a1. Must be given if `a1` is not specified.
+    nswitch : float, optional
+        Number of cycles at transition from `m1` to `m2`.
+    t_exp : float, optional
+        Thickness correction exponent. If not specified, thickness may not be specified in later calculations.
+    t_ref : float, optional
+        Reference thickness [mm]. If not specified, thickness may not be specified in later calculations.
+
+    Notes
+    -----
+    For linear curves (single slope), the following input parameters are required: m1, a1 (or loga1).
+    For bi-linear curves, the following parameters are required: m1, m2, nswitch, a1 (or loga1), t_exp, t_ref.
+
+    If S-N curve is overdefined (e.g. both loga1 and a1 are defined), the S-N curve is established based on the
+    parameter order listed above (under "Parameters").
     """
 
     def __init__(self, name, m1, **kwargs):
-        """
-
-        Parameters
-        ----------
-        name : str
-            S-N curve name
-        m1 : float
-            Negative inverse slope parameter (for bilinear curves: used for N < `nswitch`).
-        m2 : float, optional
-            Negative inverse slope parameter for N > `nswitch`
-        a1 : float, optional
-            Intercept parameter for N <= `nswitch`.
-        loga1 : float, optional
-            Log10 of a1. Must be given if `a1` is not specified.
-        nswitch : float, optional
-            Number of cycles at transition from `m1` to `m2`.
-        k_thickn : float, optional
-            Thickness correction exponent. If not specified, thickness may not be specified in later calculations.
-        t_ref : float, optional
-            Reference thickness [mm]. If not specified, thickness may not be specified in later calculations.
-
-        Notes
-        -----
-        For linear curves (single slope), the following input parameters are required: m1, a1 (or loga1).
-        For bi-linear curves, the following parameters are required: m1, m2, nswitch, a1 (or loga1), k_thickn, t_ref.
-
-        If S-N curve is overdefined (e.g. both loga1 and a1 are defined), the S-N curve is established based on the
-        parameter order listed above (under "Parameters").
-        """
         self.name = name
 
         self.m1 = m1
         self.m2 = m2 = kwargs.get("m2", None)
 
-        self.k_thickn = k_thickn = kwargs.get("k_thickn", None)
+        self.t_exp = t_exp = kwargs.get("t_exp", None)
         self.t_ref = t_ref = kwargs.get("t_ref", None)
 
         # check parameters
         if m1 is None:
             raise ValueError("parameter `m1` must be given")
 
-        if k_thickn is None and t_ref is None:
+        if t_exp is None and t_ref is None:
             # thickness correction not specified
             pass
-        elif k_thickn is None or t_ref is None:
-            raise ValueError("if thickness correction is specified, both parameters `k_thickn` and `t_ref` "
+        elif t_exp is None or t_ref is None:
+            raise ValueError("if thickness correction is specified, both parameters `t_exp` and `t_ref` "
                              "must be specified")
 
         # check and deduct intercept parameter(s), etc.
@@ -148,11 +133,11 @@ class SNCurve(object):
         if t is not None:
             # thickness correction term
             try:
-                tcorr = self.thickn_corr(t)
+                tcorr = self.thickness_correction(t)
             except ValueError:
                 raise
         else:
-            # todo: consider to raise error if k_thickn and t_ref is specified, but t not given (unless suppressed)
+            # todo: consider to raise error if t_exp and t_ref is specified, but t not given (unless suppressed)
             # no thickness correction term implies tk=1.0
             tcorr = 1.0
 
@@ -169,7 +154,7 @@ class SNCurve(object):
 
         return n
 
-    def thickn_corr(self, t):
+    def thickness_correction(self, t):
         """
         Thickness correction for specified thickness.
 
@@ -186,14 +171,14 @@ class SNCurve(object):
         Raises
         ------
         ValueError
-            If thickness correction is not defined, i.e. `k_thickn` and `t_ref` are not defined.
+            If thickness correction is not defined, i.e. `t_exp` and `t_ref` are not defined.
         """
         try:
             if t < self.t_ref:  # t = tref is used for thickness less than tref, ref. DNV-RP-C203 eq. 2.4.3
                 t = self.t_ref
-            tcorr = (t / self.t_ref) ** self.k_thickn
+            tcorr = (t / self.t_ref) ** self.t_exp
         except TypeError:
-            raise ValueError("thickness correction is not defined, i.e. `k_thickn` and `t_ref` are not specified")
+            raise ValueError("thickness correction is not defined, i.e. `t_exp` and `t_ref` are not specified")
         return tcorr
 
     def print_parameters(self):
@@ -209,7 +194,7 @@ class SNCurve(object):
                  "log(a2) : %(loga2).3f\n" \
                  "sswitch : %(sswitch).3f\n" % self.__dict__
 
-        s += "k_tickn : %(k_thickn)s\n" \
+        s += "t_exp : %(t_exp)s\n" \
              "t_ref   : %(t_ref)s\n" % self.__dict__
 
         print(s)
@@ -260,7 +245,7 @@ def dcalc_sn(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     if not isinstance(sn, SNCurve):
         sn = SNCurve("", **sn)
 
-    if th is not None and (sn.k_thickn is None and sn.t_ref is None):
+    if th is not None and (sn.t_exp is None and sn.t_ref is None):
         raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
 
     damage_per_bin = [(td * n) / sn.n(s * scf, t=th) for s, n in zip(srange, count)]
@@ -323,7 +308,7 @@ def dcalc_sn_weib(q, h, sn, v0, td=None, scf=1., th=None):
     if th is not None:
         try:
             # include thickness correction in SCF
-            scf *= sn.thickn_corr(th)
+            scf *= sn.thickness_correction(th)
         except ValueError:
             raise
 
