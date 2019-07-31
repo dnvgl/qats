@@ -45,9 +45,9 @@ def reversals(series):
         d_last = d_next
 
 
-def extract_cycles(series):
+def cycles_fromto(series):
     """
-    Returns full cycles and half-cycles from *series*.
+    Returns start and end points for full cycles and half-cycles from *series* using the Rainflow algorithm.
 
     Parameters
     ----------
@@ -63,8 +63,11 @@ def extract_cycles(series):
 
     Notes
     -----
-    The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
+    The unsymmetrical From-To cycle counting keeps more information about the loading cycles than Range and Range-Mean
+    counting does, because it also stores the "orientation" of each load cycle. With this you can reconstruct a time
+    history from a Rainflow matrix.
 
+    The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
     """
     points = deque()
     full, half = [], []
@@ -75,6 +78,7 @@ def extract_cycles(series):
             # Form ranges X and Y from the three most recent points
             x = abs(points[-2] - points[-1])
             y = abs(points[-3] - points[-2])
+            fromto = (points[-2], points[-3])   # cycle start and end points
 
             if x < y:
                 # Read the next point
@@ -82,11 +86,11 @@ def extract_cycles(series):
             elif len(points) == 3:
                 # Y contains the starting point
                 # Count Y as one-half cycle and discard the first point
-                half.append(y)
+                half.append(fromto)
                 points.popleft()
             else:
                 # Count Y as one cycle and discard the peak and the valley of Y
-                full.append(y)
+                full.append(fromto)
                 last = points.pop()
                 points.pop()
                 points.pop()
@@ -94,9 +98,13 @@ def extract_cycles(series):
     else:
         # Count the remaining ranges as one-half cycles
         while len(points) > 1:
-            half.append(abs(points[-2] - points[-1]))
+            half.append((points[-1], points[-2]))
             points.pop()
     return full, half
+
+
+def cycle_rangemean(series):
+    pass
 
 
 def count_cycles(series, ndigits=None, nbins=None, binwidth=None):
