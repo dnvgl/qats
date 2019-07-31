@@ -11,6 +11,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import welch
 from scipy.stats import kurtosis, skew, tstd
+import matplotlib.pyplot as plt
 from .rainflow import count_cycles
 from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
     average_frequency, find_maxima
@@ -888,6 +889,33 @@ class TimeSeries(object):
         """
         self._t, self.x = self.get(**kwargs)
 
+    def plot(self, figurename=None, **kwargs):
+        """
+        Plot time series trace.
+
+        Parameters
+        ----------
+        names : str/list/tuple, optional
+            Time series names
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            See documentation of TimeSeries.get() method for available options
+
+        """
+        # dict with numpy arrays: time and data
+        t, x = self.get(**kwargs)
+
+        plt.figure(1)
+        plt.plot(t, x, label=self.name)
+        plt.xlabel('Time (s)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
     def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, **kwargs):
         """
         Estimate power spectral density using Welch’s method.
@@ -990,14 +1018,14 @@ class TimeSeries(object):
 
     def rfc(self, ndigits=None, nbins=None, binwidth=None, **kwargs):
         """
-        Returns a sorted list containing pairs of cycle magnitude and count.
+        Returns a sorted list containing with cycle range, mean and count.
 
         Parameters
         ----------
         ndigits : int, optional
             If *ndigits* is given the cycles will be rounded to the given number of digits before counting.
         nbins : int, optional
-            If *nbins* is given the cycle count per cycle magnitude is rebinned to *nbins* bins.
+            If *nbins* is given the cycle count per cycle range is rebinned to *nbins* bins.
         binwidth : float, optional
             If *binwidth* is given the cycle counts are gathered in bins with a width of *binwidth*.
         kwargs : optional
@@ -1006,11 +1034,11 @@ class TimeSeries(object):
         Returns
         -------
         list
-            Sorted list of tuples of cycle magnitude versus count
+            Sorted list of tuples of cycle range, mean and count
 
         Notes
         -----
-        One-half cycles are counted as 0.5, so the returned counts may not be whole numbers.
+        Half cycles are counted as 0.5, so the returned counts may not be whole numbers.
 
         Rebinning is not applied if specified *nbins* is larger than the original number of bins.
 
