@@ -916,6 +916,30 @@ class TimeSeries(object):
         else:
             plt.show()
 
+    def plot_psd(self, figurename=None, **kwargs):
+        """
+        Plot time series power spectral density.
+
+        Parameters
+        ----------
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        """
+        # dict with TimeSeries objects
+        plt.figure(1)
+        f, p = self.psd(**kwargs)
+        plt.plot(f, p, label=self.name)
+        plt.xlabel('Frequency (Hz)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
     def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, **kwargs):
         """
         Estimate power spectral density using Welch’s method.
