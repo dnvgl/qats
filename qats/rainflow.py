@@ -103,8 +103,46 @@ def cycles_fromto(series):
     return full, half
 
 
-def cycle_rangemean(series):
-    pass
+def cycles_rangemean(series):
+    """
+    Returns range and mean value of all full cycles and half-cycles from *series* using the Rainflow algorithm.
+
+    Parameters
+    ----------
+    series : array_like
+        data series
+
+    Returns
+    -------
+    list
+        full cycles
+    list
+        half cycles
+
+    Notes
+    -----
+    The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
+
+    Examples
+    --------
+    Extract range and mean value for all full and half cycles.
+    >>> from qats.rainflow import cycles_rangemean
+    >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
+    >>> full, half = cycles_rangemean(series)
+    >>> full
+    [(4, 1)]
+    >>> half
+    [(3, -0.5), (4, -1.0), (8, 1.0), (6, 1.0), (8, 0.0), (9, 0.5)]
+
+    """
+    # extract cycle start and end points
+    full, half = cycles_fromto(series)
+
+    # calculate cycle range and mean values
+    full = [(abs(_[1] - _[0]), 0.5 * (_[0] + _[1])) for _ in full]
+    half = [(abs(_[1] - _[0]), 0.5 * (_[0] + _[1])) for _ in half]
+
+    return full, half
 
 
 def count_cycles(series, ndigits=None, nbins=None, binwidth=None):
