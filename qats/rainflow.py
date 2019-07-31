@@ -2,12 +2,12 @@
 # coding: utf-8
 """
 Rainflow cycle counting algorithm according to ASTM E1049-85 (2011), section 5.4.4.
-
-.. todo:: Include example of typical use in ``qats.rainflow`` docstring.
 """
-
 from collections import deque, defaultdict
 import numpy as np
+
+# TODO: cycle_count (input series directly, uses cycles_rangemean, replaces count_cycles)
+# TODO: update rebinning functions
 
 
 def reversals(series):
@@ -68,6 +68,18 @@ def cycles_fromto(series):
     history from a Rainflow matrix.
 
     The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
+
+    Examples
+    --------
+    Extract start and end points for all full and half cycles.
+    >>> from qats.rainflow import cycles_fromto
+    >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
+    >>> full, half = cycles_fromto(series)
+    >>> full
+    [(3, -1)]
+    >>> half
+    [(1, -2), (-3, 1), (5, -3), (-2, 4), (4, -4), (-4, 5)]
+
     """
     points = deque()
     full, half = [], []
