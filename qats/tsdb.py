@@ -1390,11 +1390,11 @@ class TsDB(object):
         plt.figure(1)
         for k, v in container.items():
             _ = v.rfc(**kwargs)
-            m, c = zip(*_)      # unpack magnitude-count pairs (tuples)
-            w = m[1] - m[0]     # bar width
-            plt.bar(m, c, w, label=k, alpha=0.4)
+            r, _, c = zip(*_)   # unpack range and count pairs, ignore mean value
+            w = r[1] - r[0]     # bar width
+            plt.bar(r, c, w, label=k, alpha=0.4)
 
-        plt.xlabel('Cycle magnitude')
+        plt.xlabel('Cycle range')
         plt.ylabel('Cycle count (-)')
         plt.grid()
         plt.legend()

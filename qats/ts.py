@@ -925,7 +925,7 @@ class TimeSeries(object):
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         kwargs : optional
-            see documentation of TimeSeries.get() method for available options
+            see documentation of TimeSeries.psd() method for available options
 
         """
         # dict with TimeSeries objects
@@ -933,6 +933,34 @@ class TimeSeries(object):
         f, p = self.psd(**kwargs)
         plt.plot(f, p, label=self.name)
         plt.xlabel('Frequency (Hz)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_rfc(self, figurename=None, **kwargs):
+        """
+        Plot time series cycle distribution (cycle range versus number of occurrences) from Rainflow counting.
+
+        Parameters
+        ----------
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.rfc() method for available options
+
+        See Also
+        --------
+        TimeSeries.rfc
+        """
+        cycles = self.rfc(**kwargs)
+        r, _, c = zip(*cycles)      # unpack cycle range and count, ignore mean value
+        w = r[1] - r[0]             # bar width
+        plt.bar(r, c, w, label=self.name)
+        plt.xlabel('Cycle range')
+        plt.ylabel('Cycle count (-)')
         plt.grid()
         plt.legend()
         if figurename is not None:

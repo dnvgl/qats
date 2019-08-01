@@ -683,11 +683,11 @@ class Qats(QMainWindow):
         Parameters
         ----------
         container : dict
-            Frequency versus power spectral density as tuple
+            Cycle range versus number of occurrences.
         """
         self.cycles_axes.clear()
         self.cycles_axes.grid(True)
-        self.cycles_axes.set_xlabel('Cycle magnitude')
+        self.cycles_axes.set_xlabel('Cycle range')
         self.cycles_axes.set_ylabel('Cycle count (-)')
 
         # cycle bar colors
