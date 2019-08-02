@@ -678,7 +678,7 @@ class Qats(QMainWindow):
 
     def plot_rfc(self, container):
         """
-        Plot time series cycle distribution found using rainflow counting
+        Plot cycle ranges versus number of occurrences
 
         Parameters
         ----------
@@ -695,11 +695,11 @@ class Qats(QMainWindow):
 
         # draw
         for name, value in container.items():
-            magnitude, count = value    # unpack magnitude and count
+            range, count = value    # unpack magnitude and count
 
             try:
                 # width of bars
-                width = magnitude[1] - magnitude[0]
+                width = range[1] - range[0]
 
             except IndexError:
                 # cycles and magnitude lists are empty, no cycles found from rainflow
@@ -710,7 +710,7 @@ class Qats(QMainWindow):
                 logging.warning("Invalid values (nan, inf) in time series '%s'. Cannot create cycle histogram." % name)
 
             else:
-                self.cycles_axes.bar(magnitude, count, width, label=name, alpha=0.4, color=next(barcolor))
+                self.cycles_axes.bar(range, count, width, label=name, alpha=0.4, color=next(barcolor))
                 self.cycles_axes.legend(loc="upper left")
                 self.cycles_canvas.draw()
 

@@ -5,6 +5,7 @@ import numpy as np
 from ..tsdb import TsDB
 from ..weibull import pwm as weibull_pwm
 from ..gumbel import pwm as gumbel_pwm
+from ..rainflow import rebin as rebin_cycles
 
 
 def calculate_psd(container, twin, fargs):
@@ -58,12 +59,16 @@ def calculate_rfc(container, twin, fargs, nbins=256):
     container_out = dict()
 
     for name, ts in container.items():
-        # Do Rainflow counting
-        pairs = ts.rfc(nbins=nbins, twin=twin, filterargs=fargs)
+        # rainflow counting
+        cycles = ts.rfc(twin=twin, filterargs=fargs)
+
+        # rebin
+        if nbins is not None:
+            cycles = rebin_cycles(cycles, binby='range', n=nbins)
 
         # unpack pairs (tuples) in list
-        m, c = zip(*pairs)
-        container_out[name] = tuple([m, c])
+        r, _, c = zip(*cycles)
+        container_out[name] = tuple([r, c])
 
     return container_out
 
