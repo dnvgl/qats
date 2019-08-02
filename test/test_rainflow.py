@@ -4,7 +4,6 @@ Module for testing rainflow algorithm
 """
 
 import itertools
-import random
 import unittest
 import numpy as np
 from qats import rainflow
@@ -28,14 +27,6 @@ class TestRainflowCounting(unittest.TestCase):
         """
         self.assertEqual(self.cycles, rainflow.count_cycles(self.series))
 
-    def test_rainflow_ndigits(self):
-        """
-        Add noise to test series. Test that the noise is ignored when specifying fewer significant digits
-        """
-        series = [x + 0.01 * random.random() for x in self.series]
-        self.assertNotEqual(self.cycles, rainflow.count_cycles(series))
-        self.assertEqual(self.cycles, rainflow.count_cycles(series, ndigits=1))
-
     def test_series_with_zero_derivatives(self):
         """
         Duplicate values in series to create zero derivatives (platou). Test that these are ignored by the cycle
@@ -48,31 +39,37 @@ class TestRainflowCounting(unittest.TestCase):
         """
         Test that values are correctly gathered to new bins of width 2
         """
-        self.assertEqual(self.cycles_bw2, rainflow.count_cycles(self.series, binwidth=2.))
+        self.assertEqual(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
 
     def test_rainflow_rebinning_binwidth5(self):
         """
         Test that values are correctly gathered to new bins of width 5
         """
-        self.assertEqual(self.cycles_bw5, rainflow.count_cycles(self.series, binwidth=5.))
+        self.assertEqual(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
 
     def test_rainflow_rebinning_nbin2(self):
         """
         Test that values are correctly gathered to 2 bins
         """
-        self.assertEqual(self.cycles_n2, rainflow.count_cycles(self.series, nbins=2))
+        self.assertEqual(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2.))
 
     def test_rainflow_rebin_exceptions(self):
         """
-        Test that rebinning to bins which upper bound is lower than the maximum magnitude in the cycle
-        distribution raises a ValueError
+        Test that rebinning raises errors as it should do
         """
         try:
-            _ = rainflow.rebin_cycles(self.cycles, [0, 2, 4, 6, 8])
+            _ = rainflow.rebin(self.cycles, binby='nothing')
         except ValueError:
             pass
         else:
-            self.fail("Did not raise ValueError when specifying bins which do not cover all cycle magnitudes.")
+            self.fail("Did not raise ValueError when binby was not equal to neither 'mean' nor 'range'.")
+
+        try:
+            _ = rainflow.rebin(self.cycles)
+        except ValueError:
+            pass
+        else:
+            self.fail("Did not raise ValueError when neither `n` nor `w` were specified.")
 
 
 if __name__ == '__main__':

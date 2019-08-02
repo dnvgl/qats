@@ -6,7 +6,7 @@ Rainflow cycle counting algorithm according to ASTM E1049-85 (2011), section 5.4
 from collections import deque, defaultdict
 import numpy as np
 
-# TODO: plot functions for 2D (range, count) and 3D (range, mean, count)
+# TODO: Evaluate from-to counting which stores the "orientation" of each cycle. Enables reconstruction of a time history
 
 
 def reversals(series):
@@ -44,9 +44,10 @@ def reversals(series):
         d_last = d_next
 
 
-def cycles_fromto(series):
+def cycles(series):
     """
-    Returns start and end points for full cycles and half-cycles from *series* using the Rainflow algorithm.
+    Find full cycles and half-cycles range and mean value from *series* and count the number of occurrences using the
+    Rainflow algorithm.
 
     Parameters
     ----------
@@ -62,22 +63,18 @@ def cycles_fromto(series):
 
     Notes
     -----
-    The unsymmetrical From-To cycle counting keeps more information about the loading cycles than Range and Range-Mean
-    counting does, because it also stores the "orientation" of each load cycle. With this you can reconstruct a time
-    history from a Rainflow matrix.
-
     The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
 
     Examples
     --------
     Extract start and end points for all full and half cycles.
-    >>> from qats.rainflow import cycles_fromto
+    >>> from qats.rainflow import cycles
     >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
-    >>> full, half = cycles_fromto(series)
+    >>> full, half = cycles(series)
     >>> full
-    [(3, -1)]
+    [(4, 1.0)]
     >>> half
-    [(1, -2), (-3, 1), (5, -3), (-2, 4), (4, -4), (-4, 5)]
+    [(3, -0.5), (4, -1.0), (8, 1.0), (6, 1.0), (8, 0.0), (9, 0.5)]
 
     """
     points = deque()
@@ -88,88 +85,42 @@ def cycles_fromto(series):
         while len(points) >= 3:
             # Form ranges X and Y from the three most recent points
             x = abs(points[-2] - points[-1])
-            y = abs(points[-3] - points[-2])
-            fromto = (points[-2], points[-3])   # cycle start and end points
+            y = abs(points[-3] - points[-2])        # cycle range
+            m = 0.5 * (points[-2] + points[-3])     # cycle mean
+            # fromto = (points[-2], points[-3])     # cycle start and end points (not currently in use)
 
             if x < y:
                 # Read the next point
                 break
             elif len(points) == 3:
                 # Y contains the starting point
-                # Count Y as one-half cycle and discard the first point
-                half.append(fromto)
+                # Count Y as half cycle and discard the first point
+                half.append((y, m))
                 points.popleft()
             else:
                 # Count Y as one cycle and discard the peak and the valley of Y
-                full.append(fromto)
+                full.append((y, m))
                 last = points.pop()
                 points.pop()
                 points.pop()
                 points.append(last)
     else:
-        # Count the remaining ranges as one-half cycles
+        # Count the remaining ranges as half cycles
         while len(points) > 1:
-            half.append((points[-1], points[-2]))
+            half.append((abs(points[-2] - points[-1]), 0.5 * (points[-1] + points[-2])))
             points.pop()
-    return full, half
-
-
-def cycles_rangemean(series):
-    """
-    Returns range and mean value of all full cycles and half-cycles from *series* using the Rainflow algorithm.
-
-    Parameters
-    ----------
-    series : array_like
-        data series
-
-    Returns
-    -------
-    list
-        full cycles
-    list
-        half cycles
-
-    Notes
-    -----
-    The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
-
-    Examples
-    --------
-    Extract range and mean value for all full and half cycles.
-    >>> from qats.rainflow import cycles_rangemean
-    >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
-    >>> full, half = cycles_rangemean(series)
-    >>> full
-    [(4, 1.0)]
-    >>> half
-    [(3, -0.5), (4, -1.0), (8, 1.0), (6, 1.0), (8, 0.0), (9, 0.5)]
-
-    """
-    # extract cycle start and end points
-    full, half = cycles_fromto(series)
-
-    # calculate cycle range and mean values
-    full = [(abs(_[1] - _[0]), 0.5 * (_[0] + _[1])) for _ in full]
-    half = [(abs(_[1] - _[0]), 0.5 * (_[0] + _[1])) for _ in half]
 
     return full, half
 
 
-def count_cycles(series, ndigits=None, nbins=None, binwidth=None):
+def count_cycles(series):
     """
-    Returns a sorted list containing triplets of cycle range, mean and count.
+    Count number of occurrences of cycle range and mean combinations.
 
     Parameters
     ----------
     series : array_like
         Data series.
-    ndigits : int, optional
-        If `ndigits` is given the cycles will be rounded to the given number of digits before counting.
-    nbins : int, optional
-        If `nbins` is given the cycle count per cycle magnitude is rebinned to `nbins` bins.
-    binwidth : float, optional
-        If `binwidth` is given the cycle count per cycle magnitude is rebinned to bins with a width of `binwidth`.
 
     Returns
     -------
@@ -181,12 +132,9 @@ def count_cycles(series, ndigits=None, nbins=None, binwidth=None):
 
     Notes
     -----
-    The cycles are extracted from the iterable series using the `cycles_rangemean` function.
+    The cycles are extracted from the iterable series using the `rangemean` function.
 
     Half cycles are counted as 0.5, so the returned counts may not be whole numbers.
-
-    Rebinning is not applied if specified `nbins` is larger than the original number of bins. `nbins` override
-    `binwidth` if both are specified.
 
     Examples
     --------
@@ -197,181 +145,134 @@ def count_cycles(series, ndigits=None, nbins=None, binwidth=None):
     >>> count_cycles(series)
     [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
 
-    Extract cycle range, mean and count and downsample to 3 bins:
-
-    >>> count_cycles(series, nbins=3)
-    [(1.5, -0.5, 0.5), (4.5, 0.5, 2.0), (7.5, 0.5, 1.5)]
-
     The sorted list of cycles may be unpacked into separate lists of cycle range, mean and count as:
 
-    >>> cycles = count_cycles(series)
-    >>> r, m, c = zip(*cycles)
+    >>> r, m, c = zip(*count_cycles(series))
 
     See Also
     --------
-    rainflow.rebin_cycles
+    rainflow.reversals, rainflow.cycles, rainflow.cycle_ranges, rainflow.cycle_means, rainflow.cycle_rangemean
 
     """
-    full, half = cycles_rangemean(series)
-
-    # Round the cycle range and mean value if requested
-    if ndigits is not None:
-        full = ((round(_[0], ndigits), round(_[1], ndigits)) for _ in full)
-        half = ((round(_[0], ndigits), round(_[1], ndigits)) for _ in half)
+    full, half = cycles(series)
 
     # Count cycles
-    cycles = defaultdict(float)
+    counts = defaultdict(float)
     for x in full:
-        cycles[x] += 1.0
+        counts[x] += 1.0
     for x in half:
-        cycles[x] += 0.5
+        counts[x] += 0.5
 
-    # sorted triplets (tuples) of cycle range, mean and count in list
-    cycles = sorted([rm + tuple([c]) for rm, c in cycles.items()])
+    # create a list of triplets (range, mean, count) sorted ascending
+    counts = sorted([rm + tuple([c]) for rm, c in counts.items()])
 
-    if ((nbins is not None) and (nbins < len(cycles))) or (binwidth is not None):
-        if nbins is not None:
-            # rebin to specified number of bins
-            cycles_rebinned = rebin_cycles_nbins(cycles, nbins, ndigits=ndigits)
-        else:
-            # rebin to bins of specified width
-            cycles_rebinned = rebin_cycles_binwidth(cycles, binwidth, ndigits=ndigits)
-
-        return cycles_rebinned
-
-    else:
-        return cycles
+    return counts
 
 
-def rebin_cycles_binwidth(cycles, binwidth, ndigits=None):
+def rebin(cycles, binby='range', n=None, w=None):
     """
-    Rebin cycle distribution to bins of specified width.
+    Rebin cycles in specified bins by range or mean value
 
     Parameters
     ----------
     cycles : list
-        Sorted list of tuples of cycle range, mean and count.
-    binwidth : float, optional
-        Bin width in rebinned distribution.
-    ndigits : int, optional
-        If `ndigits` is given the cycles will be rounded to the given number of digits before counting.
-
-    Returns
-    -------
-    list
-        Sorted list of tuples of rebinned cycle range, mean and count.
-
-    Notes
-    -----
-    Cycles are gathered into a specific bin if ``lower_bound < cycle_range <= upper_bound``. The rebinned distribution
-    is discretized by the bin mid-points ``0.5 * (lower_bound + upper_bound)``.
-
-    """
-    # extract maximum range
-    max_range = max([m for m, _, _ in cycles])
-
-    # create bins ranging from 0 to maximum range, stepping with specified bin width
-    bins = np.arange(0., max_range + binwidth, binwidth)
-
-    # rebin
-    rebinned_cycles = rebin_cycles(cycles, bins, ndigits=ndigits)
-
-    return rebinned_cycles
-
-
-def rebin_cycles_nbins(cycles, nbins, ndigits=None):
-    """
-    Rebin cycle distribution to a specified number of equidistant bins
-
-    Parameters
-    ----------
-    cycles : list
-        Sorted list of tuples of cycle range, mean and count.
-    nbins : int, optional
-        Number of equidistant bins in rebinned distribution.
-    ndigits : int, optional
-        If `ndigits` is given the cycles will be rounded to the given number of digits before counting.
-
-    Returns
-    -------
-    list
-        sorted list of tuples of rebinned cycle range, mean and count
-
-    Notes
-    -----
-    Cycles are gathered into a specific bin if ``lower_bound < cycle_range <= upper_bound``. The rebinned distribution
-    is discretized by the bin mid-points ``0.5 * (lower_bound + upper_bound)``.
-
-    """
-    # extract maximum magnitude
-    max_range = max([m for m, _, _ in cycles])
-
-    # create specified number of bins ranging from 0 to maximum magnitude
-    bins = np.linspace(0., max_range, nbins + 1)
-
-    # rebin
-    rebinned_cycles = rebin_cycles(cycles, bins, ndigits=ndigits)
-
-    return rebinned_cycles
-
-
-def rebin_cycles(cycles, bins, ndigits=None):
-    """
-    Rebin cycle distribution to specified bins
-
-    Parameters
-    ----------
-    cycles : list
-        Sorted list of tuples of cycle range, mean and count.
-    bins : array_like
+        Cycle ranges, mean values and count.
+    bins : list
         Bins specified by bin boundaries e.g. first bin ranges from the first to the second value in `bins`, the next
         bin from the second value to the third, and so on.
-    ndigits : int, optional
-        If `ndigits` is given the cycles will be rounded to the given number of digits before counting.
+    binby : str, optional
+        'range' - Rebin by cycle range (default)
+        'mean'  - Rebin by cycle mean
+    n : int, optional
+        Number of equidistant bins for cycle ranges and cycle mean values.
+    w : float, optional
+        Width of equidistant bins for cycle ranges and cycle mean values. Overrules `n` is specified.
 
     Returns
     -------
     list
-        Sorted list of tuples of rebinned cycle range, mean and count.
+        Rebinned cycles in ascending order (cycle ranges or mean values).
 
     Notes
     -----
-    Cycles are gathered into a specific bin if ``lower_bound < cycle_range <= upper_bound``. The rebinned distribution
-    is discretized by cycle range as the bin mid-points ``0.5 * (lower_bound + upper_bound)``. The rebinned cycle mean
-    value is the weighted average of all cycle means in the bin.
+    Cycles are gathered into a specific bin if the primary measure (range of mean) is within that bin's boundaries. The
+    primary measure is represented by the bin mid point. The secondary measure (range or mean) is represented by its
+    weighted average (weighted by number of occurrences) in the bin.
 
-    Note that rebinning may shift a significant amount of the cycle count to bins with a different midpoint
-    (cycle range).
+    Note that rebinning may shift a significant amount of the cycles to bins which midpoint differs notably from
+    the original cycle value (range or mean). We advice to rebin for plotting but when calculating e.g. fatigue damage
+    we advice to use the raw unbinned values.
 
     See Also
     --------
-    rainflow.rebin_cycles_nbins
-    rainflow.rebin_cycles_binwidth
+    rainflow.create_bins
 
     """
-    # check that the specified bins cover the maximum range
-    max_range = max([m for m, _, _ in cycles])
-    max_bins = max(bins)
 
-    if max_range > max_bins:
-        raise ValueError(f"The maximum range {max_range} exceeds the upper bound of the specified bins {max_bins}."
-                         "Increase the upper boundary of the specified bins.")
+    def create_bins(start, stop, n=None, w=None):
+        """
+        Create equidistant bins.
 
-    rebinned_cycles = list()
-    for i in range(len(bins) - 1):
-        lo = bins[i]
-        hi = bins[i + 1]
+        Parameters
+        ----------
+        start : float
+            Lowest bin value
+        stop : float
+            Largest bin value
+        n : int, optional
+            Number of equidistant bins
+        w : float, optional
+            Width of equidistant bins. Overrules `n` is specified.
 
-        # count cycles in bin
-        bin_n = np.sum([c for r, _, c in cycles if (r > lo) and (r <= hi)])
+        Returns
+        -------
+        list
+            Bins specified by bin boundaries e.g. first bin ranges from the first to the second value in `bins`, the next
+            bin from the second value to the third, and so on.
 
-        # cycle range as bin midpoint
-        bin_range = round(0.5 * (lo + hi), ndigits) if ndigits is not None else 0.5 * (lo + hi)
+        """
+        if (not n) and (not w):
+            raise ValueError('Specify either the number of bins `n` or the bin width `w`.')
 
-        # cycle mean as weighted average of all cycle mean values in bin (defaults to nan)
-        bin_mean = sum([c * m for r, m, c in cycles if (r > lo) and (r <= hi)]) / bin_n if bin_n > 0. else np.nan
+        if w is not None:
+            # crate bins with specified w
+            return np.arange(start, stop + w, w)
 
-        rebinned_cycles.append(tuple([bin_range, bin_mean, bin_n]))
+        else:
+            # create specified number of bins
+            return np.linspace(start, stop, n + 1)
 
-    return sorted(rebinned_cycles)
+    if binby not in ('range', 'mean'):
+        raise ValueError(f"Unable to bin by '{binby}'. Must be either 'range' or 'mean'.")
+
+    # unpack
+    ranges, means, counts = zip(*cycles)
+
+    # rebin
+    if binby == 'range':
+        bins = create_bins(0., max(ranges), n=n, w=w)
+        bin_primary = [0.5 * (lo + hi) for lo, hi in zip(bins[:-1], bins[1:])]  # bin mid points
+        bin_secondary = list()
+        bin_n = list()
+        for lo, hi in zip(bins[:-1], bins[1:]):
+            # number of cycles which range is within bin boundaries
+            n = sum([c for r, c in zip(ranges, counts) if (r > lo) and (r <= hi)])
+            bin_n.append(n)
+            # weighted average of cycle means
+            bin_secondary.append(sum([c * m for r, m, c in zip(ranges, means, counts) if (r > lo) and (r <= hi)]) / n if n > 0. else np.nan)
+
+        return list(zip(bin_primary, bin_secondary, bin_n))
+    else:
+        bins = create_bins(min(means), max(means), n=n, w=w)
+        bin_primary = [0.5 * (lo + hi) for lo, hi in zip(bins[:-1], bins[1:])]  # bin mid points
+        bin_secondary = list()
+        bin_n = list()
+        for lo, hi in zip(bins[:-1], bins[1:]):
+            # number of cycles which mean is within bin boundaries
+            n = sum([c for m, c in zip(means, counts) if (m > lo) and (m <= hi)])
+            bin_n.append(n)
+            # weighted average of cycle ranges
+            bin_secondary.append(sum([c * r for r, m, c in zip(ranges, means, counts) if (m > lo) and (m <= hi)]) / n if n > 0. else np.nan)
+
+        return list(zip(bin_secondary, bin_primary, bin_n))
 

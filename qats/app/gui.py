@@ -665,7 +665,7 @@ class Qats(QMainWindow):
         self.spectrum_axes.clear()
         self.spectrum_axes.grid(True)
         self.spectrum_axes.set_xlabel('Frequency (Hz)')
-        self.spectrum_axes.set_ylabel('Spectral density')
+        self.spectrum_axes.set_ylabel('Power spectral density')
 
         # draw
         for name, value in container.items():
