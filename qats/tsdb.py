@@ -873,7 +873,7 @@ class TsDB(object):
         See also
         --------
         qats.ts.TimeSeries
-        geta, getd, getl, getm
+        geta, getda, getl, getm
         """
         # check that at least one of the required parameters is given,
         # and that non-compatible parameters are not combined
@@ -954,7 +954,7 @@ class TsDB(object):
         See also
         --------
         qats.ts.TimeSeries, qats.ts.TimeSeries.get
-        get, getd, getl, getm
+        get, getda, getl, getm
         """
         # use self.get() to avoid duplicate code
         try:
@@ -967,7 +967,37 @@ class TsDB(object):
             raise
         return ts.get(**kwargs)
 
-    def getd(self, names=None, ind=None, store=True, fullkey=False, **kwargs):
+    def getd(self, names=None, ind=None, store=True, fullkey=False):
+        """
+        Get dict of TimeSeries objects.
+
+        Note that this method is identical to :meth:`~qats.ts.TimeSeries.getm`.
+
+        Parameters
+        ----------
+        names : str or list or tuple, optional
+            Time series name(s), supports wildcard.
+        ind : int or list, optional
+            Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
+            This parameter may not be combined with `keys` or `names`.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        fullkey : bool, optional
+            Use full key in returned container
+
+        Returns
+        -------
+        dict
+            TimeSeries objects
+
+        See also
+        --------
+        qats.ts.TimeSeries
+        get, geta, getda, getl, getm
+        """
+        return self.getm(names=names, ind=ind, store=store, fullkey=fullkey)
+
+    def getda(self, names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
         Get dictionary of (numpy) arrays.
         Optionally, the returned data arrays may be processed according to specified optional arguments (see `kwargs`).
@@ -1033,7 +1063,7 @@ class TsDB(object):
         See also
         --------
         qats.ts.TimeSeries
-        get, geta, getd, getm
+        get, geta, getda, getm
         """
         # read time series and return in list (reuse getm() to avoid duplicating code)
         return list(self.getm(names=names, ind=ind, store=store).values())
@@ -1064,13 +1094,13 @@ class TsDB(object):
         When working on a large time series database it is recommended to set ``store=False`` to avoid too high memory
         usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
 
-        Note that this method is somewhat similar to :meth:`~getd` but returns TimeSeries objects instead of numpy
+        Note that this method is somewhat similar to :meth:`~getda` but returns TimeSeries objects instead of numpy
         arrays. Therefore this method does not support keyword arguments to be passed further to TimeSeries.get().
 
         See also
         --------
         qats.ts.TimeSeries
-        get, geta, getd, getl
+        get, geta, getda, getl
         """
         # check that non-compatible parameters are not combined
         if ind is not None and names is not None:
@@ -1359,7 +1389,7 @@ class TsDB(object):
         # todo: add possibility for subplots in plot method. nsub=None (int), sharex=True.
         # todo: consider need for `keep_order` parameter when plotting
         # dict with numpy arrays: time and data
-        container = self.getd(names=names, store=store, **kwargs)
+        container = self.getda(names=names, store=store, **kwargs)
 
         plt.figure(1)
         for k, v in container.items():

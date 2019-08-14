@@ -157,23 +157,23 @@ class TestTsDB(unittest.TestCase):
         k = self.db.list(display=False)
         self.assertEqual(6, len(k), "Did not clear subset of registered keys correctly. %d keys remaining" % len(k))
 
-    def test_getd_correct_key(self):
+    def test_getda_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)
-        container = self.db.getd(names="Heave", fullkey=True)
+        container = self.db.getda(names="Heave", fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and get_many method returns different keys.")
 
-    def test_getd_correct_number_of_arrays(self):
+    def test_getda_correct_number_of_arrays(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)  # should be only 1 key returned in this case
-        container = self.db.getd(names="Heave", fullkey=True)
+        container = self.db.getda(names="Heave", fullkey=True)
         self.assertEqual(2, len(container[rk[0]]), "Got more than 2 arrays (time and data) in return from get_many().")
 
     def test_gets_none(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.getd(names=[])
+        container = self.db.getda(names=[])
         n = len(container)
-        self.assertEqual(0, n, "Should have received empty container (OrderedDict) from getd()")
+        self.assertEqual(0, n, "Should have received empty container (OrderedDict) from getda()")
 
     def test_getl_correct_key(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
@@ -192,6 +192,14 @@ class TestTsDB(unittest.TestCase):
         rk = self.db.list(names="Heave", display=False)
         container = self.db.getm(ind=2, fullkey=True)
         self.assertEqual(rk, list(container.keys()), "db list method and getm method returns different keys.")
+
+    def test_getd_equals_getm(self):
+        self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
+        container1 = self.db.getm(names="*", fullkey=True)
+        container2 = self.db.getd(names="*", fullkey=True)
+        for name, ts in container1.items():
+            self.assertTrue(name in container2 and container2[name] is container1[name],
+                            "container returned by getd is not identical to container returned by getm")
 
     def test_geta(self):
         tsfile = os.path.join(self.data_directory, 'simo_p.ts')
@@ -273,7 +281,7 @@ class TestTsDB(unittest.TestCase):
     def test_get_correct_number_of_timesteps(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         rk = self.db.list(names="Heave", display=False)  # should be only 1 key returned in this case
-        container = self.db.getd(names="Heave", fullkey=True)
+        container = self.db.getda(names="Heave", fullkey=True)
         self.assertEqual(65536, len(container[rk[0]][0]), "Deviating number of time steps.")
 
     def test_add_raises_keyerror_on_nonunique_key(self):
@@ -344,7 +352,7 @@ class TestTsDB(unittest.TestCase):
         Test correct types
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
-        container = self.db.getd(names="Surge")
+        container = self.db.getda(names="Surge")
         for key, ts in container.items():
             self.assertIsInstance(key, str, "Key should be type string.")
             self.assertIsInstance(ts, tuple, "Time series container should be type tuple.")
