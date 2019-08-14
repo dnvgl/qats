@@ -75,6 +75,21 @@ Signal processing
     .. rubric:: API
 
 
+Motions
+*******
+
+.. automodule:: qats.motions
+
+    :members:
+
+    .. rubric:: Function overview
+
+    .. autoautosummary:: qats.motions
+       :functions:
+
+    .. rubric:: API
+
+
 Rainflow counting
 *****************
 
