@@ -1,15 +1,10 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-Functions for time series operations:
-    - transformation of motion
-    - numerical time differentiation (velocity, acceleration)
+Transformations and operations related to motion.
 """
 import numpy as np
 from numpy import sin, cos, radians as rad
-
-# todo: write unittest module for transforms.py
-# todo: add function for time derivative
 
 
 def transform_motion(motion, newref, rotunit="deg"):
@@ -152,7 +147,7 @@ def velocity(x, t):
     if x.ndim == 1:
         axis = None
     else:
-        # more than one signal is given -> perform time differentation along axis 1
+        # more than one signal is given -> perform time differentiation along axis 1
         axis = 1
 
     # time differentiation

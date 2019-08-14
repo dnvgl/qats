@@ -3,7 +3,7 @@
 Module for testing functions in operations module
 """
 from qats import TsDB
-from qats.operations import transform_motion, velocity, acceleration
+from qats.motions import transform_motion, velocity, acceleration
 import unittest
 import os
 import numpy as np
