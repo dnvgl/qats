@@ -58,6 +58,7 @@ Take a look at the resources listed below to learn more.
 
 * [**Source**](https://github.com/dnvgl/qats)
 * [**Issues**](https://github.com/dnvgl/qats/issues)
+* [**Changelog**](https://github.com/dnvgl/qats/blob/master/CHANGELOG.md)
 * [**Documentation**](https://qats.readthedocs.io)
 * [**Download**](https://pypi.org/project/qats/)
 
