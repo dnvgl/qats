@@ -22,6 +22,7 @@ For comparison to specific branches, use the [GitHub compare](https://github.com
 #### Added
 - `TsDB.getl()` method ("get list").
 - New module `motions.py`, for transformations and operations related to motion time series.
+- Changelog (this file)
 
 #### Changed
 - Changed `TsDB.getd()` method ("get dict") to return dict of `TimeSeries` objects, which is identical to `TsDB.getm()`. 
@@ -31,13 +32,13 @@ For comparison to specific branches, use the [GitHub compare](https://github.com
 - Wildcard prepending to names specified to `TsDB.list()` and `TsDB.get*()` methods. 
   See [this summary](https://github.com/dnvgl/qats/pull/28#issue-296526900) for details.
 
-### [3.0.6] - 2019-06-27
+### [3.0.6] // 2019-06-27
 #### Fixed
 - Issues related to proper deployment to PyPI and Read the Docs.
 - Bug when using band-stop filter in GUI.
 
 
-### [3.0.5] - 2019-06-26
+### [3.0.5] // 2019-06-26
 First proper release to [PyPI](https://pypi.org/project/qats/).
 
 
