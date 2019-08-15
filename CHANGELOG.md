@@ -20,7 +20,7 @@ Click link to see all [unreleased] changes to the master branch of the repositor
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
 #### Added
-- `TsDB.getl()` method ("get list").
+- Class method `TsDB.getl()` ("get list").
 - New module `motions.py`, for transformations and operations related to motion time series.
 - Changelog (this file)
 
