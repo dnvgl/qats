@@ -12,7 +12,7 @@ from scipy.interpolate import interp1d
 from scipy.signal import welch
 from scipy.stats import kurtosis, skew, tstd
 import matplotlib.pyplot as plt
-from .rainflow import count_cycles, rebin as rebin_cycles
+from .fatigue.rainflow import count_cycles, rebin as rebin_cycles
 from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
     average_frequency, find_maxima
 from .weibull import Weibull, weibull2gumbel, pwm

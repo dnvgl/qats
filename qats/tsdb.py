@@ -13,7 +13,7 @@ from struct import pack
 from array import array
 from collections import OrderedDict, defaultdict
 from .ts import TimeSeries
-from .rainflow import rebin as rebin_cycles
+from .fatigue.rainflow import rebin as rebin_cycles
 from .readers.sima import (
     read_names as read_sima_names,
     read_ascii_data as read_sima_ascii_data,

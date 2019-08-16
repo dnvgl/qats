@@ -5,7 +5,7 @@ import numpy as np
 from ..tsdb import TsDB
 from ..weibull import pwm as weibull_pwm
 from ..gumbel import pwm as gumbel_pwm
-from ..rainflow import rebin as rebin_cycles
+from ..fatigue.rainflow import rebin as rebin_cycles
 
 
 def calculate_psd(container, twin, fargs):

@@ -6,7 +6,7 @@ Module for testing rainflow algorithm
 import itertools
 import unittest
 import numpy as np
-from qats import rainflow
+from qats.fatigue import rainflow
 
 
 class TestRainflowCounting(unittest.TestCase):
