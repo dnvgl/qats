@@ -329,7 +329,7 @@ def dcalc_sn_weib(q, h, sn, v0, td=None, scf=1., th=None):
     return d
 
 
-def effective_alternating_stress(cycles, uts):
+def goodman_haigh(cycles, uts):
     """
     Effective alternating stress using the Goodman-Haigh mean stress correction for fully reversed loading (R=-1).
 
