@@ -1357,7 +1357,7 @@ class TsDB(object):
         else:
             plt.show()
 
-    def plot_cycle_range(self, names=None, n=None, w=None, figurename=None, **kwargs):
+    def plot_cycle_range(self, names=None, n=200, w=None, figurename=None, **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -1387,14 +1387,17 @@ class TsDB(object):
         # dict with TimeSeries objects
         container = self.getm(names=names, **kwargs)
 
+        # ensure that rebinning will be done
+        assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
+                                                   "be different from None"
+
         plt.figure(1)
         for k, v in container.items():
             # extract cycles
             cycles = v.rfc(**kwargs)
 
             # rebin cycles
-            if (n is not None) or (w is not None):
-                cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+            cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
             r, _, c = zip(*cycles)   # unpack range and count pairs, ignore mean value
             dr = r[1] - r[0]     # bar width

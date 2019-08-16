@@ -30,7 +30,7 @@ from .gumbel import Gumbel
 # todo: level crossings (see Moan&Naess book)
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
-
+# todo: smarter sizing of scatter dots in plot_cycle_rangemean()
 
 class TimeSeries(object):
     """
@@ -941,7 +941,7 @@ class TimeSeries(object):
         else:
             plt.show()
 
-    def plot_cycle_range(self, n=None, w=None, figurename=None, **kwargs):
+    def plot_cycle_range(self, n=200, w=None, figurename=None, **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -963,8 +963,9 @@ class TimeSeries(object):
         cycles = self.rfc(**kwargs)
 
         # rebin cycles
-        if (n is not None) or (w is not None):
-            cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+        assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
+                                                   "be different from None"
+        cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
         r, _, c = zip(*cycles)      # unpack cycle range and count, ignore mean value
         dr = r[1] - r[0]            # bar width
