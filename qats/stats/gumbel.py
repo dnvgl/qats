@@ -40,7 +40,7 @@ class Gumbel(object):
     --------
     To initiate an instance based on parameters, use:
 
-    >>> from qats.gumbel import Gumbel
+    >>> from qats.stats.gumbel import Gumbel
     >>> gumb = Gumbel(loc, scale)
 
     If you need to establish a Gumbel instance based on a sample data set, use:
@@ -282,7 +282,7 @@ class Gumbel(object):
         --------
         Assuming `data` is a sample array/list:
 
-        >>> from qats.gumbel import Gumbel
+        >>> from qats.stats.gumbel import Gumbel
         >>> gumb = Gumbel.fit(data, method="msm")
 
         """
@@ -332,7 +332,7 @@ class Gumbel(object):
 
         Examples
         --------
-        >>> from qats.gumbel import Gumbel
+        >>> from qats.stats.gumbel import Gumbel
         >>> gumb = Gumbel.fit_from_weibull_parameters(wa, wb, wc, n)
         """
 
@@ -507,13 +507,13 @@ class Gumbel(object):
         --------
         Pick 1000 values randomly from a Gumbel distribution
 
-        >>> from qats.gumbel import Gumbel
+        >>> from qats.stats.gumbel import Gumbel
         >>> g = Gumbel(loc, scale)
         >>> sample = g.rnd(size=1000)
 
         If you want to preset the seed for the random sampling (to be able to repeat the sampling)
 
-        >>> from qats.gumbel import Gumbel
+        >>> from qats.stats.gumbel import Gumbel
         >>> g = Gumbel(loc, scale)
         >>> sample = g.rnd(size=1000, seed=3)
 
@@ -594,7 +594,7 @@ def bootstrap(loc, scale, size, repetitions, method='pwm'):
     To quantify the uncertainty (coefficient of variation) of a Gumbel distribution fitted to a sample with 5 values
     (using 100 repetition):
 
-    >>> from qats.gumbel import bootstrap
+    >>> from qats.stats.gumbel import bootstrap
     >>> m, cv = bootstrap(10, 2.5, 5, 100)
 
     """
