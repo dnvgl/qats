@@ -400,7 +400,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.get()
+        get()
 
         Notes
         -----
@@ -475,8 +475,8 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.maxima()
-        qats.stats.find_maxima
+        maxima()
+        qats.signal.find_maxima
         qats.weibull.Weibull.fit
         qats.weibull.Weibull.fromsignal
 
@@ -513,7 +513,7 @@ class TimeSeries(object):
             - ('bs', flo, fhi)    - Band-stop filter between frequencies flo and fhi
             - ('tp', a)           - Threshold-pass filter at amplitude a
 
-        resample : float|ndarray|list, optional
+        resample : float or ndarray or list, optional
             Resample time series:
 
             - to specified constant time step if `resample` is a float
@@ -560,7 +560,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.resample(), TimeSeries.interpolate(), qats.signal_processing.smooth()
+        TimeSeries.resample(), TimeSeries.interpolate(), qats.signal.smooth()
 
         """
         assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), \
@@ -762,7 +762,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        qats.stats.find_maxima
+        qats.signal.find_maxima
 
         Notes
         -----
@@ -857,8 +857,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.maxima()
-
+        maxima()
         """
         # get time and data
         t, x = self.get(twin=twin, **kwargs)
@@ -886,7 +885,6 @@ class TimeSeries(object):
         Notes
         -----
         Modifies ´t´ and ´x´ on current TimeSeries object. This is irreversible.
-
         """
         self._t, self.x = self.get(**kwargs)
 
