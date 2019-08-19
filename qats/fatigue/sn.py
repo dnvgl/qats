@@ -253,7 +253,7 @@ class SNCurve(object):
         return
 
 
-def dcalc_sn(srange, count, sn, td=1., scf=1., th=None, retbins=False):
+def damage(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     """
     Fatigue damage calculation based on stress cycle histogram and S-N curve.
 
@@ -309,7 +309,7 @@ def dcalc_sn(srange, count, sn, td=1., scf=1., th=None, retbins=False):
         return d
 
 
-def dcalc_sn_weib(q, h, sn, v0, td=None, scf=1., th=None):
+def damage_weibull(q, h, sn, v0, td=None, scf=1., th=None):
     """
     Fatigue damage calculation based on (2-parameter) Weibull stress cycle distribution and S-N curve.
     Ref. DNV-RP-C03 (2016) eq. F.12-1.
