@@ -1447,7 +1447,7 @@ class TsDB(object):
         else:
             plt.show()
 
-    def plot_cycle_range(self, names=None, n=200, w=None, figurename=None, store=True **kwargs):
+    def plot_cycle_range(self, names=None, n=200, w=None, figurename=None, store=True, **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -1504,7 +1504,7 @@ class TsDB(object):
         else:
             plt.show()
 
-    def plot_cycle_rangemean(self, names=None, n=None, w=None, figurename=None, store=True **kwargs):
+    def plot_cycle_rangemean(self, names=None, n=None, w=None, figurename=None, store=True, **kwargs):
         """
         Plot cycle range-mean versus number of occurrences.
 
