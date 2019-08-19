@@ -8,7 +8,6 @@ Classes and functions for fatigue calculations:
 import numpy as np
 from scipy.special import gamma as gammafunc, gammainc, gammaincc
 
-# todo: write unittest module for fatigue functions (SNClass, damage calculations, ...)
 # todo: Update SNCurve docstring to include description of class and attributes
 
 
@@ -81,7 +80,7 @@ class SNCurve(object):
                 raise ValueError("`nswitch` must be specified for bi-linear curves")
             loga2 = m2 / m1 * loga1 + (1 - m2/m1) * np.log10(nswitch)
             a2 = 10 ** loga2
-            sswitch = 10 ** ((loga1 - np.log10(nswitch)) / m1)  # todo: check formula for Sswitch
+            sswitch = 10 ** ((loga1 - np.log10(nswitch)) / m1)
         else:
             a2 = None
             loga2 = None
@@ -107,6 +106,59 @@ class SNCurve(object):
             return False
         else:
             return True
+
+    @property
+    def m(self):
+        """ Slope parameter """
+        # should only be available for linear S-N curves - otherwise, m1 and m2 should be used!
+        assert self.m2 is None, "For bi-linear curves, use `m1` and `m2` instead of `m`"
+        return self.m1
+
+    def fatigue_strength(self, n, t=None):
+        """
+        Magnitude of stress range leading to a particular fatigue life (in terms of number of cycles.
+
+        Parameters
+        ----------
+        n : float
+            Number of cycles (fatigue life) [-].
+        t : float, optional
+            Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
+            specified, thickness correction is not taken into account.
+
+        Returns
+        -------
+        float
+            Fatigue strength, i.e. magnitude of stress range leading to specified fatigue life (no. of cycles).
+
+        Raises
+        ------
+        ValueError: If thickness is specified, but thickness reference and exponent is not defined.
+        """
+        # thickness correction
+        if t is not None:
+            # thickness correction term
+            try:
+                tcorr = self.thickness_correction(t)
+            except ValueError:
+                raise
+        else:
+            # todo: consider to raise error if t_exp and t_ref is specified, but t not given (unless suppressed)
+            # no thickness correction term implies tk=1.0
+            tcorr = 1.0
+
+        # S-N parameters for specified stress range
+        if self.bilinear is False or n <= self.nswitch:
+            m = self.m1
+            loga = self.loga1
+        else:
+            m = self.m2
+            loga = self.loga2
+
+        # fatigue strength, ref. DNV-RP-C203 (2016) eq. 2.4.3
+        s = 1 / tcorr * 10 ** ((loga - np.log10(n)) / m)
+
+        return s
 
     def n(self, s, t=None):
         """
@@ -312,7 +364,7 @@ def dcalc_sn_weib(q, h, sn, v0, td=None, scf=1., th=None):
         except ValueError:
             raise
 
-    # todo: verify implementation of thickness correction and SCF
+    # todo: verify implementation of thickness correction
     # scale Weibull scale parameter by SCF (incl. thickness correction if specified)
     q *= scf
 
