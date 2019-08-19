@@ -23,7 +23,7 @@ from .threading import Worker
 from .models import CustomSortFilterProxyModel
 from .widgets import CustomTabWidget
 from ..tsdb import TsDB
-from ..stats import empirical_cdf
+from ..stats.empirical import empirical_cdf
 from .funcs import (
     export_to_file,
     import_from_file,

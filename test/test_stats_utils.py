@@ -5,7 +5,7 @@ Module for testing stats functions
 import unittest
 import numpy as np
 from qats.signal import smooth, average_frequency
-from qats.gumbel import _euler_masceroni
+from qats.stats.gumbel import _euler_masceroni
 
 
 class TestFunStats(unittest.TestCase):

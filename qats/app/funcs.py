@@ -3,8 +3,8 @@ Module with functions for handling file operations and calculations. Made for mu
 """
 import numpy as np
 from ..tsdb import TsDB
-from ..weibull import pwm as weibull_pwm
-from ..gumbel import pwm as gumbel_pwm
+from ..stats.weibull import pwm as weibull_pwm
+from ..stats.gumbel import pwm as gumbel_pwm
 from ..fatigue.rainflow import rebin as rebin_cycles
 
 

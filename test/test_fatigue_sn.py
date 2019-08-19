@@ -8,10 +8,10 @@ import numpy as np
 from collections import OrderedDict, defaultdict
 from scipy.optimize import brenth, brentq
 from scipy.special import gamma
-from qats.fatigue.sn import SNCurve, dcalc_sn, dcalc_sn_weib
+from qats.fatigue.sn import SNCurve, damage, damage_weibull
 
 # todo: include tests for thickness correction of SNCurve class
-# todo: include test for dcalc_sn() (fatigue damage from stress range histogram)
+# todo: include test for damage() (fatigue damage from stress range histogram)
 
 
 class TestFatigueSn(unittest.TestCase):
@@ -113,8 +113,8 @@ class TestFatigueSn(unittest.TestCase):
         v0 = 0.1  # mean stress cycle frequency
         for h in (0.8, 1.0, 1.1):
             q = _q_calc(life, h, v0, sn)
-            self.assertAlmostEqual(dcalc_sn_weib(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from dcalc_sn_weib() for bilinear S-N curve and shape={h}")
+            self.assertAlmostEqual(damage_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
+                                   msg=f"Wrong fatigue life from damage_weibull() for bilinear S-N curve and shape={h}")
 
     def test_dcalc_weib_singleslope(self):
         """
@@ -132,8 +132,8 @@ class TestFatigueSn(unittest.TestCase):
         v0 = 0.1  # mean stress cycle frequency
         for h in (0.8, 1.0, 1.1):
             q = _q_calc_single_slope(life, h, v0, sn)
-            self.assertAlmostEqual(dcalc_sn_weib(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from dcalc_sn_weib() for linear S-N curve and shape={h}")
+            self.assertAlmostEqual(damage_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
+                                   msg=f"Wrong fatigue life from damage_weibull() for linear S-N curve and shape={h}")
 
     def test_dcalc_weib_scf(self):
         """
@@ -148,8 +148,8 @@ class TestFatigueSn(unittest.TestCase):
         v0 = 0.1  # mean stress cycle frequency
         h = 1.0
         q = _q_calc_single_slope(life, h, v0, sn)
-        self.assertAlmostEqual(dcalc_sn_weib(q, h, sn, v0, td=31536000, scf=scf), dyear_scf, places=6,
-                               msg="SCF not correctly accounting for by dcalc_sn_weib()")
+        self.assertAlmostEqual(damage_weibull(q, h, sn, v0, td=31536000, scf=scf), dyear_scf, places=6,
+                               msg="SCF not correctly accounting for by damage_weibull()")
 
 
 def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
@@ -208,7 +208,7 @@ def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
     # calculate gamma parameters
     eps = np.finfo(float).eps  # machine epsilon
     func = rootfuncs[method]
-    q = func(lambda qq: dcalc_sn_weib(qq, h, sn, v0, td) - 1, a=eps, b=1e10)
+    q = func(lambda qq: damage_weibull(qq, h, sn, v0, td) - 1, a=eps, b=1e10)
 
     return q
 

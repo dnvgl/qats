@@ -13,12 +13,11 @@ from scipy.signal import welch
 from scipy.stats import kurtosis, skew, tstd
 import matplotlib.pyplot as plt
 from matplotlib import cm
-from mpl_toolkits.mplot3d import Axes3D
 from .fatigue.rainflow import count_cycles, rebin as rebin_cycles, mesh
 from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
     average_frequency, find_maxima
-from .weibull import Weibull, weibull2gumbel, pwm
-from .gumbel import Gumbel
+from .stats.weibull import Weibull, weibull2gumbel, pwm
+from .stats.gumbel import Gumbel
 
 
 # todo: weibull and gumbel + plotting (self.pd = Weibull(), self.evd = Gumbel())

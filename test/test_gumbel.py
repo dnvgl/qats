@@ -5,7 +5,7 @@ Module for testing gumbel class
 
 import unittest
 
-from qats.gumbel import Gumbel, pwm, mle, msm, lse
+from qats.stats.gumbel import Gumbel, pwm, mle, msm, lse
 
 
 # todo: more test cases for weibull class and functions

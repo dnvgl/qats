@@ -51,7 +51,7 @@ class TestRainflowCounting(unittest.TestCase):
         """
         Test that values are correctly gathered to 2 bins
         """
-        self.assertEqual(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2.))
+        self.assertEqual(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2))
 
     def test_rainflow_rebin_exceptions(self):
         """
