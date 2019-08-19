@@ -149,7 +149,7 @@ class SNCurve(object):
             loga = self.loga2
 
         # fatigue strength, ref. DNV-RP-C203 (2016) eq. 2.4.3
-        s = m * (loga - np.log10(n)) / tcorr
+        s = 1 / tcorr * 10 ** ((loga - np.log10(n)) / m)
 
         return s
 
