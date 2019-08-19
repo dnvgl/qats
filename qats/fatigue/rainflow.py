@@ -68,7 +68,7 @@ def cycles(series):
     Examples
     --------
     Extract start and end points for all full and half cycles.
-    >>> from qats.rainflow import cycles
+    >>> from qats.fatigue.rainflow import cycles
     >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
     >>> full, half = cycles(series)
     >>> full
@@ -140,7 +140,7 @@ def count_cycles(series):
     --------
     Extract raw cycle range, mean and count:
 
-    >>> from qats.rainflow import count_cycles
+    >>> from qats.fatigue.rainflow import count_cycles
     >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
     >>> count_cycles(series)
     [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
@@ -167,6 +167,59 @@ def count_cycles(series):
     counts = sorted([rm + tuple([c]) for rm, c in counts.items()])
 
     return counts
+
+
+def mesh(cycles, nr=100, nm=100):
+    """
+    Mesh range-mean distribution.
+
+    Parameters
+    ----------
+    cycles : list
+        Cycle ranges, mean values and count.
+    nr : int, optional
+        Number of equidistant bins for cycle ranges.
+    nm : int, optional
+        Number of equidistant bins for cycle means.
+
+    Returns
+    -------
+    array
+        Cycle ranges.
+    array
+        Cycle mean value.
+    array
+        Cycle count.
+
+    Examples
+    --------
+    Rebin the cycle distribution onto a 10x10 mesh suitable for surface plotting.
+
+    >>> from qats.fatigue.rainflow import count_cycles
+    >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
+    >>> count_cycles(series)
+    >>> r, m, c = mesh(cycles, nr=10, nm=10)
+
+    """
+    # create mesh
+    maxrange = max([r for r, _, _ in cycles])
+    maxmean = max([m for _, m, _ in cycles])
+    minmean = min([m for _, m, _ in cycles])
+    ri = np.linspace(0., 1.1 * maxrange, nr)
+    mj = np.linspace(0.9 * minmean, 1.1 * maxmean, nm)
+    rij, mij = np.meshgrid(ri, mj)
+    cij = np.zeros(np.shape(mij))
+
+    # rebin distribution
+    for i in range(nr - 1):
+        for j in range(nm - 1):
+            for r, m, c in cycles:
+                if (ri[i] <= r < ri[i + 1]) and (mj[j] <= m < mj[j + 1]):
+                    cij[i, j] += c
+
+    print(f"Number of cycles {sum([c for _, _, c in cycles])} / {cij.sum()}.")
+
+    return rij, mij, cij
 
 
 def rebin(cycles, binby='range', n=None, w=None):

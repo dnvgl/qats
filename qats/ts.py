@@ -12,7 +12,9 @@ from scipy.interpolate import interp1d
 from scipy.signal import welch
 from scipy.stats import kurtosis, skew, tstd
 import matplotlib.pyplot as plt
-from .fatigue.rainflow import count_cycles, rebin as rebin_cycles
+from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
+from .fatigue.rainflow import count_cycles, rebin as rebin_cycles, mesh
 from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
     average_frequency, find_maxima
 from .weibull import Weibull, weibull2gumbel, pwm
@@ -1014,6 +1016,37 @@ class TimeSeries(object):
         plt.xlabel('Cycle mean')
         plt.ylabel('Cycle range')
         plt.grid()
+
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_cycle_rangemean3d(self, nr=100, nm=100, figurename=None, **kwargs):
+        """
+        Plot cycle range-mean versus number of occurrences as 3D surface.
+
+        Parameters
+        ----------
+        nr : int, optional
+            Group by cycle range in *nr* equidistant bins.
+        nm : int, optional
+            Group by cycle mean in *nm* equidistant bins.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        """
+        cycles = self.rfc(**kwargs)
+        ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        ax.plot_surface(means, ranges, counts, cmap=cm.coolwarm)
+        ax.set_xlabel('Cycle mean')
+        ax.set_ylabel('Cycle range')
+        ax.set_zlabel('Cycle count')
 
         if figurename is not None:
             plt.savefig(figurename)

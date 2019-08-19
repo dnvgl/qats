@@ -16,3 +16,7 @@ db.plot_cycle_range(names='tension*', n=100)
 # plot the cycle range-mean distribution grouped in 100 cycle range bins
 db.plot_cycle_rangemean(names='tension*', n=100)
 
+# plot the cycle range-mean distribution as a 3D surface.
+ts = db.get(name='tension_2_qs')
+ts.plot_cycle_rangemean3d(nr=25, nm=25)
+
