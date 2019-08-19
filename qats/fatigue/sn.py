@@ -107,6 +107,13 @@ class SNCurve(object):
         else:
             return True
 
+    @property
+    def m(self):
+        """ Slope parameter """
+        # should only be available for linear S-N curves - otherwise, m1 and m2 should be used!
+        assert self.m2 is None, "For bi-linear curves, use `m1` and `m2` instead of `m`"
+        return self.m1
+
     def fatigue_strength(self, n, t=None):
         """
         Magnitude of stress range leading to a particular fatigue life (in terms of number of cycles.
@@ -357,7 +364,7 @@ def dcalc_sn_weib(q, h, sn, v0, td=None, scf=1., th=None):
         except ValueError:
             raise
 
-    # todo: verify implementation of thickness correction and SCF
+    # todo: verify implementation of thickness correction
     # scale Weibull scale parameter by SCF (incl. thickness correction if specified)
     q *= scf
 
