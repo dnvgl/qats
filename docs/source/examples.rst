@@ -84,6 +84,16 @@ Compare the cycle range and range-mean distribution from several time series usi
 
     Comparison of several cycle range-mean distributions.
 
+
+Calculate fatigue damage in mooring lines
+*****************************************
+
+.. literalinclude:: examples/mooring_fatigue.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Apply low-pass and high-pass filters to time series
 ***************************************************
 
