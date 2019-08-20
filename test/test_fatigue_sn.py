@@ -97,6 +97,32 @@ class TestFatigueSn(unittest.TestCase):
         self.assertAlmostEqual(c_sea.n(c_sea.sswitch), c_sea.nswitch, places=8,
                                msg="Wrong 'sswitch' calculated for S-N curve C sea cp")
 
+    def test_minersum(self):
+        """
+        Test that correct fatigue Miner sum is calculated using bilinear S-N curve.
+        """
+        c_sea = self.sn_c_sea
+        start, stop = c_sea.fatigue_strength(1e7), c_sea.fatigue_strength(1e5)
+        srange = np.linspace(start, stop, 20)  # stress range histogram
+        d = 0.5  # target damage
+        count = np.array([c_sea.n(s) for s in srange]) / srange.size * d
+        self.assertAlmostEqual(minersum(srange, count, c_sea), d, places=8,
+                               msg="Wrong fatigue life (damage) from minersum()")
+
+    def test_minersum_scf(self):
+        """
+        Test that correct fatigue Miner sum is calculated using bilinear S-N curve.
+        """
+        studless = self.sn_studless
+        start, stop = studless.fatigue_strength(1e7), studless.fatigue_strength(1e5)
+        srange = np.linspace(start, stop, 20)  # stress range histogram
+        d = 0.5     # target damage (excl. SCF)
+        scf = 1.15  # stress concentration factor
+        d_scf = d * scf ** studless.m  # damage incl. SCF
+        count = np.array([studless.n(s) for s in srange]) / srange.size * d
+        self.assertAlmostEqual(minersum(srange, count, studless, scf=scf), d_scf, places=8,
+                               msg="Wrong fatigue life (damage) from minersum() with SCF specified")
+
     def test_minersum_weibull_bilinear(self):
         """
         Test that correct fatigue Miner sum is calculated from Weibull stress range distribution.
