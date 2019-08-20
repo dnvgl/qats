@@ -44,8 +44,8 @@ inspecting, quality assurance and reporting. Use the library for more advanced o
 Source code
 ***********
 
-The `source code <https://github.com/dnvgl/qats>`_ and `issue tracker <https://github.com/dnvgl/qats/issues>`_ is on
-GitHub.
+The `source code <https://github.com/dnvgl/qats>`_, `issue tracker <https://github.com/dnvgl/qats/issues>`_ and
+`changelog <https://github.com/dnvgl/qats/blob/master/CHANGELOG.md>`_ is on GitHub.
 
 Downloads
 *********
