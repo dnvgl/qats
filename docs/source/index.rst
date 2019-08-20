@@ -60,7 +60,7 @@ Table of contents
    getting_started
    examples
    gui
-   api
+   api/index
 
 Indices and tables
 ******************

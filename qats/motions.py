@@ -128,8 +128,6 @@ def velocity(x, t):
     --------
     numpy.gradient
 
-    Notes
-    -----
     """
     # check input signal(s)
     x = np.asarray(x)

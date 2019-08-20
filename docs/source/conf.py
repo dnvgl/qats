@@ -11,6 +11,13 @@
 import os
 import sys
 import sphinx_bootstrap_theme
+from sphinx.ext.autosummary import Autosummary
+from sphinx.ext.autosummary import get_documenter
+from docutils.parsers.rst import directives
+from sphinx.util.inspect import safe_getattr
+import re
+import sphinx.ext.autodoc
+
 sys.path.append(os.path.abspath(os.path.join('..', '..')))
 
 # -- General configuration ------------------------------------------------
@@ -23,6 +30,7 @@ sys.path.append(os.path.abspath(os.path.join('..', '..')))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # 'autoapi.extension',  # ref. https://buildmedia.readthedocs.org/media/pdf/sphinx-autoapi/latest/sphinx-autoapi.pdf
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.autosummary',
@@ -37,14 +45,27 @@ extensions = [
     # 'sphinx.ext.viewcode',  # remove this one to disable code view
 ]
 
+# -- AutoAPI configuration   ----------------------------------------------
+# ref.: https://buildmedia.readthedocs.org/media/pdf/sphinx-autoapi/latest/sphinx-autoapi.pdf
+# autoapi_dirs = ['../../qats']
+# autoapi_add_toctree_entry = False     # default: True
+# autoapi_root = 'api'
+# autoapi_generate_api_docs = False     # default: True
+# autoapi_include_summaries = False      # default: False
+# autoapi_keep_files = False            # default: False
+# autoapi_python_class_content = 'both'   # default: 'class'
+# autoapi_options = ['members', 'undoc-members', ]  # 'private-members', 'special-members']
+# autoapi_ignore = ['*app*']
+
+# -------------------------------------------------------------------------
+
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = ['.rst', '.md']
-# source_suffix = '.rst'
+source_suffix = ['.rst', '.md']  # source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
@@ -94,8 +115,7 @@ html_logo = 'img/qats.ico'
 # Include sidebar
 # todo: consider including sidebar (just remove comment on next line to do so)
 html_sidebars = {
-    '**': ['localtoc.html', ],  #'relations.html', ],  #'globaltoc.html', ],
-    # 'sourcelink.html', 'searchbox.html']}
+    '**': ['localtoc.html', ],  # 'relations.html', ],  #'globaltoc.html', 'sourcelink.html', 'searchbox.html']}
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -104,10 +124,10 @@ html_sidebars = {
 #
 html_theme_options = {
     # Navigation bar title. (Default: ``project`` value)
-    #'navbar_title': "Demo",
+    # 'navbar_title': "Demo",
 
     # Tab name for entire site. (Default: "Site")
-    #'navbar_site_name': "Site",
+    # 'navbar_site_name': "Site",
 
     # A list of tuples containing pages or urls to link to.
     # Valid tuples should be in the following forms:
@@ -120,7 +140,7 @@ html_theme_options = {
         ("Getting started", "getting_started"),
         ("GUI", "gui"),
         ("Examples", "examples"),
-        ("API", "api"),
+        ("API", "api/index"),
     ],
 
     # Render the next and previous page links in navbar. (Default: true)
@@ -134,7 +154,7 @@ html_theme_options = {
 
     # Global TOC depth for "site" navbar tab. (Default: 1)
     # Switching to -1 shows all levels.
-    'globaltoc_depth': 2,
+    'globaltoc_depth': 3,
 
     # Include hidden TOCs in Site navbar?
     #
@@ -174,15 +194,12 @@ html_theme_options = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#
+# html_static_path = ['_static']
 # html_style = 'style.css'
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'https://docs.python.org/': None}
-
-
-# other parameters
-autodoc_member_order = 'bysource'  # 'alphabetical', 'groupwise', 'bysource'
 
 
 # -----------------------------------------------------------------------------
@@ -194,14 +211,11 @@ autodoc_member_order = 'bysource'  # 'alphabetical', 'groupwise', 'bysource'
 
 # autosummary_generate = True  # what difference does this variable do, actually??
 
-autodoc_default_flags = ['members', 'inherited-members']
-
-# spell checking
-'''
-spelling_lang = 'en_US'
-spelling_word_list_filename = 'spelling_wordlist.txt'
-spelling_show_suggestions = True
-'''
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',  # 'alphabetical', 'groupwise', 'bysource'
+    'special-members': '__init__',
+}
 
 
 # try to exclude deprecated
@@ -216,13 +230,6 @@ def setup(app):
     app.connect('autodoc-skip-member', skip_deprecated)
     app.add_stylesheet("custom-todo-style.css")  # also can be a full URL
     try:
-        from sphinx.ext.autosummary import Autosummary
-        from sphinx.ext.autosummary import get_documenter
-        from docutils.parsers.rst import directives
-        from sphinx.util.inspect import safe_getattr
-        import re
-        import sphinx.ext.autodoc
-
         class AutoAutoSummary(Autosummary):
 
             option_spec = {
