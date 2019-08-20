@@ -68,6 +68,7 @@ def cycles(series):
     Examples
     --------
     Extract start and end points for all full and half cycles.
+
     >>> from qats.fatigue.rainflow import cycles
     >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
     >>> full, half = cycles(series)
