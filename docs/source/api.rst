@@ -93,12 +93,12 @@ Motions
 Rainflow counting
 *****************
 
-.. automodule:: qats.rainflow
+.. automodule:: qats.fatigue.rainflow
     :members:
 
     .. rubric:: Function overview
 
-    .. autoautosummary:: qats.rainflow
+    .. autoautosummary:: qats.fatigue.rainflow
        :functions:
 
     .. rubric:: API
@@ -109,18 +109,18 @@ Weibull distribution
 Weibull class
 =============
 
-.. autoclass:: qats.weibull.Weibull
+.. autoclass:: qats.stats.weibull.Weibull
     :members:
     :undoc-members:
 
     .. rubric:: Attributes
 
-    .. autoautosummary:: qats.weibull.Weibull
+    .. autoautosummary:: qats.stats.weibull.Weibull
         :attributes:
 
     .. rubric:: Methods
 
-    .. autoautosummary:: qats.weibull.Weibull
+    .. autoautosummary:: qats.stats.weibull.Weibull
         :methods:
 
     .. rubric:: API
@@ -128,10 +128,10 @@ Weibull class
 Functions
 =========
 
-.. automodule:: qats.weibull
+.. automodule:: qats.stats.weibull
     :exclude-members: Weibull
 
-    .. autoautosummary:: qats.weibull
+    .. autoautosummary:: qats.stats.weibull
         :functions:
 
     .. rubric:: API
@@ -142,18 +142,18 @@ Gumbel distribution
 Gumbel class
 ============
 
-.. autoclass:: qats.gumbel.Gumbel
+.. autoclass:: qats.stats.gumbel.Gumbel
     :members:
     :undoc-members:
 
     .. rubric:: Attributes
 
-    .. autoautosummary:: qats.gumbel.Gumbel
+    .. autoautosummary:: qats.stats.gumbel.Gumbel
         :attributes:
 
     .. rubric:: Methods
 
-    .. autoautosummary:: qats.gumbel.Gumbel
+    .. autoautosummary:: qats.stats.gumbel.Gumbel
         :methods:
 
     .. rubric:: API
@@ -161,10 +161,10 @@ Gumbel class
 Functions
 =========
 
-.. automodule:: qats.gumbel
+.. automodule:: qats.stats.gumbel
     :exclude-members: Gumbel
 
-    .. autoautosummary:: qats.gumbel
+    .. autoautosummary:: qats.stats.gumbel
         :functions:
 
     .. rubric:: API
