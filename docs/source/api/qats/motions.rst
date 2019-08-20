@@ -4,7 +4,6 @@
 .. py:module:: qats.motions
 
 .. automodule:: qats.motions
-
     :members:
 
     .. rubric:: Function overview
