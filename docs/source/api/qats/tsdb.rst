@@ -1,20 +1,20 @@
-:mod:`qats.tsdb`
-****************
+:class:`qats.TsDB`
+******************
 
 .. py:module:: qats.tsdb
 
-.. autoclass:: qats.tsdb.TsDB
+.. autoclass:: qats.TsDB
     :members:
     :undoc-members:
 
     .. rubric:: Attributes
 
-    .. autoautosummary:: qats.tsdb.TsDB
+    .. autoautosummary:: qats.TsDB
         :attributes:
 
     .. rubric:: Methods
 
-    .. autoautosummary:: qats.tsdb.TsDB
+    .. autoautosummary:: qats.TsDB
        :methods:
 
     .. rubric:: API

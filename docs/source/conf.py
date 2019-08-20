@@ -153,7 +153,8 @@ html_theme_options = {
     'navbar_pagenav_name': "Page",
 
     # Global TOC depth for "site" navbar tab. (Default: 1)
-    # Switching to -1 shows all levels.
+    # Switching to -1 sh
+    # ows all levels.
     'globaltoc_depth': 3,
 
     # Include hidden TOCs in Site navbar?
@@ -214,7 +215,7 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 autodoc_default_options = {
     'members': True,
     'member-order': 'bysource',  # 'alphabetical', 'groupwise', 'bysource'
-    'special-members': '__init__',
+    # 'special-members': '__init__',
 }
 
 

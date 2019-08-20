@@ -8,7 +8,7 @@ below.
 
 .. toctree::
    :titlesonly:
-   :maxdepth: 2
+   :maxdepth: 3
 
    qats/tsdb
    qats/motions
