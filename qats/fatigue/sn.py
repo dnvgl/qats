@@ -253,9 +253,9 @@ class SNCurve(object):
         return
 
 
-def damage(srange, count, sn, td=1., scf=1., th=None, retbins=False):
+def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     """
-    Fatigue damage calculation based on stress cycle histogram and S-N curve.
+    Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
 
     Parameters
     ----------
@@ -277,14 +277,14 @@ def damage(srange, count, sn, td=1., scf=1., th=None, retbins=False):
         Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
         defined for the S-N curve given.
     retbins: bool, optional
-        If True, damage per bin is also returned.
+        If True, minersum per bin is also returned.
 
     Returns
     -------
     float
         Fatigue damage (Palmgren-Miner sum).
     list (optional)
-        Fatigue damage for each stress range bin. Returned if `retbin=True`.
+        Fatigue damage (Palmgren-Miner sum) for each stress range bin. Returned if `retbin=True`.
 
     Raises
     ------
@@ -309,10 +309,10 @@ def damage(srange, count, sn, td=1., scf=1., th=None, retbins=False):
         return d
 
 
-def damage_weibull(q, h, sn, v0, td=None, scf=1., th=None):
+def minersum_weibull(q, h, sn, v0, td=None, scf=1., th=None):
     """
-    Fatigue damage calculation based on (2-parameter) Weibull stress cycle distribution and S-N curve.
-    Ref. DNV-RP-C03 (2016) eq. F.12-1.
+    Fatigue damage (Palmgren-Miner sum) calculation based on (2-parameter) Weibull stress cycle distribution and
+    S-N curve. Ref. DNV-RP-C03 (2016) eq. F.12-1.
 
     Parameters
     ----------

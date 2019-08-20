@@ -8,10 +8,10 @@ import numpy as np
 from collections import OrderedDict, defaultdict
 from scipy.optimize import brenth, brentq
 from scipy.special import gamma
-from qats.fatigue.sn import SNCurve, damage, damage_weibull
+from qats.fatigue.sn import SNCurve, minersum, minersum_weibull
 
 # todo: include tests for thickness correction of SNCurve class
-# todo: include test for damage() (fatigue damage from stress range histogram)
+# todo: include test for minersum() (fatigue minersum from stress range histogram)
 
 
 class TestFatigueSn(unittest.TestCase):
@@ -97,9 +97,9 @@ class TestFatigueSn(unittest.TestCase):
         self.assertAlmostEqual(c_sea.n(c_sea.sswitch), c_sea.nswitch, places=8,
                                msg="Wrong 'sswitch' calculated for S-N curve C sea cp")
 
-    def test_dcalc_weib_bilinear(self):
+    def test_minersum_weibull_bilinear(self):
         """
-        Test that correct fatigue damage is calculated from Weibull stress range distribution.
+        Test that correct fatigue Miner sum is calculated from Weibull stress range distribution.
 
         The test is performed as follows, for three different values of Weibull shape parameter:
             1. For each shape parameter; calculate scale parameter (q) of the equivalent Weibull distribution (i.e.
@@ -113,12 +113,12 @@ class TestFatigueSn(unittest.TestCase):
         v0 = 0.1  # mean stress cycle frequency
         for h in (0.8, 1.0, 1.1):
             q = _q_calc(life, h, v0, sn)
-            self.assertAlmostEqual(damage_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from damage_weibull() for bilinear S-N curve and shape={h}")
+            self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
+                                   msg=f"Wrong fatigue life from minersum_weibull() for bilinear S-N curve and shape={h}")
 
-    def test_dcalc_weib_singleslope(self):
+    def test_minersum_weibull_singleslope(self):
         """
-        Test that correct fatigue damage is calculated from Weibull stress range distribution.
+        Test that correct fatigue Miner sum is calculated from Weibull stress range distribution.
 
         The test is performed as follows, for three different values of Weibull shape parameter:
             1. For each shape parameter; calculate scale parameter (q) of the equivalent Weibull distribution (i.e.
@@ -132,13 +132,13 @@ class TestFatigueSn(unittest.TestCase):
         v0 = 0.1  # mean stress cycle frequency
         for h in (0.8, 1.0, 1.1):
             q = _q_calc_single_slope(life, h, v0, sn)
-            self.assertAlmostEqual(damage_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from damage_weibull() for linear S-N curve and shape={h}")
+            self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
+                                   msg=f"Wrong fatigue life from minersum_weibull() for linear S-N curve and shape={h}")
 
-    def test_dcalc_weib_scf(self):
+    def test_minersum_weibull_scf(self):
         """
-        Test that SCF is correctly accounted for when calculated fatigue damage is calculated from Weibull stress
-        range distribution.
+        Test that SCF is correctly accounted for when fatigue damage is calculated from Weibull stress range
+        distribution.
         """
         sn = self.sn_studless
         scf = 1.15
@@ -148,8 +148,8 @@ class TestFatigueSn(unittest.TestCase):
         v0 = 0.1  # mean stress cycle frequency
         h = 1.0
         q = _q_calc_single_slope(life, h, v0, sn)
-        self.assertAlmostEqual(damage_weibull(q, h, sn, v0, td=31536000, scf=scf), dyear_scf, places=6,
-                               msg="SCF not correctly accounting for by damage_weibull()")
+        self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000, scf=scf), dyear_scf, places=6,
+                               msg="SCF not correctly accounting for by minersum_weibull()")
 
 
 def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
@@ -182,7 +182,7 @@ def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
     scale parameter calculated. To obtain the scale parameter excl. thickness correction:
     >>> q_ = q_calc(fatigue_life, h, v0, sn)
     >>> q = q_ / (t / t_ref)**k
-    where `t` is the thickness, `t_ref` is the reference thickness, and `k` is the thickness exponene.
+    where `t` is the thickness, `t_ref` is the reference thickness, and `k` is the thickness exponent.
     Keep in mind that ``t = t_ref`` if ``t < t_ref``.
 
     See Also
@@ -208,7 +208,7 @@ def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
     # calculate gamma parameters
     eps = np.finfo(float).eps  # machine epsilon
     func = rootfuncs[method]
-    q = func(lambda qq: damage_weibull(qq, h, sn, v0, td) - 1, a=eps, b=1e10)
+    q = func(lambda qq: minersum_weibull(qq, h, sn, v0, td) - 1, a=eps, b=1e10)
 
     return q
 

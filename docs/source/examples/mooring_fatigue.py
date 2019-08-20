@@ -4,7 +4,7 @@ Calculate mooring line fatigue.
 import os
 from math import pi
 from qats import TsDB
-from qats.fatigue.sn import SNCurve, damage as minersum
+from qats.fatigue.sn import SNCurve, minersum
 
 # load time series
 db = TsDB.fromfile(os.path.join("..", "..", "..", "data", "simo_p_out.ts"))
@@ -24,7 +24,7 @@ for ts in db.getl(names='tension_*_qs'):
     area = 2. * pi * (118. / 2.) ** 2.          # mm^2
     ranges = [r *1e3 / area for r in ranges]    # MPa
 
-    # calculate fatigue damage from Miner-Palmgren formula (SCF=1, no thickness correction)
+    # calculate fatigue damage from Palmgren-Miner rule (SCF=1, no thickness correction)
     damage = minersum(ranges, counts, sncurve)
 
     # print summary
