@@ -2,7 +2,7 @@
 import numpy as np
 from scipy.special import zetac
 from scipy.optimize import leastsq, fsolve
-from matplotlib.pyplot import figure, ylabel, yticks, plot, legend, grid, show, xlabel, hold, ylim, savefig
+from matplotlib.pyplot import figure, ylabel, yticks, plot, legend, grid, show, xlabel, ylim, savefig
 from .empirical import empirical_cdf
 from .gumbel import _euler_masceroni as em
 
@@ -344,10 +344,10 @@ class GumbelMin(object):
         """
         raise NotImplementedError("Formula for deriving Gumbel minimum distribution parameter is not implemented.")
         pass
-        #self.location = wa + wb * np.log(n) ** (1. / wc)
-        #self.scale = 1. / (wc / wb * np.log(n) ** ((wc - 1.) / wc))
+        # self.location = wa + wb * np.log(n) ** (1. / wc)
+        # self.scale = 1. / (wc / wb * np.log(n) ** ((wc - 1.) / wc))
 
-        #if verbose:
+        # if verbose:
         #    print "Fitted parameters:\nlocation = %(location)5.3g\nscale = %(scale)5.3g" % self.__dict__
 
     def gp_plot(self, showfig=True, save=None):
@@ -364,7 +364,6 @@ class GumbelMin(object):
         """
 
         figure()
-        hold(True)
 
         x = np.sort(self.data)
 
@@ -484,7 +483,6 @@ class GumbelMin(object):
         """
 
         figure()
-        hold(True)
 
         if self.data is not None:
             plot(np.sort(self.data), self.ecdf, 'ko', label='Data')
