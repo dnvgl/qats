@@ -1,5 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-:class:`Weibull` class + additional functions related to Weibull distribution.
+:class:`Weibull` class and functions related to Weibull distribution.
 """
 
 import numpy as np

@@ -1,6 +1,7 @@
-# encoding: utf8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-:class:`Gumbel` class + additional functions related to Gumbel distribution.
+:class:`Gumbel` class and functions related to Gumbel distribution.
 """
 import numpy as np
 from scipy.special import zetac, binom
@@ -19,7 +20,9 @@ class Gumbel(object):
     """
 
     The Gumbel class offers miscellaneous functions for working with the Gumbel
-    maxima distribution, defined as (cumulative distribution function)::
+    maxima distribution.
+
+    The cumulative distribution function is defined as::
 
         F(x) = exp{-exp[-(x-a)/b]}
 
@@ -56,15 +59,16 @@ class Gumbel(object):
 
     3. `Plotting positions <http://en.wikipedia.org/wiki/Q%E2%80%93Q_plot>`_, About plotting positions
 
-    4. `Usable estimators for parameters in Gumbel distribution <http://stats.stackexchange.com/questions/71197/usable-estimators-for-parameters-in-gumbel-distribution>`_
+    4. `Usable estimators for parameters in Gumbel distribution
+       <http://stats.stackexchange.com/questions/71197/usable-estimators-for-parameters-in-gumbel-distribution>`_
 
-    5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
+    5. `Bootstrapping statistics <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_
 
     6. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979,
        Water Resources Research. 15(5): 1049-1054.
 
-    7. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and quantiles.,
-       Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
+    7. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
+       quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
 
     """
 

@@ -1,4 +1,8 @@
-# encoding: utf8
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+:class:`GumbelMin` class and functions related to Gumbel (minima) distribution.
+"""
 import numpy as np
 from scipy.special import zetac
 from scipy.optimize import leastsq, fsolve
@@ -16,18 +20,13 @@ class GumbelMin(object):
     r"""
 
     The GumbelMin class offers miscellaneous functions for working with the Gumbel
-    minima distribution, defined as (cumulative distribution function):
+    minima distribution.
 
-    .. F(x) = 1 - exp{-exp[(x-a)/b]}
+    The cumulative distribution function is defined as::
 
-    .. math:: F(x) = 1 - \exp\{ -\exp\{ \frac{(x-a)}{b} \} \}
+        F(x) = 1 - exp{-exp[(x-a)/b]}
 
-
-    where
-
-        a = location parameter
-
-        b = scale parameter
+    where `a` is location parameter and `b` is the scale parameter.
 
     .. rubric:: References
 
@@ -37,11 +36,10 @@ class GumbelMin(object):
 
     3. `Plotting positions <http://en.wikipedia.org/wiki/Q%E2%80%93Q_plot>`_, About plotting positions
 
-    4. `Usable estimators for parameters in Gumbel distribution /
-        <http://stats.stackexchange.com/questions/71197/usable-estimators-for-parameters-in-gumbel-distribution>`_, \
-        Usable estimators for parameters in Gumbel distribution
+    4. `Usable estimators for parameters in Gumbel distribution
+       <http://stats.stackexchange.com/questions/71197/usable-estimators-for-parameters-in-gumbel-distribution>`_
 
-    5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
+    5. `Bootstrapping statistics <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_
 
     """
 
