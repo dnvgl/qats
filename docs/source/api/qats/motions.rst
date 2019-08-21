@@ -1,10 +1,13 @@
 :mod:`qats.motions`
-*******************
+####################
 
-.. py:module:: qats.motions
+Some text.
+
+Functions
+*********
 
 .. automodule:: qats.motions
-    :members:
+    :no-members:
 
     .. rubric:: Function overview
 
