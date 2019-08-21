@@ -11,16 +11,12 @@
 import os
 import sys
 import sphinx_bootstrap_theme
-from sphinx.ext.autosummary import Autosummary
-from sphinx.ext.autosummary import get_documenter
-from docutils.parsers.rst import directives
-from sphinx.util.inspect import safe_getattr
-import re
-import sphinx.ext.autodoc
 
 sys.path.append(os.path.abspath(os.path.join('..', '..')))
 
-# -- General configuration ------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# General configuration
+# ----------------------------------------------------------------------------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -34,7 +30,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon',  # makes sphinx understand docstrings in numpy and google format
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -44,20 +40,6 @@ extensions = [
     # 'm2r',
     # 'sphinx.ext.viewcode',  # remove this one to disable code view
 ]
-
-# -- AutoAPI configuration   ----------------------------------------------
-# ref.: https://buildmedia.readthedocs.org/media/pdf/sphinx-autoapi/latest/sphinx-autoapi.pdf
-# autoapi_dirs = ['../../qats']
-# autoapi_add_toctree_entry = False     # default: True
-# autoapi_root = 'api'
-# autoapi_generate_api_docs = False     # default: True
-# autoapi_include_summaries = False      # default: False
-# autoapi_keep_files = False            # default: False
-# autoapi_python_class_content = 'both'   # default: 'class'
-# autoapi_options = ['members', 'undoc-members', ]  # 'private-members', 'special-members']
-# autoapi_ignore = ['*app*']
-
-# -------------------------------------------------------------------------
 
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
@@ -102,9 +84,24 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
+# ----------------------------------------------------------------------------------------------------------------------
+# AutoAPI configuration
+#   ref.: https://buildmedia.readthedocs.org/media/pdf/sphinx-autoapi/latest/sphinx-autoapi.pdf
+# ----------------------------------------------------------------------------------------------------------------------
+# autoapi_dirs = ['../../qats']
+# autoapi_add_toctree_entry = False     # default: True
+# autoapi_root = 'api'
+# autoapi_generate_api_docs = False     # default: True
+# autoapi_include_summaries = False      # default: False
+# autoapi_keep_files = False            # default: False
+# autoapi_python_class_content = 'both'   # default: 'class'
+# autoapi_options = ['members', 'undoc-members', ]  # 'private-members', 'special-members']
+# autoapi_ignore = ['*app*']
 
-# -- Options for HTML output ----------------------------------------------
 
+# ----------------------------------------------------------------------------------------------------------------------
+# HTML output configuration
+# ----------------------------------------------------------------------------------------------------------------------
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
@@ -113,7 +110,6 @@ html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 html_logo = 'img/qats.ico'
 
 # Include sidebar
-# todo: consider including sidebar (just remove comment on next line to do so)
 html_sidebars = {
     '**': ['localtoc.html', ],  # 'relations.html', ],  #'globaltoc.html', 'sourcelink.html', 'searchbox.html']}
 }
@@ -121,8 +117,7 @@ html_sidebars = {
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#
-html_theme_options = {
+html_theme_options = {  # bootstrap theme options
     # Navigation bar title. (Default: ``project`` value)
     # 'navbar_title': "Demo",
 
@@ -134,8 +129,7 @@ html_theme_options = {
     #    (name, page)                 # a link to a page
     #    (name, "/aa/bb", 1)          # a link to an arbitrary relative url
     #    (name, "http://example.com", True) # arbitrary absolute url
-    # Note the "1" or "True" value above as the third argument to indicate
-    # an arbitrary url.
+    # Note the "1" or "True" value above as the third argument to indicate an arbitrary url.
     'navbar_links': [
         ("Getting started", "getting_started"),
         ("GUI", "gui"),
@@ -144,7 +138,7 @@ html_theme_options = {
     ],
 
     # Render the next and previous page links in navbar. (Default: true)
-    'navbar_sidebarrel': False,
+    'navbar_sidebarrel': True,  # False,
 
     # Render the current pages TOC in the navbar. (Default: true)
     'navbar_pagenav': False,  # True,
@@ -159,9 +153,8 @@ html_theme_options = {
 
     # Include hidden TOCs in Site navbar?
     #
-    # Note: If this is "false", you cannot have mixed ``:hidden:`` and
-    # non-hidden ``toctree`` directives in the same page, or else the build
-    # will break.
+    # Note: If this is "false", you cannot have mixed :hidden: and non-hidden toctree directives
+    # in the same page, or else the build will break.
     #
     # Values: "true" (default) or "false"
     'globaltoc_includehidden': "true",
@@ -178,20 +171,25 @@ html_theme_options = {
     # Options are "nav" (default), "footer" or anything else to exclude.
     'source_link_position': None,
 
-    # Bootswatch (http://bootswatch.com/) theme.
+    # Bootswatch  theme (see http://bootswatch.com/ for available themes)
     #
-    # Options are nothing (default) or the name of a valid theme
-    # such as "united", "cosmo" or "sandstone".
-    # 'bootswatch_theme': "cosmo",  # (original theme)
-    'bootswatch_theme': "spacelab",  # (looks good, better 'See Also' sections)
-    # 'bootswatch_theme': "cerulean",  # (looks okay)
-    # 'bootswatch_theme': "sandstone",
+    # Options are nothing (default) or the name of a valid theme such as "united", "cosmo" or "sandstone".
+    # Note: value av 'navbar_class' (defined above) will affect the look of the theme
+    #
+    # 'bootswatch_theme': "cosmo",      # (original theme)
+    # 'bootswatch_theme': "cerulean",   # (looks okay)
+    # 'bootswatch_theme': "sandstone",  #
+    # 'bootswatch_theme': "yeti",       # (looks good, but 'See Also' a bit too intense)
+    'bootswatch_theme': "spacelab",   # (looks good, better 'See Also' sections)
 
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
     'bootstrap_version': "3",
 }
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Other configuration options
+# ----------------------------------------------------------------------------------------------------------------------
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
@@ -200,23 +198,27 @@ html_theme_options = {
 # html_style = 'style.css'
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 
-# -----------------------------------------------------------------------------
-# Autosummary
-# ... based on code and inspiration provided by:
-#   https://stackoverflow.com/questions/20569011/python-sphinx-autosummary-automated-listing-of-member-functions
-#   https://github.com/markovmodel/PyEMMA/blob/devel/doc/source/conf.py#L285
-# -----------------------------------------------------------------------------
-
+# ----------------------------------------------------------------------------------------------------------------------
+# Autodoc options
+# ----------------------------------------------------------------------------------------------------------------------
 # autosummary_generate = True  # what difference does this variable do, actually??
-
 autodoc_default_options = {
     'members': True,
     'member-order': 'bysource',  # 'alphabetical', 'groupwise', 'bysource'
     # 'special-members': '__init__',
 }
+autoclass_content = "both"  # include both class' and __init__ method's docstrings (concatenated)
+
+
+# ----------------------------------------------------------------------------------------------------------------------
+# Autosummary
+# ... based on code and inspiration provided by:
+#   https://stackoverflow.com/questions/20569011/python-sphinx-autosummary-automated-listing-of-member-functions
+#   https://github.com/markovmodel/PyEMMA/blob/devel/doc/source/conf.py#L285
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 # try to exclude deprecated
@@ -231,12 +233,21 @@ def setup(app):
     app.connect('autodoc-skip-member', skip_deprecated)
     app.add_stylesheet("custom-todo-style.css")  # also can be a full URL
     try:
+        from sphinx.ext.autosummary import Autosummary
+        from sphinx.ext.autosummary import get_documenter
+        from docutils.parsers.rst import directives
+        from sphinx.util.inspect import safe_getattr
+        import re
+        import sphinx.ext.autodoc
+
         class AutoAutoSummary(Autosummary):
 
             option_spec = {
                 'methods': directives.unchanged,
                 'attributes': directives.unchanged,
+                'classes': directives.unchanged,
                 'functions': directives.unchanged,  # enlo 09.03.2018
+                'modules': directives.unchanged,
                 'toctree': directives.unchanged,
             }
 
@@ -288,7 +299,7 @@ def setup(app):
                         r = __import__(root_name, globals(), locals(), [module_name])
                         m = getattr(r, module_name)
                         functions = [o[0] for o in insp.getmembers(m)
-                                     if insp.isfunction(o[1]) and o[1].__module__ == m.__name__]
+                                     if (insp.isfunction(o[1]) or insp.isclass(o[1])) and o[1].__module__ == m.__name__]
                         self.content = ["~%s.%s" % (module, func) for func in functions if not func.startswith('_')]
 
                     finally:

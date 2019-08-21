@@ -1,15 +1,36 @@
 .. _api:
 
 API Reference
-#############
+==============
 
-:mod:`qats` consists of modules and subpackages with classes and functions, documented in the API reference listed
-below.
+**qats** consists of classes, modules and subpackages as documented in the API reference listed below.
+
+
+Top-level classes
+-----------------
 
 .. toctree::
-   :titlesonly:
-   :maxdepth: 3
+    :maxdepth: 4
 
-   qats/tsdb
-   qats/motions
+    qats/classes
+
+
+Submodules
+----------
+
+.. toctree::
+    :maxdepth: 4
+
+    qats/submodules
+
+
+Subpackages
+-----------
+
+.. toctree::
+    :maxdepth: 4
+
+    qats/subpackages/fatigue
+    qats/subpackages/readers
+    qats/subpackages/stats
 
