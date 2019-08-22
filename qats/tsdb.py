@@ -62,6 +62,19 @@ class TsDB(object):
     name : str, optional
         Database name.
 
+    Attributes
+    ----------
+    name : str
+        Database name.
+    register : OrderedDict
+        TimeSeries objects by unique time series id.
+    register_parent : OrderedDict
+        Parent file path by unique time series id.
+    register_indices : OrderedDict
+        Index of time series on parent file by unique time series id.
+    register_keys : list
+        Unique time series id.
+
     """
 
     def __init__(self, name=None):

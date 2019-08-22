@@ -34,6 +34,31 @@ class SNCurve(object):
     t_ref : float, optional
         Reference thickness [mm]. If not specified, thickness may not be specified in later calculations.
 
+    Attributes
+    ----------
+    a1 : float
+        Intercept parameter for N <= `nswitch`.
+    a2 : float
+        Intercept parameter for N > `nswitch`. Equals `a1` for linear curves.
+    loga1 : float
+        Common logarithm with base 10 of `a1`.
+    loga2 : float
+        Common logarithm with base 10 of `a2`.
+    m1 : float
+        Negative inverse slope parameter (for bilinear curves: used for N < `nswitch`).
+    m2 : float
+        Negative inverse slope parameter for N > `nswitch`. Equals `m1` for linear curves.
+    name : str
+        S-N curve name.
+    nswitch : float
+        Number of cycles at transition from `m1` to `m2`. Applies only to bilinear curves.
+    sswitch : float
+        Stress range at transition from `m1` to `m2`. Applies only to bilinear curves.
+    t_exp : float
+        Thickness correction exponent.
+    t_ref : float, optional
+        Reference thickness [mm] for thickness correction.
+
     Notes
     -----
     For linear curves (single slope), the following input parameters are required: m1, a1 (or loga1).
