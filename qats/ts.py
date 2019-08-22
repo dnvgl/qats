@@ -61,7 +61,7 @@ class TimeSeries(object):
     name : str
         Time series name/identifier
     x : array_like
-        Data points corresponding to time, see property :meth:`~TimeSeries.t`.
+        Data points corresponding to time, see property :attr:`~TimeSeries.t`.
     parent : str
         Obsolute or relative path to file it originates from.
     kind : str
