@@ -1022,7 +1022,7 @@ class TimeSeries(object):
         ranges, means, counts = zip(*cycles)      # unpack cycle range, mean and count
 
         # the scatter plot
-        plt.scatter(means, ranges, s=counts)
+        plt.scatter(means, ranges, s=[2. * c for c in counts], alpha=0.4)  # double marker size for improved readability
         plt.xlabel('Cycle mean')
         plt.ylabel('Cycle range')
         plt.grid()

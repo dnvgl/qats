@@ -1562,7 +1562,7 @@ class TsDB(object):
                 cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
             ranges, means, counts = zip(*cycles)      # unpack range and count pairs, ignore mean value
-            plt.scatter(means, ranges, s=counts, label=k, alpha=0.4)
+            plt.scatter(means, ranges, s=[2. * c for c in counts], label=k, alpha=0.4)  # double marker size for improved readability
 
         plt.xlabel('Cycle mean')
         plt.ylabel('Cycle range')
