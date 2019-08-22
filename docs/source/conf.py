@@ -11,9 +11,12 @@
 import os
 import sys
 import sphinx_bootstrap_theme
+
 sys.path.append(os.path.abspath(os.path.join('..', '..')))
 
-# -- General configuration ------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# General configuration
+# ----------------------------------------------------------------------------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -23,10 +26,11 @@ sys.path.append(os.path.abspath(os.path.join('..', '..')))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    # 'autoapi.extension',  # ref. https://buildmedia.readthedocs.org/media/pdf/sphinx-autoapi/latest/sphinx-autoapi.pdf
     'sphinx.ext.autodoc',
     'sphinx.ext.doctest',
     'sphinx.ext.autosummary',
-    'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon',  # makes sphinx understand docstrings in numpy and google format
     'sphinx.ext.intersphinx',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -38,13 +42,13 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
+
 # templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = ['.rst', '.md']
-# source_suffix = '.rst'
+source_suffix = ['.rst', '.md']  # source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
@@ -81,9 +85,30 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
+# ----------------------------------------------------------------------------------------------------------------------
+# AutoAPI configuration
+#   ref.: https://buildmedia.readthedocs.org/media/pdf/sphinx-autoapi/latest/sphinx-autoapi.pdf
+# ----------------------------------------------------------------------------------------------------------------------
+# autoapi_dirs = ['../../qats']
+# autoapi_add_toctree_entry = False     # default: True
+# autoapi_root = 'api'
+# autoapi_generate_api_docs = False     # default: True
+# autoapi_include_summaries = False      # default: False
+# autoapi_keep_files = False            # default: False
+# autoapi_python_class_content = 'both'   # default: 'class'
+# autoapi_options = ['members', 'undoc-members', ]  # 'private-members', 'special-members']
+# autoapi_ignore = ['*app*']
 
-# -- Options for HTML output ----------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+# Napoleon configuration
+#   ref.: https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html
+# ----------------------------------------------------------------------------------------------------------------------
+# napoleon_use_admonition_for_examples = True  # default: False
+napoleon_use_ivar = True  # default: False
 
+# ----------------------------------------------------------------------------------------------------------------------
+# HTML output configuration
+# ----------------------------------------------------------------------------------------------------------------------
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
@@ -92,39 +117,35 @@ html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 html_logo = 'img/qats.ico'
 
 # Include sidebar
-# todo: consider including sidebar (just remove comment on next line to do so)
 html_sidebars = {
-    '**': ['localtoc.html', ],  #'relations.html', ],  #'globaltoc.html', ],
-    # 'sourcelink.html', 'searchbox.html']}
+    '**': ['localtoc.html', ],  # 'relations.html', ],  #'globaltoc.html', 'sourcelink.html', 'searchbox.html']}
 }
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#
-html_theme_options = {
+html_theme_options = {  # bootstrap theme options
     # Navigation bar title. (Default: ``project`` value)
-    #'navbar_title': "Demo",
+    # 'navbar_title': "Demo",
 
     # Tab name for entire site. (Default: "Site")
-    #'navbar_site_name': "Site",
+    # 'navbar_site_name': "Site",
 
     # A list of tuples containing pages or urls to link to.
     # Valid tuples should be in the following forms:
     #    (name, page)                 # a link to a page
     #    (name, "/aa/bb", 1)          # a link to an arbitrary relative url
     #    (name, "http://example.com", True) # arbitrary absolute url
-    # Note the "1" or "True" value above as the third argument to indicate
-    # an arbitrary url.
+    # Note the "1" or "True" value above as the third argument to indicate an arbitrary url.
     'navbar_links': [
         ("Getting started", "getting_started"),
         ("GUI", "gui"),
         ("Examples", "examples"),
-        ("API", "api"),
+        ("API", "api/index"),
     ],
 
     # Render the next and previous page links in navbar. (Default: true)
-    'navbar_sidebarrel': False,
+    'navbar_sidebarrel': True,  # False,
 
     # Render the current pages TOC in the navbar. (Default: true)
     'navbar_pagenav': False,  # True,
@@ -133,14 +154,14 @@ html_theme_options = {
     'navbar_pagenav_name': "Page",
 
     # Global TOC depth for "site" navbar tab. (Default: 1)
-    # Switching to -1 shows all levels.
-    'globaltoc_depth': 2,
+    # Switching to -1 sh
+    # ows all levels.
+    'globaltoc_depth': 3,
 
     # Include hidden TOCs in Site navbar?
     #
-    # Note: If this is "false", you cannot have mixed ``:hidden:`` and
-    # non-hidden ``toctree`` directives in the same page, or else the build
-    # will break.
+    # Note: If this is "false", you cannot have mixed :hidden: and non-hidden toctree directives
+    # in the same page, or else the build will break.
     #
     # Values: "true" (default) or "false"
     'globaltoc_includehidden': "true",
@@ -157,51 +178,54 @@ html_theme_options = {
     # Options are "nav" (default), "footer" or anything else to exclude.
     'source_link_position': None,
 
-    # Bootswatch (http://bootswatch.com/) theme.
+    # Bootswatch  theme (see http://bootswatch.com/ for available themes)
     #
-    # Options are nothing (default) or the name of a valid theme
-    # such as "united", "cosmo" or "sandstone".
-    # 'bootswatch_theme': "cosmo",  # (original theme)
-    'bootswatch_theme': "spacelab",  # (looks good, better 'See Also' sections)
-    # 'bootswatch_theme': "cerulean",  # (looks okay)
-    # 'bootswatch_theme': "sandstone",
+    # Options are nothing (default) or the name of a valid theme such as "united", "cosmo" or "sandstone".
+    # Note: value av 'navbar_class' (defined above) will affect the look of the theme
+    #
+    # 'bootswatch_theme': "cosmo",      # (original theme)
+    # 'bootswatch_theme': "cerulean",   # (looks okay)
+    # 'bootswatch_theme': "sandstone",  #
+    # 'bootswatch_theme': "yeti",       # (looks good, but 'See Also' a bit too intense)
+    'bootswatch_theme': "spacelab",   # (looks good, better 'See Also' sections)
 
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
     'bootstrap_version': "3",
 }
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Other configuration options
+# ----------------------------------------------------------------------------------------------------------------------
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#
+# html_static_path = ['_static']
 # html_style = 'style.css'
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 
-# other parameters
-autodoc_member_order = 'bysource'  # 'alphabetical', 'groupwise', 'bysource'
+# ----------------------------------------------------------------------------------------------------------------------
+# Autodoc options
+# ----------------------------------------------------------------------------------------------------------------------
+# autosummary_generate = True  # what difference does this variable do, actually??
+autodoc_default_options = {
+    'members': True,
+    'member-order': 'bysource',  # 'alphabetical', 'groupwise', 'bysource'
+    # 'special-members': '__init__',
+}
+autoclass_content = "both"  # include both class' and __init__ method's docstrings (concatenated)
 
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 # Autosummary
 # ... based on code and inspiration provided by:
 #   https://stackoverflow.com/questions/20569011/python-sphinx-autosummary-automated-listing-of-member-functions
 #   https://github.com/markovmodel/PyEMMA/blob/devel/doc/source/conf.py#L285
-# -----------------------------------------------------------------------------
-
-# autosummary_generate = True  # what difference does this variable do, actually??
-
-autodoc_default_flags = ['members', 'inherited-members']
-
-# spell checking
-'''
-spelling_lang = 'en_US'
-spelling_word_list_filename = 'spelling_wordlist.txt'
-spelling_show_suggestions = True
-'''
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 # try to exclude deprecated
@@ -216,72 +240,156 @@ def setup(app):
     app.connect('autodoc-skip-member', skip_deprecated)
     app.add_stylesheet("custom-todo-style.css")  # also can be a full URL
     try:
+        import inspect
         from sphinx.ext.autosummary import Autosummary
-        from sphinx.ext.autosummary import get_documenter
         from docutils.parsers.rst import directives
-        from sphinx.util.inspect import safe_getattr
-        import re
-        import sphinx.ext.autodoc
+        # import sphinx.ext.autodoc
+        # from sphinx.ext.autosummary import get_documenter
+        # from sphinx.util.inspect import safe_getattr
+        # import re
 
         class AutoAutoSummary(Autosummary):
 
             option_spec = {
+                'modules': directives.unchanged,
+                'functions': directives.unchanged,
+                'classes': directives.unchanged,
                 'methods': directives.unchanged,
-                'attributes': directives.unchanged,
-                'functions': directives.unchanged,  # enlo 09.03.2018
+                'properties': directives.unchanged,
                 'toctree': directives.unchanged,
             }
 
             required_arguments = 1
 
             @staticmethod
-            def get_members(obj, typ, include_public=None):
-                if not include_public:
+            def get_class_members(obj, typ, include_public=None):
+                """
+                Parameters
+                ----------
+                obj : object
+                    Object (class) to inspect.
+                typ : str
+                    Type of members requested. Valid options: 'method', 'property'
+                include_public : list, optional
+                    Methods/attributes to include in public list
+
+                Returns
+                -------
+                public : list
+                    List of public members of requested type.
+                items : list
+                    List of all members of requested type.
+                """
+                if include_public is None:
                     include_public = []
-                items = []
-                for name in dir(obj):
-                    try:
-                        documenter = get_documenter(safe_getattr(obj, name), obj)
-                    except AttributeError:
-                        continue
-                    if documenter.objtype == typ:
-                        items.append(name)
+                if typ == "method":
+                    # enlo, 22.08.2019: it appears not all methods are captured by ismethod() any more;
+                    # we therefore need to extract members that predicate True for isfunction() as well.
+                    items = [m[0] for m in
+                             inspect.getmembers(obj, predicate=lambda x: inspect.ismethod(x) or inspect.isfunction(x))]
+                elif typ == "property":
+                    items = [m[0] for m in inspect.getmembers(obj, predicate=inspect.isdatadescriptor)]
+                else:
+                    raise ValueError(f"Invalid value for parameter 'typ': {typ}")
                 public = [x for x in items if x in include_public or not x.startswith('_')]
                 return public, items
 
+            @staticmethod
+            def get_module_members(module, typ=('class', 'function')):
+                """
+                Parameters
+                ----------
+                module : module
+                    Module to inspect.
+                typ : str or list, optional
+                    Type of members requested. Valid options: 'class', 'function', 'module'
+
+                Returns
+                -------
+                members : list
+                    List of module members
+                """
+                if isinstance(typ, str):
+                    typ = typ,  # make tuple
+
+                def check(mod, member, mtyp):
+                    """
+                    Function that returns True if `member` should be included in returned list.
+                    The following criteria are used:
+                        - classes are included if 'classes' is specified
+                        - functions are included if 'functions' is specified
+                        - modules are included if 'modules' is specified
+                        - classes and functions are only included if they are defined in the module inspected
+                        - modules are only included if they are not imported
+                    """
+                    if (inspect.isclass(member) and 'class' in mtyp) and member.__module__ == mod.__name__:
+                        return True
+                    if (inspect.isfunction(member) and 'function' in mtyp) and member.__module__ == mod.__name__:
+                        return True
+                    if (inspect.ismodule(member) and 'module' in mtyp) and member.__package__ in member.__name__:
+                        return True
+                    return False
+
+                # members = [check(module, m[0], typ) for m in inspect.getmembers(module)]
+                members = [m[0] for m in inspect.getmembers(module, predicate=lambda x: check(module, x, typ))]
+                return members
+
             def run(self):
-                if 'functions' in self.options and ('methods' in self.options or 'attributes' in self.options):
+                # check that options doesn't contain invalid combinations
+                if ('functions' in self.options or 'classes' in self.options) \
+                        and ('methods' in self.options or 'properties' in self.options):
                     raise Exception("invalid option combination: %s" % self.options)
 
-                if not 'functions' in self.options:
-                    clazz = self.arguments[0]
+                # import requested module, or module of requested class
+                fullname = self.arguments[0]
+                root, name = fullname.rsplit('.', 1)
+                r = __import__(root, globals(), locals(), [name])   # root module
+                cm = getattr(r, name)                               # class or module
+                if inspect.isclass(cm):
+                    cm_typ = "class"
+                elif inspect.ismodule(cm):
+                    cm_typ = "module"
+                else:
+                    raise TypeError(f"Invalid type for {fullname}: {cm}")
+
+                # debug
+                '''
+                with open("_abc.txt", "a") as f:
+                    f.write(f"run : {fullname}, {cm_typ}\n")
+                '''
+
+                if cm_typ == "class":
                     try:
-                        (module_name, class_name) = clazz.rsplit('.', 1)
-                        m = __import__(module_name, globals(), locals(), [class_name])
-                        c = getattr(m, class_name)
+                        r = __import__(root, globals(), locals(), [name])
+                        cm = getattr(r, name)
+
+                        self.content = []
+
+                        if 'properties' in self.options:
+                            _, props = self.get_class_members(cm, 'property')
+                            self.content += ["~%s.%s" % (fullname, prop) for prop in props if not prop.startswith('_')]
+
                         if 'methods' in self.options:
-                            _, methods = self.get_members(c, 'method', ['__init__'])
+                            _, methods = self.get_class_members(cm, 'method', ['__init__'])
 
-                            self.content = ["~%s.%s" % (clazz, method) for method in methods if not method.startswith('_')]
-
-                        if 'attributes' in self.options:
-                            _, attribs = self.get_members(c, 'attribute')
-                            self.content = ["~%s.%s" % (clazz, attrib) for attrib in attribs if not attrib.startswith('_')]
-
+                            self.content += ["~%s.%s" % (fullname, method) for method in methods if
+                                             not method.startswith('_')]
                     finally:
                         return super(AutoAutoSummary, self).run()
 
-                else:  # --> 'functions' in self.options
-                    # dirty fix by enlo to handle autosummary of module functions
-                    import inspect as insp
-                    module = self.arguments[0]
+                elif cm_typ == "module":
                     try:
-                        root_name, module_name = module.rsplit('.', 1)
-                        r = __import__(root_name, globals(), locals(), [module_name])
-                        m = getattr(r, module_name)
-                        functions = [o[0] for o in insp.getmembers(m)
-                                     if insp.isfunction(o[1]) and o[1].__module__ == m.__name__]
-                        self.content = ["~%s.%s" % (module, func) for func in functions if not func.startswith('_')]
+                        typ = []
+                        if 'classes' in self.options:
+                            typ.append('class')
+                        if 'functions' in self.options:
+                            typ.append('function')
+                        if 'modules' in self.options:
+                            typ.append('modules')
+
+                        members = self.get_module_members(cm, typ=typ)
+                        self.content = ["~%s.%s" % (fullname, member) for member in members
+                                        if not member.startswith('_')]
 
                     finally:
                         return super(AutoAutoSummary, self).run()

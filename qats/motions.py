@@ -91,7 +91,7 @@ def acceleration(x, t):
     See Also
     --------
     velocity
-    np.gradient
+    numpy.gradient
     """
     acc = x[:]  # copy input signals
     for _ in range(2):
@@ -128,8 +128,6 @@ def velocity(x, t):
     --------
     numpy.gradient
 
-    Notes
-    -----
     """
     # check input signal(s)
     x = np.asarray(x)

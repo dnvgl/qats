@@ -23,7 +23,7 @@ from .threading import Worker
 from .models import CustomSortFilterProxyModel
 from .widgets import CustomTabWidget
 from ..tsdb import TsDB
-from ..stats import empirical_cdf
+from ..stats.empirical import empirical_cdf
 from .funcs import (
     export_to_file,
     import_from_file,
@@ -665,7 +665,7 @@ class Qats(QMainWindow):
         self.spectrum_axes.clear()
         self.spectrum_axes.grid(True)
         self.spectrum_axes.set_xlabel('Frequency (Hz)')
-        self.spectrum_axes.set_ylabel('Spectral density')
+        self.spectrum_axes.set_ylabel('Power spectral density')
 
         # draw
         for name, value in container.items():
@@ -678,16 +678,16 @@ class Qats(QMainWindow):
 
     def plot_rfc(self, container):
         """
-        Plot time series cycle distribution found using rainflow counting
+        Plot cycle ranges versus number of occurrences
 
         Parameters
         ----------
         container : dict
-            Frequency versus power spectral density as tuple
+            Cycle range versus number of occurrences.
         """
         self.cycles_axes.clear()
         self.cycles_axes.grid(True)
-        self.cycles_axes.set_xlabel('Cycle magnitude')
+        self.cycles_axes.set_xlabel('Cycle range')
         self.cycles_axes.set_ylabel('Cycle count (-)')
 
         # cycle bar colors
@@ -695,11 +695,11 @@ class Qats(QMainWindow):
 
         # draw
         for name, value in container.items():
-            magnitude, count = value    # unpack magnitude and count
+            crange, count = value    # unpack magnitude and count
 
             try:
                 # width of bars
-                width = magnitude[1] - magnitude[0]
+                width = crange[1] - crange[0]
 
             except IndexError:
                 # cycles and magnitude lists are empty, no cycles found from rainflow
@@ -710,7 +710,7 @@ class Qats(QMainWindow):
                 logging.warning("Invalid values (nan, inf) in time series '%s'. Cannot create cycle histogram." % name)
 
             else:
-                self.cycles_axes.bar(magnitude, count, width, label=name, alpha=0.4, color=next(barcolor))
+                self.cycles_axes.bar(crange, count, width, label=name, alpha=0.4, color=next(barcolor))
                 self.cycles_axes.legend(loc="upper left")
                 self.cycles_canvas.draw()
 

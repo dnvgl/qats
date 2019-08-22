@@ -13,6 +13,7 @@ from struct import pack
 from array import array
 from collections import OrderedDict, defaultdict
 from .ts import TimeSeries
+from .fatigue.rainflow import rebin as rebin_cycles
 from .readers.sima import (
     read_names as read_sima_names,
     read_ascii_data as read_sima_ascii_data,
@@ -60,6 +61,19 @@ class TsDB(object):
     ----------
     name : str, optional
         Database name.
+
+    Attributes
+    ----------
+    name : str
+        Database name.
+    register : OrderedDict
+        TimeSeries objects by unique time series id.
+    register_parent : OrderedDict
+        Parent file path by unique time series id.
+    register_indices : OrderedDict
+        Index of time series on parent file by unique time series id.
+    register_keys : list
+        Unique time series id.
 
     """
 
@@ -1438,6 +1452,7 @@ class TsDB(object):
             plt.plot(f, p, label=k)
 
         plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Power spectral density')
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1445,14 +1460,75 @@ class TsDB(object):
         else:
             plt.show()
 
-    def plot_rfc(self, names=None, figurename=None, store=True, **kwargs):
+    def plot_cycle_range(self, names=None, n=200, w=None, figurename=None, store=True, **kwargs):
         """
-        Plot time series cycle distribution from Rainflow counting.
+        Plot cycle range versus number of occurrences.
 
         Parameters
         ----------
         names : str/list/tuple, optional
             Time series names
+        n : int, optional
+            Group by cycle range in *n* equidistant bins.
+        w : float, optional
+            Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        Notes
+        -----
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        See Also
+        --------
+        TsDB.rfc, TsDB.plot_cycle_rangemean, TimeSeries.rfc, rainflow.count_cycles, rainflow.rebin_cycles
+
+        """
+        # dict with TimeSeries objects
+        container = self.getm(names=names, store=store)
+
+        # ensure that rebinning will be done
+        assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
+                                                   "be different from None"
+
+        plt.figure(1)
+        for k, v in container.items():
+            # extract cycles
+            cycles = v.rfc(**kwargs)
+
+            # rebin cycles
+            cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+
+            r, _, c = zip(*cycles)   # unpack range and count pairs, ignore mean value
+            dr = r[1] - r[0]     # bar width
+            plt.bar(r, c, dr, label=k, alpha=0.4)
+
+        plt.xlabel('Cycle range')
+        plt.ylabel('Cycle count (-)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_cycle_rangemean(self, names=None, n=None, w=None, figurename=None, store=True, **kwargs):
+        """
+        Plot cycle range-mean versus number of occurrences.
+
+        Parameters
+        ----------
+        names : str/list/tuple, optional
+            Time series names
+        n : int, optional
+            Group by cycle range in *n* equidistant bins.
+        w : float, optional
+            Group by cycle range in *w* wide equidistant bins. Overrides *n*.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         store : bool, optional
@@ -1463,6 +1539,9 @@ class TsDB(object):
         Notes
         -----
         When working on a large time series database it is recommended to set ``store=False`` to avoid too high memory
+        Cycle means are represented by weighted averages in each bin.
+
+        When working on a large time series database it is recommended to set store=False to avoid too high memory
         usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
 
         See also
@@ -1475,13 +1554,18 @@ class TsDB(object):
 
         plt.figure(1)
         for k, v in container.items():
-            _ = v.rfc(**kwargs)
-            m, c = zip(*_)      # unpack magnitude-count pairs (tuples)
-            w = m[1] - m[0]     # bar width
-            plt.bar(m, c, w, label=k, alpha=0.4)
+            # extract cycles
+            cycles = v.rfc(**kwargs)
 
-        plt.xlabel('Cycle magnitude')
-        plt.ylabel('Cycle count (-)')
+            # rebin cycles
+            if (n is not None) or (w is not None):
+                cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+
+            ranges, means, counts = zip(*cycles)      # unpack range and count pairs, ignore mean value
+            plt.scatter(means, ranges, s=[2. * c for c in counts], label=k, alpha=0.4)  # double marker size for improved readability
+
+        plt.xlabel('Cycle mean')
+        plt.ylabel('Cycle range')
         plt.grid()
         plt.legend()
         if figurename is not None:

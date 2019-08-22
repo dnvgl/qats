@@ -1,13 +1,15 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-:class:`Weibull` class + additional functions related to Weibull distribution.
+:class:`Weibull` class and functions related to Weibull distribution.
 """
 
 import numpy as np
 from scipy.special import gamma, binom
 from scipy.optimize import leastsq, fsolve, brentq
 import matplotlib.pyplot as plt
-from .stats import empirical_cdf
-from .signal import find_maxima
+from .empirical import empirical_cdf
+from ..signal import find_maxima
 
 
 # todo: build documentation and check that docstrings behave as intended
@@ -38,6 +40,17 @@ class Weibull(object):
         Sample data, used to establish empirical cdf and is included in plots.
         To fit the Weibull distribution to the sample data, use :meth:`Weibull.fit()`.
 
+    Attributes
+    ----------
+    loc: float
+        Weibull location parameter.
+    scale: float
+        Weibull scale parameter.
+    shape: float
+        Weibull shape parameter.
+    data: array_like
+        Sample data. Exists only if distribution parameters are estimated from a sample.
+
     Notes
     -----
     For a Weibull 2-parameter distribution, specify location parameter 0 (zero).
@@ -47,7 +60,7 @@ class Weibull(object):
     --------
     To initiate an instance based on parameters, use:
 
-    >>> from qats.weibull import Weibull
+    >>> from qats.stats.weibull import Weibull
     >>> weib = Weibull(loc, scale, shape)
 
     If you need to establish a Weibull instance based on a sample data set, use:
@@ -227,7 +240,7 @@ class Weibull(object):
 
         See Also
         --------
-        qats.weibull.weibull2gumbel
+        qats.stats.weibull.weibull2gumbel
 
 
         Notes
@@ -313,7 +326,7 @@ class Weibull(object):
         --------
         Assuming `data` is a sample array/list:
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> weib = Weibull.fit(data, method="msm")
 
         """
@@ -367,7 +380,7 @@ class Weibull(object):
         --------
         Assuming `x` is a time series signal:
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> weib = Weibull.fromsignal(x, method='msm')
 
         Note that the example above is equivalent to:
@@ -453,13 +466,13 @@ class Weibull(object):
         --------
         Plot distribution and show the figure
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> distribution = Weibull(100., 15., 2.5)
         >>> distribution.plot()
 
         Plot distribution and save the figure as png
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> distribution = Weibull(100., 15., 2.5)
         >>> distribution.plot(filename="plot.png")
 
@@ -498,13 +511,13 @@ class Weibull(object):
         --------
         Plot distribution and show the figure
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> distribution = Weibull(100., 15., 2.5)
         >>> distribution.plot_linear()
 
         Plot distribution and save the figure as png
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> distribution = Weibull(100., 15., 2.5)
         >>> distribution.plot_linear(filename="plot.png")
 
@@ -624,7 +637,7 @@ def bootstrap(loc, scale, shape, size, repetitions, method='pwm'):
     To quantify the uncertainty (coefficient of variation) of a Weibull distribution fitted to a sample with 5 values
     (using 100 repetition):
 
-    >>> from qats.weibull import bootstrap
+    >>> from qats.stats.weibull import bootstrap
     >>> m, cv = bootstrap(10., 5., 2.5, 5, 100)
 
     """

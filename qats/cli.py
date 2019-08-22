@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Command line interface
+Command line interface to app (GUI).
 """
 import os
 import sys
@@ -15,7 +15,7 @@ from . import __version__
 
 def link_app():
     """
-    Create start menu item and desktop shortcut to QATS desktop app
+    Create start menu item and desktop shortcut to QATS desktop app.
     """
     if not sys.platform == "win32":
         print(f"Unable to create links to app on {sys.platform} OS.")
@@ -53,7 +53,7 @@ def link_app():
 
 def unlink_app():
     """
-    Remove start menu item and desktop shortcut to QATS desktop application
+    Remove start menu item and desktop shortcut to QATS desktop application.
     """
     if not sys.platform == "win32":
         print(f"Unable to remove links to app on {sys.platform} OS.")
@@ -75,7 +75,7 @@ def unlink_app():
 
 def launch_app(home=True, files=None, log_level="info"):
     """
-    Start desktop application
+    Start desktop application.
 
     Parameters
     ----------
@@ -98,24 +98,29 @@ def launch_app(home=True, files=None, log_level="info"):
 
 def main():
     """
-    Launch desktop application from command line with parameters
+    Launch desktop application from command line with parameters.
     """
     # top-level parser
-    parser = argparse.ArgumentParser(prog="qats", description="QATS is a library and desktop application for time series analysis")
+    parser = argparse.ArgumentParser(prog="qats",
+                                     description="QATS is a library and desktop application for time series analysis")
     parser.add_argument("--version", action="version", version=f"QATS {__version__}", help="Package version")
     subparsers = parser.add_subparsers(title="Commands", dest="command")
 
     # app parser
     app_parser = subparsers.add_parser("app", help="Launch the desktop application")
     app_parser.add_argument("-f", "--files", type=str, nargs="*", help="Time series files.")
-    app_parser.add_argument("--home", action="store_true", help="Launch from home directory, default: current work directory.")
-    app_parser.add_argument("--log-level", default="info", choices=list(LOGGING_LEVELS.keys()), help="Set logging level.")
+    app_parser.add_argument("--home", action="store_true",
+                            help="Launch from home directory, default: current work directory.")
+    app_parser.add_argument("--log-level", default="info", choices=list(LOGGING_LEVELS.keys()),
+                            help="Set logging level.")
 
     # config parser
     config_parser = subparsers.add_parser("config", help="Configure the package")
     applink_group = config_parser.add_mutually_exclusive_group()
-    applink_group.add_argument("--link-app", action="store_true", help="Create start menu and destop links to the app.")
-    applink_group.add_argument("--unlink-app", action="store_true", help="Remove start menu and destop links to the app.")
+    applink_group.add_argument("--link-app", action="store_true",
+                               help="Create start menu and destop links to the app.")
+    applink_group.add_argument("--unlink-app", action="store_true",
+                               help="Remove start menu and destop links to the app.")
 
     # parse command line arguments
     args = parser.parse_args()

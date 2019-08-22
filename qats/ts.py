@@ -11,11 +11,13 @@ import numpy as np
 from scipy.interpolate import interp1d
 from scipy.signal import welch
 from scipy.stats import kurtosis, skew, tstd
-from .rainflow import count_cycles
+import matplotlib.pyplot as plt
+from matplotlib import cm
+from .fatigue.rainflow import count_cycles, rebin as rebin_cycles, mesh
 from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
     average_frequency, find_maxima
-from .weibull import Weibull, weibull2gumbel, pwm
-from .gumbel import Gumbel
+from .stats.weibull import Weibull, weibull2gumbel, pwm
+from .stats.gumbel import Gumbel
 
 
 # todo: weibull and gumbel + plotting (self.pd = Weibull(), self.evd = Gumbel())
@@ -29,7 +31,7 @@ from .gumbel import Gumbel
 # todo: level crossings (see Moan&Naess book)
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
-
+# todo: smarter sizing of scatter dots in plot_cycle_rangemean()
 
 class TimeSeries(object):
     """
@@ -53,6 +55,19 @@ class TimeSeries(object):
         Kind/type of signal e.g. 'force' or 'acceleration'
     unit : str, optional
         Unit of measure e.g. 'N' (Newton), 'kN' (kilo Newton), 'm/s2'
+
+    Attributes
+    ----------
+    name : str
+        Time series name/identifier
+    x : array_like
+        Data points corresponding to time, see property :attr:`~TimeSeries.t`.
+    parent : str
+        Obsolute or relative path to file it originates from.
+    kind : str
+        Kind of signal e.g. 'force' or 'acceleration'.
+    unit : str
+        Unit of measure e.g. 'N' (Newton) or 'm/s2'.
 
     Notes
     -----
@@ -886,6 +901,168 @@ class TimeSeries(object):
         """
         self._t, self.x = self.get(**kwargs)
 
+    def plot(self, figurename=None, **kwargs):
+        """
+        Plot time series trace.
+
+        Parameters
+        ----------
+        names : str/list/tuple, optional
+            Time series names
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            See documentation of TimeSeries.get() method for available options
+
+        """
+        # dict with numpy arrays: time and data
+        t, x = self.get(**kwargs)
+
+        plt.figure(1)
+        plt.plot(t, x)
+        plt.xlabel('Time (s)')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_psd(self, figurename=None, **kwargs):
+        """
+        Plot time series power spectral density.
+
+        Parameters
+        ----------
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.psd() method for available options
+
+        """
+        # dict with TimeSeries objects
+        plt.figure(1)
+        f, p = self.psd(**kwargs)
+        plt.plot(f, p)
+        plt.xlabel('Frequency (Hz)')
+        plt.ylabel('Power spectral density')
+        plt.grid()
+        plt.legend()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_cycle_range(self, n=200, w=None, figurename=None, **kwargs):
+        """
+        Plot cycle range versus number of occurrences.
+
+        Parameters
+        ----------
+        n : int, optional
+            Group by cycle range in *n* equidistant bins.
+        w : float, optional
+            Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.rfc() method for available options
+
+        See Also
+        --------
+        TimeSeries.rfc, rainflow.count_cycles, rainflow.rebin_cycles
+        """
+        cycles = self.rfc(**kwargs)
+
+        # rebin cycles
+        assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
+                                                   "be different from None"
+        cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+
+        r, _, c = zip(*cycles)      # unpack cycle range and count, ignore mean value
+        dr = r[1] - r[0]            # bar width
+        plt.bar(r, c, dr)
+        plt.xlabel('Cycle range')
+        plt.ylabel('Cycle count (-)')
+        plt.grid()
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_cycle_rangemean(self, n=None, w=None, figurename=None, **kwargs):
+        """
+        Plot cycle range-mean versus number of occurrences.
+
+        Parameters
+        ----------
+        n : int, optional
+            Group by cycle range in *n* equidistant bins.
+        w : float, optional
+            Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.rfc() method for available options
+
+        Notes
+        -----
+        Cycle means are represented by weighted averages in each bin.
+
+        See Also
+        --------
+        TimeSeries.rfc, TimeSeries.plot_cycle_ranges, rainflow.count_cycles, rainflow.rebin_cycles
+        """
+        cycles = self.rfc(**kwargs)
+
+        # rebin cycles
+        if (n is not None) or (w is not None):
+            cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+
+        ranges, means, counts = zip(*cycles)      # unpack cycle range, mean and count
+
+        # the scatter plot
+        plt.scatter(means, ranges, s=[2. * c for c in counts], alpha=0.4)  # double marker size for improved readability
+        plt.xlabel('Cycle mean')
+        plt.ylabel('Cycle range')
+        plt.grid()
+
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
+    def plot_cycle_rangemean3d(self, nr=100, nm=100, figurename=None, **kwargs):
+        """
+        Plot cycle range-mean versus number of occurrences as 3D surface.
+
+        Parameters
+        ----------
+        nr : int, optional
+            Group by cycle range in *nr* equidistant bins.
+        nm : int, optional
+            Group by cycle mean in *nm* equidistant bins.
+        figurename : str, optional
+            Save figure to file 'figurename' instead of displaying on screen.
+        kwargs : optional
+            see documentation of TimeSeries.get() method for available options
+
+        """
+        cycles = self.rfc(**kwargs)
+        ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
+
+        fig = plt.figure()
+        ax = fig.gca(projection='3d')
+        ax.plot_surface(means, ranges, counts, cmap=cm.coolwarm)
+        ax.set_xlabel('Cycle mean')
+        ax.set_ylabel('Cycle range')
+        ax.set_zlabel('Cycle count')
+
+        if figurename is not None:
+            plt.savefig(figurename)
+        else:
+            plt.show()
+
     def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, **kwargs):
         """
         Estimate power spectral density using Welch’s method.
@@ -940,9 +1117,10 @@ class TimeSeries(object):
         # ensure constant time step
         _dt = np.diff(t)
 
-        if not np.isclose(min(_dt), max(_dt), rtol=1.e-5, atol=0.):
-            raise ValueError("Constant time step is required when estimating power spectral density using FFT. "
-                             "Resample '%s' to constant time step." % self.name)
+        # atol not zero to avoid false positives for zero values
+        if not np.isclose(min(_dt), max(_dt), rtol=1.e-2, atol=1.e-6):
+            raise ValueError(f"The time step of '{self.name}' varies with more than 1%. A constant time step is required"
+                             f" when estimating power spectral density using FFT. Resample to constant time step.")
 
         # if nperseg is not specified the segment length is set to 1/4 of the total signal.
         if not nperseg:
@@ -986,39 +1164,44 @@ class TimeSeries(object):
             assert dt > 0., "The specified time step is to small."
             return self.interpolate(np.arange(self.start, self.end, step=dt))
 
-    def rfc(self, ndigits=None, nbins=None, binwidth=None, **kwargs):
+    def rfc(self, **kwargs):
         """
-        Returns a sorted list containing pairs of cycle magnitude and count.
+        Returns a sorted list containing with cycle range, mean and count.
 
         Parameters
         ----------
-        ndigits : int, optional
-            If *ndigits* is given the cycles will be rounded to the given number of digits before counting.
-        nbins : int, optional
-            If *nbins* is given the cycle count per cycle magnitude is rebinned to *nbins* bins.
-        binwidth : float, optional
-            If *binwidth* is given the cycle counts are gathered in bins with a width of *binwidth*.
         kwargs : optional
             see documentation of get() method for available options
 
         Returns
         -------
         list
-            Sorted list of tuples of cycle magnitude versus count
+            Cycle range, mean and count sorted ascending by cycle range.
+
+        Examples
+        --------
+        Unpack cycle ranges, means and counts as list
+
+        >>> cycles = ts.rfc()
+        >>> ranges, means, counts = zip(*cycles)
 
         Notes
         -----
-        One-half cycles are counted as 0.5, so the returned counts may not be whole numbers.
+        Half cycles are counted as 0.5, so the returned counts may not be whole numbers.
 
-        Rebinning is not applied if specified *nbins* is larger than the original number of bins.
+        Rebinning is not applied if specified *n* is larger than the original number of bins.
 
-        *nbins* override *binwidth* if both are specified.
+        See Also
+        --------
+        rainflow.count_cycles
 
         """
         # get data array
         _, x = self.get(**kwargs)
 
-        return count_cycles(x, ndigits=ndigits, nbins=nbins, binwidth=binwidth)
+        cycles = count_cycles(x)
+
+        return cycles
 
     def set_dtg_ref(self, new_ref=None):
         """

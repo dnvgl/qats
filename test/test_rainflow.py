@@ -4,33 +4,28 @@ Module for testing rainflow algorithm
 """
 
 import itertools
-import random
 import unittest
-
-from qats import rainflow
+import numpy as np
+from qats.fatigue import rainflow
 
 
 class TestRainflowCounting(unittest.TestCase):
     # Load series and corresponding cycle counts from ASTM E1049-85
     series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
-    cycles = [(3, 0.5), (4, 1.5), (6, 0.5), (8, 1.0), (9, 0.5)]
-    cycles_n2 = [(2.25, 2.0), (6.75, 2.0)]  # cycles grouped in 2 bins
-    cycles_bw2 = [(1, 0.0), (3, 2.0), (5, 0.5), (7, 1.0), (9, 0.5)]  # cycles grouped in bins of width 2
-    cycles_bw5 = [(2.5, 2.0), (7.5, 2.0)]   # cycles grouped in bins of width 5
+    # raw cycles
+    cycles = [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
+    # cycles grouped in 2 bins
+    cycles_n2 = [(2.25, 0.125, 2.0), (6.75, 0.625, 2.0)]
+    # cycles grouped in bins of width 2
+    cycles_bw2 = [(1.0, np.nan, 0.0), (3.0, 0.125, 2.0), (5.0, 1.0, 0.5), (7.0, 0.5, 1.0), (9.0, 0.5, 0.5)]
+    # cycles grouped in bins of width 5
+    cycles_bw5 = [(2.5, 0.125, 2.0), (7.5, 0.625, 2.0)]
 
     def test_rainflow_counting(self):
         """
         Standard test
         """
-        self.assertEqual(rainflow.count_cycles(self.series), self.cycles)
-
-    def test_rainflow_ndigits(self):
-        """
-        Add noise to test series. Test that the noise is ignored when specifying fewer significant digits
-        """
-        series = [x + 0.01 * random.random() for x in self.series]
-        self.assertNotEqual(rainflow.count_cycles(series), self.cycles)
-        self.assertEqual(rainflow.count_cycles(series, ndigits=1), self.cycles)
+        self.assertEqual(self.cycles, rainflow.count_cycles(self.series))
 
     def test_series_with_zero_derivatives(self):
         """
@@ -38,37 +33,44 @@ class TestRainflowCounting(unittest.TestCase):
         counting.
         """
         series = itertools.chain(*([x, x] for x in self.series))
-        self.assertEqual(rainflow.count_cycles(series), self.cycles)
+        self.assertEqual(self.cycles, rainflow.count_cycles(series))
 
     def test_rainflow_rebinning_binwidth2(self):
         """
         Test that values are correctly gathered to new bins of width 2
         """
-        self.assertEqual(rainflow.count_cycles(self.series, binwidth=2.), self.cycles_bw2)
+        self.assertEqual(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
 
     def test_rainflow_rebinning_binwidth5(self):
         """
         Test that values are correctly gathered to new bins of width 5
         """
-        self.assertEqual(rainflow.count_cycles(self.series, binwidth=5.), self.cycles_bw5)
+        self.assertEqual(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
 
     def test_rainflow_rebinning_nbin2(self):
         """
         Test that values are correctly gathered to 2 bins
         """
-        self.assertEqual(rainflow.count_cycles(self.series, nbins=2), self.cycles_n2)
+        self.assertEqual(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2))
 
     def test_rainflow_rebin_exceptions(self):
         """
-        Test that rebinning to bins which upper bound is lower than the maximum magnitude in the cycle
-        distribution raises a ValueError
+        Test that rebinning raises errors as it should do
         """
         try:
-            _ = rainflow.rebin_cycles(self.cycles, [0, 2, 4, 6, 8])
+            _ = rainflow.rebin(self.cycles, binby='nothing')
         except ValueError:
             pass
         else:
-            self.fail("Did not raise ValueError when specifying bins which do not cover all cycle magnitudes.")
+            self.fail("Did not raise ValueError when binby was not equal to neither 'mean' nor 'range'.")
+
+        try:
+            _ = rainflow.rebin(self.cycles)
+        except ValueError:
+            pass
+        else:
+            self.fail("Did not raise ValueError when neither `n` nor `w` were specified.")
+
 
 if __name__ == '__main__':
     unittest.main()

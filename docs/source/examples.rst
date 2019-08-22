@@ -38,13 +38,61 @@ a varying time step the the time series are resampled to a constant time step of
 Count cycles using the Rainflow algorithm
 *****************************************
 
-Fetch a single time series from the time series database and count the cycles in the time series using the the
+Fetch a single time series from the time series database, extract and visualize the cycle distribution using the
 Rainflow algorithm.
 
 .. literalinclude:: examples/rainflow.py
    :language: python
    :linenos:
+   :lines: 1-27
+
+.. figure:: img/ts_cycle_range.png
+    :figclass: align-center
+    :target: _images/ts_cycle_range.png
+
+    Single cycle range distribution.
+
+.. figure:: img/ts_cycle_range_mean.png
+    :figclass: align-center
+    :target: _images/ts_cycle_mean_range.png
+
+    Single cycle range-mean distribution.
+
+.. figure:: img/ts_cycle_range_mean_3d.png
+    :figclass: align-center
+    :target: _images/ts_cycle_range_mean_3d.png
+
+    Single 3D cycle range-mean distribution
+
+Compare the cycle range and range-mean distribution from several time series using the methods on the TsDB class.
+
+.. literalinclude:: examples/rainflow.py
+   :language: python
+   :linenos:
+   :lineno-start: 30
+   :lines: 30-34
+
+.. figure:: img/tsdb_cycle_range.png
+    :figclass: align-center
+    :target: _images/tsdb_cycle_range.png
+
+    Comparison of several cycle range distributions.
+
+.. figure:: img/tsdb_cycle_range_mean.png
+    :figclass: align-center
+    :target: _images/tsdb_cycle_range_mean.png
+
+    Comparison of several cycle range-mean distributions.
+
+
+Calculate fatigue damage in mooring lines
+*****************************************
+
+.. literalinclude:: examples/mooring_fatigue.py
+   :language: python
+   :linenos:
    :lines: 1-
+
 
 Apply low-pass and high-pass filters to time series
 ***************************************************
