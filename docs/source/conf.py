@@ -330,7 +330,7 @@ def setup(app):
             def run(self):
                 # check that options doesn't contain invalid combinations
                 if ('functions' in self.options or 'classes' in self.options) \
-                        and ('methods' in self.options or 'attributes' in self.options):
+                        and ('methods' in self.options or 'properties' in self.options):
                     raise Exception("invalid option combination: %s" % self.options)
 
                 # import requested module, or module of requested class
@@ -359,7 +359,7 @@ def setup(app):
                         self.content = []
 
                         if 'properties' in self.options:
-                            _, props = self.get_class_members(cm, 'attribute')
+                            _, props = self.get_class_members(cm, 'property')
                             self.content += ["~%s.%s" % (fullname, prop) for prop in props if not prop.startswith('_')]
 
                         if 'methods' in self.options:
@@ -372,11 +372,6 @@ def setup(app):
 
                 elif cm_typ == "module":
                     try:
-                        '''
-                        functions = [o[0] for o in inspect.getmembers(cm)
-                                     if (inspect.isfunction(o[1]) or inspect.isclass(o[1])) and o[1].__module__ == r.__name__]
-                        self.content = ["~%s.%s" % (fullname, func) for func in functions if not func.startswith('_')]
-                        '''
                         typ = []
                         if 'classes' in self.options:
                             typ.append('class')
