@@ -56,6 +56,19 @@ class TimeSeries(object):
     unit : str, optional
         Unit of measure e.g. 'N' (Newton), 'kN' (kilo Newton), 'm/s2'
 
+    Attributes
+    ----------
+    name : str
+        Time series name/identifier
+    x : array_like
+        Data points corresponding to time, see property :meth:`~TimeSeries.t`.
+    parent : str
+        Obsolute or relative path to file it originates from.
+    kind : str
+        Kind of signal e.g. 'force' or 'acceleration'.
+    unit : str
+        Unit of measure e.g. 'N' (Newton) or 'm/s2'.
+
     Notes
     -----
     If time is given as array of datetime objects and `dtg_ref` is not specified, `dtg_ref` will be set to time
