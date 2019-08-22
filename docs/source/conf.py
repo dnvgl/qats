@@ -42,6 +42,7 @@ extensions = [
 ]
 
 # Add any paths that contain templates here, relative to this directory.
+
 # templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
@@ -98,6 +99,12 @@ todo_include_todos = True
 # autoapi_options = ['members', 'undoc-members', ]  # 'private-members', 'special-members']
 # autoapi_ignore = ['*app*']
 
+# ----------------------------------------------------------------------------------------------------------------------
+# Napoleon configuration
+#   ref.: https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html
+# ----------------------------------------------------------------------------------------------------------------------
+# napoleon_use_admonition_for_examples = True  # default: False
+napoleon_use_ivar = True  # default: False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # HTML output configuration
