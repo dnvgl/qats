@@ -126,7 +126,9 @@ class SNCurve(object):
 
     @property
     def bilinear(self):
-        """ Bool """
+        """
+        Returns True if S-N curve is bi-linear, otherwise False.
+        """
         if self.m2 is None:
             return False
         else:
@@ -134,7 +136,10 @@ class SNCurve(object):
 
     @property
     def m(self):
-        """ Slope parameter """
+        """
+        Slope parameter of linear (single slope) S-N curve (equal to `m1`).
+        Not available for bi-linear curves.
+        """
         # should only be available for linear S-N curves - otherwise, m1 and m2 should be used!
         assert self.m2 is None, "For bi-linear curves, use `m1` and `m2` instead of `m`"
         return self.m1
