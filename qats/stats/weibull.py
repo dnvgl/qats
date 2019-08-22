@@ -40,6 +40,17 @@ class Weibull(object):
         Sample data, used to establish empirical cdf and is included in plots.
         To fit the Weibull distribution to the sample data, use :meth:`Weibull.fit()`.
 
+    Attributes
+    ----------
+    loc: float
+        Weibull location parameter.
+    scale: float
+        Weibull scale parameter.
+    shape: float
+        Weibull shape parameter.
+    data: array_like
+        Sample data. Exists only if distribution parameters are estimated from a sample.
+
     Notes
     -----
     For a Weibull 2-parameter distribution, specify location parameter 0 (zero).
