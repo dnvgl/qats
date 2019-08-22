@@ -18,9 +18,7 @@ from .empirical import empirical_cdf
 
 class Gumbel(object):
     """
-
-    The Gumbel class offers miscellaneous functions for working with the Gumbel
-    maxima distribution.
+    The Gumbel maxima distribution.
 
     The cumulative distribution function is defined as::
 
@@ -38,6 +36,14 @@ class Gumbel(object):
         Sample data, used to establish empirical cdf and is included in plots.
         To fit the Gumbel distribution to the sample data, use :meth:`Gumbel.fit`.
 
+    Attributes
+    ----------
+    loc : float
+        Gumbel location parameter.
+    scale : float
+        Gumbel scale parameter.
+    data : array_like
+        Sample data.
 
     Examples
     --------

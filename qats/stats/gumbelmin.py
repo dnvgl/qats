@@ -17,10 +17,8 @@ from .gumbel import _euler_masceroni as em
 
 
 class GumbelMin(object):
-    r"""
-
-    The GumbelMin class offers miscellaneous functions for working with the Gumbel
-    minima distribution.
+    """
+    The Gumbel minima distribution.
 
     The cumulative distribution function is defined as::
 
@@ -28,8 +26,38 @@ class GumbelMin(object):
 
     where `a` is location parameter and `b` is the scale parameter.
 
-    .. rubric:: References
+    Parameters
+    ----------
+    loc : float
+        Gumbel location parameter.
+    scale : float
+        Gumbel scale parameter.
+    data : array_like, optional
+        Sample data, used to establish empirical cdf and is included in plots.
+        To fit the Gumbel distribution to the sample data, use :meth:`GumbelMin.fit`.
 
+    Attributes
+    ----------
+    loc : float
+        Gumbel location parameter.
+    scale : float
+        Gumbel scale parameter.
+    data : array_like
+        Sample data.
+
+    Examples
+    --------
+    To initiate an instance based on parameters, use:
+
+    >>> from qats.stats.gumbelmin import GumbelMin
+    >>> gumb = GumbelMin(loc, scale)
+
+    If you need to establish a Gumbel instance based on a sample data set, use:
+
+    >>> gumb = GumbelMin.fit(data, method='msm')
+
+    References
+    ----------
     1. Bury, K.V. (1975) Statistical models in applied science. Wiley, New York
 
     2. Haver, S. (2007), "Bruk av asymptotiske ekstremverdifordelinger"
@@ -43,10 +71,14 @@ class GumbelMin(object):
 
     """
 
-    def __init__(self, loc=None, scale=None):
-        self.data = None
+    def __init__(self, loc=None, scale=None, data=None):
         self.location = loc
         self.scale = scale
+
+        if data is not None:
+            self.data = np.array(data)
+        else:
+            self.data = None
 
     @property
     def cov(self):
