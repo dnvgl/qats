@@ -6,10 +6,10 @@
     :undoc-members:
 
 
-    .. rubric:: Attributes
+    .. rubric:: Properties
 
     .. autoautosummary:: qats.TimeSeries
-        :attributes:
+        :properties:
 
     .. rubric:: Methods
 
@@ -28,10 +28,10 @@
     :undoc-members:
 
 
-    .. rubric:: Attributes
+    .. rubric:: Properties
 
     .. autoautosummary:: qats.TsDB
-        :attributes:
+        :properties:
 
     .. rubric:: Methods
 

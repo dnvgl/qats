@@ -233,74 +233,161 @@ def setup(app):
     app.connect('autodoc-skip-member', skip_deprecated)
     app.add_stylesheet("custom-todo-style.css")  # also can be a full URL
     try:
+        import inspect
         from sphinx.ext.autosummary import Autosummary
-        from sphinx.ext.autosummary import get_documenter
         from docutils.parsers.rst import directives
-        from sphinx.util.inspect import safe_getattr
-        import re
-        import sphinx.ext.autodoc
+        # import sphinx.ext.autodoc
+        # from sphinx.ext.autosummary import get_documenter
+        # from sphinx.util.inspect import safe_getattr
+        # import re
 
         class AutoAutoSummary(Autosummary):
 
             option_spec = {
-                'methods': directives.unchanged,
-                'attributes': directives.unchanged,
-                'classes': directives.unchanged,
-                'functions': directives.unchanged,  # enlo 09.03.2018
                 'modules': directives.unchanged,
+                'functions': directives.unchanged,
+                'classes': directives.unchanged,
+                'methods': directives.unchanged,
+                'properties': directives.unchanged,
                 'toctree': directives.unchanged,
             }
 
             required_arguments = 1
 
             @staticmethod
-            def get_members(obj, typ, include_public=None):
-                if not include_public:
+            def get_class_members(obj, typ, include_public=None):
+                """
+                Parameters
+                ----------
+                obj : object
+                    Object (class) to inspect.
+                typ : str
+                    Type of members requested. Valid options: 'method', 'property'
+                include_public : list, optional
+                    Methods/attributes to include in public list
+
+                Returns
+                -------
+                public : list
+                    List of public members of requested type.
+                items : list
+                    List of all members of requested type.
+                """
+                if include_public is None:
                     include_public = []
-                items = []
-                for name in dir(obj):
-                    try:
-                        documenter = get_documenter(safe_getattr(obj, name), obj)
-                    except AttributeError:
-                        continue
-                    if documenter.objtype == typ:
-                        items.append(name)
+                if typ == "method":
+                    # enlo, 22.08.2019: it appears not all methods are captured by ismethod() any more;
+                    # we therefore need to extract members that predicate True for isfunction() as well.
+                    items = [m[0] for m in
+                             inspect.getmembers(obj, predicate=lambda x: inspect.ismethod(x) or inspect.isfunction(x))]
+                elif typ == "property":
+                    items = [m[0] for m in inspect.getmembers(obj, predicate=inspect.isdatadescriptor)]
+                else:
+                    raise ValueError(f"Invalid value for parameter 'typ': {typ}")
                 public = [x for x in items if x in include_public or not x.startswith('_')]
                 return public, items
 
+            @staticmethod
+            def get_module_members(module, typ=('class', 'function')):
+                """
+                Parameters
+                ----------
+                module : module
+                    Module to inspect.
+                typ : str or list, optional
+                    Type of members requested. Valid options: 'class', 'function', 'module'
+
+                Returns
+                -------
+                members : list
+                    List of module members
+                """
+                if isinstance(typ, str):
+                    typ = typ,  # make tuple
+
+                def check(mod, member, mtyp):
+                    """
+                    Function that returns True if `member` should be included in returned list.
+                    The following criteria are used:
+                        - classes are included if 'classes' is specified
+                        - functions are included if 'functions' is specified
+                        - modules are included if 'modules' is specified
+                        - classes and functions are only included if they are defined in the module inspected
+                        - modules are only included if they are not imported
+                    """
+                    if (inspect.isclass(member) and 'class' in mtyp) and member.__module__ == mod.__name__:
+                        return True
+                    if (inspect.isfunction(member) and 'function' in mtyp) and member.__module__ == mod.__name__:
+                        return True
+                    if (inspect.ismodule(member) and 'module' in mtyp) and member.__package__ in member.__name__:
+                        return True
+                    return False
+
+                # members = [check(module, m[0], typ) for m in inspect.getmembers(module)]
+                members = [m[0] for m in inspect.getmembers(module, predicate=lambda x: check(module, x, typ))]
+                return members
+
             def run(self):
-                if 'functions' in self.options and ('methods' in self.options or 'attributes' in self.options):
+                # check that options doesn't contain invalid combinations
+                if ('functions' in self.options or 'classes' in self.options) \
+                        and ('methods' in self.options or 'attributes' in self.options):
                     raise Exception("invalid option combination: %s" % self.options)
 
-                if not 'functions' in self.options:
-                    clazz = self.arguments[0]
+                # import requested module, or module of requested class
+                fullname = self.arguments[0]
+                root, name = fullname.rsplit('.', 1)
+                r = __import__(root, globals(), locals(), [name])   # root module
+                cm = getattr(r, name)                               # class or module
+                if inspect.isclass(cm):
+                    cm_typ = "class"
+                elif inspect.ismodule(cm):
+                    cm_typ = "module"
+                else:
+                    raise TypeError(f"Invalid type for {fullname}: {cm}")
+
+                # debug
+                '''
+                with open("_abc.txt", "a") as f:
+                    f.write(f"run : {fullname}, {cm_typ}\n")
+                '''
+
+                if cm_typ == "class":
                     try:
-                        (module_name, class_name) = clazz.rsplit('.', 1)
-                        m = __import__(module_name, globals(), locals(), [class_name])
-                        c = getattr(m, class_name)
+                        r = __import__(root, globals(), locals(), [name])
+                        cm = getattr(r, name)
+
+                        self.content = []
+
+                        if 'properties' in self.options:
+                            _, props = self.get_class_members(cm, 'attribute')
+                            self.content += ["~%s.%s" % (fullname, prop) for prop in props if not prop.startswith('_')]
+
                         if 'methods' in self.options:
-                            _, methods = self.get_members(c, 'method', ['__init__'])
+                            _, methods = self.get_class_members(cm, 'method', ['__init__'])
 
-                            self.content = ["~%s.%s" % (clazz, method) for method in methods if not method.startswith('_')]
-
-                        if 'attributes' in self.options:
-                            _, attribs = self.get_members(c, 'attribute')
-                            self.content = ["~%s.%s" % (clazz, attrib) for attrib in attribs if not attrib.startswith('_')]
-
+                            self.content += ["~%s.%s" % (fullname, method) for method in methods if
+                                             not method.startswith('_')]
                     finally:
                         return super(AutoAutoSummary, self).run()
 
-                else:  # --> 'functions' in self.options
-                    # dirty fix by enlo to handle autosummary of module functions
-                    import inspect as insp
-                    module = self.arguments[0]
+                elif cm_typ == "module":
                     try:
-                        root_name, module_name = module.rsplit('.', 1)
-                        r = __import__(root_name, globals(), locals(), [module_name])
-                        m = getattr(r, module_name)
-                        functions = [o[0] for o in insp.getmembers(m)
-                                     if (insp.isfunction(o[1]) or insp.isclass(o[1])) and o[1].__module__ == m.__name__]
-                        self.content = ["~%s.%s" % (module, func) for func in functions if not func.startswith('_')]
+                        '''
+                        functions = [o[0] for o in inspect.getmembers(cm)
+                                     if (inspect.isfunction(o[1]) or inspect.isclass(o[1])) and o[1].__module__ == r.__name__]
+                        self.content = ["~%s.%s" % (fullname, func) for func in functions if not func.startswith('_')]
+                        '''
+                        typ = []
+                        if 'classes' in self.options:
+                            typ.append('class')
+                        if 'functions' in self.options:
+                            typ.append('function')
+                        if 'modules' in self.options:
+                            typ.append('modules')
+
+                        members = self.get_module_members(cm, typ=typ)
+                        self.content = ["~%s.%s" % (fullname, member) for member in members
+                                        if not member.startswith('_')]
 
                     finally:
                         return super(AutoAutoSummary, self).run()

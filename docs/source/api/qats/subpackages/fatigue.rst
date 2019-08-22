@@ -54,10 +54,10 @@
         :members:
         :undoc-members:
 
-        .. rubric:: Attributes
+        .. rubric:: Properties
 
         .. autoautosummary:: qats.fatigue.sn.SNCurve
-            :attributes:
+            :properties:
 
         .. rubric:: Methods
 

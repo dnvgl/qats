@@ -38,10 +38,10 @@
         :members:
         :undoc-members:
 
-        .. rubric:: Attributes
+        .. rubric:: Properties
 
         .. autoautosummary:: qats.stats.gumbel.Gumbel
-            :attributes:
+            :properties:
 
         .. rubric:: Methods
 
@@ -70,10 +70,10 @@
         :members:
         :undoc-members:
 
-        .. rubric:: Attributes
+        .. rubric:: Properties
 
         .. autoautosummary:: qats.stats.gumbelmin.GumbelMin
-            :attributes:
+            :properties:
 
         .. rubric:: Methods
 
@@ -102,10 +102,10 @@
         :members:
         :undoc-members:
 
-        .. rubric:: Attributes
+        .. rubric:: Properties
 
         .. autoautosummary:: qats.stats.weibull.Weibull
-            :attributes:
+            :properties:
 
         .. rubric:: Methods
 
