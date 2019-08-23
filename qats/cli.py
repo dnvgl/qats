@@ -89,6 +89,9 @@ def launch_app(home=True, files=None, log_level="info"):
     if home:
         os.chdir(os.getenv("USERPROFILE") or os.getcwd())   # fail safe if no USERPROFILE env
 
+    # install handler for exceptions
+    sys.excepthook = handle_exception
+
     # launch app and main window and deal with possible files
     app = QApplication(sys.argv)
     form = Qats(files_on_init=files, logging_level=log_level)
@@ -125,14 +128,7 @@ def main():
     # parse command line arguments
     args = parser.parse_args()
 
-    # install handler for exceptions
-    sys.excepthook = handle_exception
-
     if args.command == "app":
-        if args.home:
-            # force user home as working directory
-            os.chdir(os.getenv("HOME") or os.getenv("HOMEPATH") or os.getcwd())
-
         # launch app
         launch_app(home=args.home, files=args.files, log_level=args.log_level)
 

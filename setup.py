@@ -49,7 +49,7 @@ setup(
         "Issue Tracker": "https://github.com/dnvgl/qats/issues",
         "Documentation": "https://qats.readthedocs.io",
     },
-    classifiers = [
+    classifiers=[
         'Topic :: Scientific/Engineering',
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
