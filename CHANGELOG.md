@@ -19,6 +19,13 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+
+### [4.0.1] // 23.08.2019
+
+#### Fixed
+- SIMA .h5 reader bug that occured if numpy 1.16 is used.
+- `qats.cli.launch_app()` did not connect `sys.excepthook` with custom error traceback dialogue.
+
 ### [4.0.0] // 22.08.2019
 
 This release is not backwards compatible. Main updates are related to fatigue calculation capabilities.
@@ -58,7 +65,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/3.0.6...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.0.1...HEAD
+[4.0.1]: https://github.com/dnvgl/qats/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/dnvgl/qats/compare/3.0.6...4.0.0
 [3.0.6]: https://github.com/dnvgl/qats/compare/3.0.5...3.0.6
 [3.0.5]: https://github.com/dnvgl/qats/compare/3.0.0...3.0.5
