@@ -334,12 +334,12 @@ class TimeSeries(object):
     @property
     def dtg_end(self):
         """
-        Start time as datetime object.
+        End time as datetime object.
 
         Returns
         -------
         datetime
-            Start time as datetime.datetime instanc, provided that `dtg_ref` is defined.
+            End time as datetime.datetime instance, provided that `dtg_ref` is defined.
             Otherwise, returns None.
         """
         if self._dtg_ref is not None:

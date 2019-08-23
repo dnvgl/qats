@@ -122,7 +122,7 @@ def read_data(path, names=None, verbose=False):
             data = dset[:]  # dset.value
             # todo: consider if check of data type is really neccessary -- if not, dset.ndim, dset.size etc. may be used
             if not isinstance(data, np.ndarray):
-                raise NotImplemented("only value of type np.ndarray is implented, got: %s (for name '%s')" %
+                raise NotImplemented("only value of type np.ndarray is implemented, got: %s (for name '%s')" %
                                      (type(data), name))
             if data.ndim != 1:
                 raise NotImplemented("only 1-dimensional arrays implemented, got ndim=%d (for name '%s')" %
@@ -181,8 +181,8 @@ def _timearray_info(dset):
         # SIMA-way of defining time array
         timeinfo = {
             "kind": "sima",
-            "start": attrs["start"],
-            "dt": attrs["delta"],
+            "start": float(attrs["start"]),
+            "dt": float(attrs["delta"]),
         }
         return timeinfo
     else:
