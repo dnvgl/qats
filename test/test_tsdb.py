@@ -10,9 +10,7 @@ import sys
 
 
 # todo: add tests for listing subset(s) based on specifying parameter `names` (with and wo param. `keys`)
-# todo: more tests for TsDB.get_many_ts()
-# todo: more tests for .h5 files (use flexout.h5 and example_h5_output.h5)
-# todo: add test for get_many() with fullkey=False (similar to test_get_many_correct_key, but with shorter key)
+# todo: add test for getm() with fullkey=False (similar to test_get_many_correct_key, but with shorter key)
 
 
 class TestTsDB(unittest.TestCase):
@@ -62,19 +60,6 @@ class TestTsDB(unittest.TestCase):
         else:
             self.fail("Did not throw exception when trying to load a file type which is not yet supported.")
 
-    def test_h5_sima_load_correct_number_of_keys(self):
-        self.db.load(os.path.join(self.data_directory, 'example_sima_h5_output_shrinked.h5'))
-        self.assertEqual(self.db.n, 34, "Should identify 34 time series datasets on the sima .h5 file")
-
-    ''' temporarily disabled due to failure when building - to be debugged later
-    def test_h5_sima_timeseries_correctly_read(self):
-        fn = 'example_h5_output.h5'
-        self.db.load(os.path.join(self.data_directory, fn))
-        t, x = self.db.get(name='TotalforceElement1')
-        self.assertTrue(t.size > 1 and t.size == x.size,
-                        "Reading of time series from .h5 file '%s' failed" % fn)
-    '''
-
     def test_list_all(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         k = self.db.list(display=False)
@@ -111,15 +96,15 @@ class TestTsDB(unittest.TestCase):
         # should return exactly one key
         self.assertEqual(1, len(self.db.list(names="Acc-X[m/s^2]")), "TsDB.list() returned wrong number of keys")
 
-    def test_list_prepended_wildcard_1(self):
+    def test_list_prepended_wildcard_1_3(self):
         """
         Test that wildcard is prepended in a reasonable manner. Test cases:
-            - Specifying 'XG' should not return 'vel_XG'
-            - Specifying '*XG' should return both 'XG' and 'vel_XG'
-            - Specifying full key should be possible
-            - If multiple files are loaded, specifying 'XG' should return all occurrences (across files)
+            1. Specifying 'XG' should not return 'vel_XG'
+            2. Specifying '*XG' should return both 'XG' and 'vel_XG'
+            3. Specifying full key should be possible
+            4. If multiple files are loaded, specifying 'XG' should return all occurrences (across files)
 
-        The first three are tested here, while the fourth is tested in `test_list_prepended_wildcard_2()`
+        The first three are tested here, while the fourth is tested in `test_list_prepended_wildcard_4()`
         """
         path = os.path.join(self.data_directory, 'simo_r1.ts')
         db = self.db
@@ -132,9 +117,9 @@ class TestTsDB(unittest.TestCase):
         self.assertEqual(len(k2), 2, "TsDB.list() failed to return correct number of keys for names='*XG'")
         self.assertEqual(len(k3), 1, "TsDB.list() failed to return correct number of keys when specifying full path")
 
-    def test_list_prepended_wildcard_2(self):
+    def test_list_prepended_wildcard_4(self):
         """
-        See description of `test_list_prepended_wildcard_2()`
+        See description of `test_list_prepended_wildcard_1_3()`
         """
         db = self.db
         db.load(os.path.join(self.data_directory, 'simo_r1.ts'))
