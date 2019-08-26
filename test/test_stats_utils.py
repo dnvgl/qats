@@ -5,12 +5,6 @@ Module for testing stats functions
 import unittest
 import numpy as np
 from qats.signal import smooth, average_frequency
-from qats.stats.gumbel import _euler_masceroni
-
-
-class TestFunStats(unittest.TestCase):
-    def test_eulermascheroni(self):
-        self.assertAlmostEqual(_euler_masceroni(), 0.57721566490153286060651209008240243104215933593992, places=12)
 
 
 class TestSignal(unittest.TestCase):

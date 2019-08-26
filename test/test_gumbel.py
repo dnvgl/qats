@@ -6,9 +6,12 @@ Module for testing gumbel class
 import unittest
 
 from qats.stats.gumbel import Gumbel, pwm, mle, msm, lse
+from qats.stats.gumbel import _euler_masceroni
 
 
-# todo: more test cases for weibull class and functions
+class EulerMascheroniTest(unittest.TestCase):
+    def test_eulermascheroni(self):
+        self.assertAlmostEqual(_euler_masceroni(), 0.57721566490153286060651209008240243104215933593992, places=12)
 
 
 class GumbelTestCases(unittest.TestCase):
