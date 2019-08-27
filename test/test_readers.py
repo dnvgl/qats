@@ -42,5 +42,28 @@ class TestReadersSimaH5(unittest.TestCase):
             self.assertTrue(ts.t.size > 1 and ts.t.size == ts.x.size, f"Reading of time series from '{h5_file}' failed")
 
 
+class TestReadersCSV(unittest.TestCase):
+    def setUp(self):
+        # the data directory used in the test relative to this module
+        # necessary to do it like this for the tests to work both locally and in virtual env
+        self.data_directory = os.path.join(os.path.dirname(__file__), '..', 'data')
+        # time series arranged by column on .csv files
+        self.files = [
+            # file name, number of (time series) keys
+            ("example.csv", 6),
+        ]
+
+    def test_correct_number_of_timeseries(self):
+        for filename, nts in self.files:
+            db = TsDB.fromfile(os.path.join(self.data_directory, filename))
+            self.assertEqual(db.n, nts, f"Failed to identify correct number of time series on '{filename}'")
+
+    def test_correct_timeseries_size(self):
+        for filename, _ in self.files:
+            db = TsDB.fromfile(os.path.join(self.data_directory, filename))
+            ts = db.get(ind=0)  # should not fail
+            self.assertTrue(ts.t.size > 1 and ts.t.size == ts.x.size, f"Reading of time series from '{filename}' failed")
+
+
 if __name__ == '__main__':
     unittest.main()
