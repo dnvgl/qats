@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Module for testing stats functions
+Module for testing signal processing functions
 """
 import unittest
 import numpy as np
-from qats.signal import smooth, average_frequency
+from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass
 
 
 class TestSignal(unittest.TestCase):
@@ -26,6 +26,23 @@ class TestSignal(unittest.TestCase):
     def test_smooth(self):
         # fails if not smoothed
         self.assertAlmostEqual(average_frequency(self.t, smooth(self.noise, window_len=11), up=True), 0.05, places=3)
+
+    def test_taper(self):
+        tapered, _ = taper(self.noise, alpha=0.01)
+        self.assertAlmostEqual(tapered[0], 0., places=3)
+        self.assertAlmostEqual(tapered[-1], 0., places=3)
+
+    def test_lp_hp(self):
+        dt = self.t[1] - self.t[0]
+        xlp = lowpass(self.noise, dt, 0.1)
+        xhp = highpass(self.noise, dt, 0.1)
+        self.assertTrue(np.allclose(self.noise, xlp + xhp))
+
+    def test_bandstop_bandpass(self):
+        dt = self.t[1] - self.t[0]
+        band = bandpass(self.noise, dt, 0.1, 0.2)
+        rest = bandblock(self.noise, dt, 0.1, 0.2)
+        self.assertTrue(np.allclose(self.noise, band + rest))
 
 
 if __name__ == '__main__':
