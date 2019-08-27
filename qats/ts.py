@@ -62,7 +62,7 @@ class TimeSeries(object):
     x : array_like
         Data points corresponding to time, see property :attr:`~TimeSeries.t`.
     parent : str
-        Obsolute or relative path to file it originates from.
+        Absolute or relative path to file it originates from.
     kind : str
         Kind of signal e.g. 'force' or 'acceleration'.
     unit : str
