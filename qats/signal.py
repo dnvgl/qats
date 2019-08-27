@@ -65,6 +65,8 @@ def smooth(x, window_len=11, window='rectangular', mode='same'):
     numpy.convolve
 
     """
+    x = np.asarray(x)
+
     if x.ndim != 1:
         raise ValueError("smooth only accepts 1 dimension arrays.")
 
@@ -195,8 +197,12 @@ def lowpass(x, dt, fc):
     Notes
     -----
     FFT filter.
-    
+
+    See Also
+    --------
+    scipy.fftpack
     """
+    x = np.asarray(x)
 
     if fc == 0:
         fc = sys.float_info.epsilon
@@ -241,8 +247,12 @@ def highpass(x, dt, fc):
     Notes
     -----
     FFT filter.
-       
+
+    See Also
+    --------
+    scipy.fftpack
     """
+    x = np.asarray(x)
 
     if fc == 0:
         fc = sys.float_info.epsilon
@@ -288,7 +298,10 @@ def bandpass(x, dt, flow, fupp):
     Notes
     -----
     FFT filter.
-    
+
+    See Also
+    --------
+    scipy.fftpack
     """
     real_signal = np.all(np.isreal(x))
     n = x.size
@@ -337,6 +350,9 @@ def bandblock(x, dt, flow, fupp):
     -----
     FFT filter.
        
+    See Also
+    --------
+    scipy.fftpack
     """
     real_signal = np.all(np.isreal(x))
     n = x.size
@@ -383,6 +399,9 @@ def threshold(x, thresholds):
     -----
     FFT filter.
 
+    See Also
+    --------
+    scipy.fftpack
     """
     real_signal = np.all(np.isreal(x))
     n = x.size
@@ -672,4 +691,5 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
     # estimate psd using welch's definition
     f, p = welch(x, fs=dt, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend, window='hanning',
                  return_onesided=True, scaling='density', axis=-1)
+
     return f, p
