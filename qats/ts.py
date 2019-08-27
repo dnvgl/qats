@@ -9,13 +9,12 @@ from collections import OrderedDict
 from datetime import datetime, timedelta
 import numpy as np
 from scipy.interpolate import interp1d
-from scipy.signal import welch
 from scipy.stats import kurtosis, skew, tstd
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from .fatigue.rainflow import count_cycles, rebin as rebin_cycles, mesh
 from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
-    average_frequency, find_maxima
+    average_frequency, find_maxima, psd
 from .stats.weibull import Weibull, weibull2gumbel, pwm
 from .stats.gumbel import Gumbel
 
@@ -490,8 +489,8 @@ class TimeSeries(object):
         --------
         maxima()
         qats.signal.find_maxima
-        qats.weibull.Weibull.fit
-        qats.weibull.Weibull.fromsignal
+        qats.stats.weibull.Weibull.fit
+        qats.stats.weibull.Weibull.fromsignal
 
         Examples
         --------
@@ -970,7 +969,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.rfc, rainflow.count_cycles, rainflow.rebin_cycles
+        TimeSeries.rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         cycles = self.rfc(**kwargs)
 
@@ -1011,7 +1010,8 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.rfc, TimeSeries.plot_cycle_ranges, rainflow.count_cycles, rainflow.rebin_cycles
+        TimeSeries.rfc, TimeSeries.plot_cyclerange,
+        qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         cycles = self.rfc(**kwargs)
 
@@ -1089,26 +1089,11 @@ class TimeSeries(object):
 
         Notes
         -----
-        Welch’s method [1] computes an estimate of the power spectral density by dividing the data into overlapping
-        segments, computing a modified periodogram for each segment and averaging the periodograms. Welch method is
-        chosen over the periodogram as the spectral density is smoothed by adjusting the `nperseg` parameter. The
-        periodogram returns a raw spectrum which requires additional smoothing to get a readable spectral density plot.
-
-        An appropriate amount of overlap will depend on the choice of window and on your requirements. For the default
-        ‘hanning’ window an overlap of 50% is a reasonable trade off between accurately estimating the signal power,
-        while not over counting any of the data. Narrower windows may require a larger overlap.
-
-        If noverlap is 0, this method is equivalent to Bartlett’s method [2].
-
-        References
-        ----------
-        1. P. Welch, “The use of the fast Fourier transform for the estimation of power spectra: A method based on
-           time averaging over short, modified periodograms”, IEEE Trans. Audio Electroacoust. vol. 15, pp. 70-73, 1967.
-        2. M.S. Bartlett, “Periodogram Analysis and Continuous Spectra”, Biometrika, vol. 37, pp. 1-16, 1950.
+        For description of Welch's method and references, see :meth:`qats.signal.psd()`.
 
         See also
         --------
-        scipy.signal.welch, scipy.signal.periodogram
+        qats.signal.psd, scipy.signal.welch, scipy.signal.periodogram
 
         """
         # get time and data arrays
@@ -1116,19 +1101,18 @@ class TimeSeries(object):
 
         # ensure constant time step
         _dt = np.diff(t)
-
-        # atol not zero to avoid false positives for zero values
+        # (use atol not zero to avoid false positives for zero values)
         if not np.isclose(min(_dt), max(_dt), rtol=1.e-2, atol=1.e-6):
-            raise ValueError(f"The time step of '{self.name}' varies with more than 1%. A constant time step is required"
-                             f" when estimating power spectral density using FFT. Resample to constant time step.")
+            raise ValueError(f"The time step of '{self.name}' varies with more than 1%. A constant time step is "
+                             f"required when estimating power spectral density using FFT. Resample to constant "
+                             f"time step.")
 
-        # if nperseg is not specified the segment length is set to 1/4 of the total signal.
-        if not nperseg:
-            nperseg = t.size/4
+        # average time step for requested series
+        dt = float(np.mean(_dt))
 
-        # estimate psd using welch's definition
-        f, p = welch(x, fs=1. / self.dt, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend,
-                     window='hanning', return_onesided=True, scaling='density', axis=-1)
+        # estimate psd using qats.signal.psd (which uses welch's definition)
+        f, p = psd(x, dt, nperseg=nperseg, noverlap=noverlap, detrend=detrend, nfft=nfft)
+
         return f, p
 
     def resample(self, dt=None, t=None):
@@ -1193,7 +1177,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        rainflow.count_cycles
+        qats.fatigue.rainflow.count_cycles
 
         """
         # get data array
@@ -1296,7 +1280,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        qats.weibull.weibull2gumbel, qats.weibull.pwm
+        qats.stats.weibull.weibull2gumbel, qats.stats.weibull.pwm
 
         Examples
         --------
