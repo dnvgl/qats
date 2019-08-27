@@ -34,11 +34,15 @@ class TestSignal(unittest.TestCase):
 
     def test_lp_hp(self):
         dt = self.t[1] - self.t[0]
-        xlp = lowpass(self.noise, dt, 0.1)   # taper to be able direct comparison after filtering
-        xhp = highpass(self.noise, dt, 0.1)  # taper to be able direct comparison after filtering
+        xlp = lowpass(self.noise, dt, 0.1)
+        xhp = highpass(self.noise, dt, 0.1)
         self.assertTrue(np.allclose(self.noise, xlp + xhp))
 
-
+    def test_bandstop_bandpass(self):
+        dt = self.t[1] - self.t[0]
+        band = bandpass(self.noise, dt, 0.1, 0.2)
+        rest = bandblock(self.noise, dt, 0.1, 0.2)
+        self.assertTrue(np.allclose(self.noise, band + rest))
 
 
 if __name__ == '__main__':
