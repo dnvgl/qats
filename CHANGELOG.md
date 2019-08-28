@@ -20,11 +20,20 @@ Click link to see all [unreleased] changes to the master branch of the repositor
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
 
+### [4.1.0] // 28.08.2019
+
+#### Added
+- `qats.signal.psd()`: power spectral density calculation (now available as detached function, was previously available only through `TimeSeries.psd()`).
+- `test_readers.py`: new test module for loading (reading) all supported file formats.
+- `test_signal.py`: added more tests for `qats.signal` functions.
+
+
 ### [4.0.1] // 23.08.2019
 
 #### Fixed
 - SIMA .h5 reader bug that occured if numpy 1.16 is used.
 - `qats.cli.launch_app()` did not connect `sys.excepthook` with custom error traceback dialogue.
+
 
 ### [4.0.0] // 22.08.2019
 
@@ -52,7 +61,9 @@ This release is not backwards compatible. Main updates are related to fatigue ca
 - Wildcard prepending to names specified to `TsDB.list()` and `TsDB.get*()` methods. 
   See [this summary](https://github.com/dnvgl/qats/pull/28#issue-296526900) for details.
 
+
 ### [3.0.6] // 2019-06-27
+
 #### Fixed
 - Issues related to proper deployment to PyPI and Read the Docs.
 - Bug when using band-stop filter in GUI.
@@ -65,7 +76,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.0.1...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.1.0...HEAD
+[4.1.0]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.0
 [4.0.1]: https://github.com/dnvgl/qats/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/dnvgl/qats/compare/3.0.6...4.0.0
 [3.0.6]: https://github.com/dnvgl/qats/compare/3.0.5...3.0.6
