@@ -120,7 +120,7 @@ def construct_version_string(major, minor, micro, dev=None):
     return version_tag
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(
         description="Set new version tag using git command line interface. The tag is set by augmenting either "
                     "'major', 'minor' or 'micro' (specified by user) by 1.",
@@ -178,13 +178,17 @@ if __name__ == "__main__":
 
         sys.stdout.write(textwrap.dedent(f'''
             New version tag ({new_version}) has been set. 
-            
+
             Verify the new tag by the following git command:
             git describe --tag
-            
+
             To reverse (delete) the new tag, use the following git command:
             git tag -d {new_version}
             '''))
 
     else:
         sys.stdout.write("\nNew tag has NOT been set.")
+
+
+if __name__ == "__main__":
+    main()
