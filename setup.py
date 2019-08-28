@@ -48,6 +48,7 @@ setup(
     project_urls={
         "Issue Tracker": "https://github.com/dnvgl/qats/issues",
         "Documentation": "https://qats.readthedocs.io",
+        "Changelog": "https://github.com/dnvgl/qats/blob/master/CHANGELOG.md",
     },
     classifiers=[
         'Topic :: Scientific/Engineering',
