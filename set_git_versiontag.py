@@ -31,8 +31,7 @@ def get_version_setuptools(package="qats", return_dev=False):
     major, minor, micro = version
 
     # interpret/correct micro
-    micro_string = version[2]
-    if "-" in micro_string:
+    if "-" in micro:
         # dev info included in micro
         micro, dev = micro.split(".", maxsplit=1)
     else:
@@ -60,8 +59,7 @@ def get_version_git(return_dev=False):
     major, minor, micro = version
 
     # interpret/correct micro
-    micro_string = version[2]
-    if "-" in micro_string:
+    if "-" in micro:
         # dev info included in micro
         micro, dev = micro.split("-", maxsplit=1)
     else:
