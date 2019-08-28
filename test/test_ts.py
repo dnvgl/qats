@@ -110,7 +110,7 @@ class TestTs(unittest.TestCase):
         Test that the data property returns dictionary
         """
         # todo: invoke type check below when the quality of the data property is assured
-        #self.assertIsInstance(self.ts.data, dict, "Data property does not return dictionary.")
+        # self.assertIsInstance(self.ts.data, dict, "Data property does not return dictionary.")
         try:
             self.ts.data
         except NotImplementedError:
