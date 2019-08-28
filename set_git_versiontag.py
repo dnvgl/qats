@@ -2,7 +2,7 @@
 """
 Set new version tag, using git command line interface.
 
-In order to obtain the current version (before setting new), shell command 'git describe --tag' is used. This will
+In order to obtain the current version (before setting new), git command 'git describe --tag' is used. This will
 yield version tags like '4.1.0' or '4.1.0-1-g82869e0'.
 
 Alternatively, pgk_resources.get_distribution (available through setuptools) could be used. This would yield version
@@ -10,6 +10,8 @@ tags like '4.1.0' or '4.0.1.dev0+g963a10f.d20190823', i.e. with slightly better 
 However; information about development version is not relevant here, and also the use of pkg_resources.get_distribution
 increases the risk of extracting version for another qats installation on the computer (e.g. if this script is invoked
 within the wrong conda/virtual environment.
+
+Note: user is prompted for approval on command line before new tag is actually set.
 """
 import argparse
 import os
@@ -17,22 +19,30 @@ import sys
 import textwrap
 from pkg_resources import get_distribution
 
-__summary__ = __doc__
 
-
-def get_version_setuptools(package="qats"):
+def get_version_setuptools(package="qats", return_dev=False):
     # get version (will raise DistributionNotFound error if package is not found/installed)
-    ver = get_distribution(package).version
+    version_string = get_distribution(package).version
 
-    '''
-    major = 4
-    minor = 1
-    micro = 0
-    dev = None
-    
-    return major, minor, micro, dev
-    '''
-    return ver
+    version = version_string.split(".", maxsplit=2)
+    assert len(version) == 3, f"Not able to interpret version string: {version_string}"
+
+    # extract major, minor, micro
+    major, minor, micro = version
+
+    # interpret/correct micro
+    micro_string = version[2]
+    if "-" in micro_string:
+        # dev info included in micro
+        micro, dev = micro.split(".", maxsplit=1)
+    else:
+        # pure major.minor.micro version, no dev part of tag
+        dev = ""
+
+    if return_dev:
+        return major, minor, micro, dev
+    else:
+        return major, minor, micro
 
 
 def get_version_git(return_dev=False):
@@ -102,7 +112,7 @@ def query_yes_no(question, default="yes"):
                              "(or 'y' or 'n').\n")
 
 
-def construct_version_tag(major, minor, micro, dev=None):
+def construct_version_string(major, minor, micro, dev=None):
     """
     Construct version tag: "major.minor.micro" (or if 'dev' is specified: "major.minor.micro-dev").
     """
@@ -120,18 +130,20 @@ if __name__ == "__main__":
     parser.add_argument("type", choices=("major", "minor", "micro"),
                         help="Which part of version tag to augment by one.")
 
-    parser.add_argument("--test", action="store_true",
-                        help="Do not set tag, only print what tag would have been set.")
+    parser.add_argument("-m", "--message", default="", help="Commit message to include. Default is empty string")
+
+    # parser.add_argument("--test", action="store_true",
+    #                     help="Do not set tag, only print what tag would have been set.")
 
     args = parser.parse_args()
 
     # for debug and verification
     # print(f"get_version_setuptools() : {get_version_setuptools()}")
-    print(f"get_version_git()  : {get_version_git(return_dev=True)}")
+    # print(f"get_version_git()  : {get_version_git(return_dev=True)}")
 
     # extract current version tag
     major, minor, micro, dev = get_version_git(return_dev=True)
-    current_version = construct_version_tag(major, minor, micro, dev=dev)
+    current_version = construct_version_string(major, minor, micro, dev=dev)
 
     # determine new version
     if args.type == "major":
@@ -150,21 +162,31 @@ if __name__ == "__main__":
     dev = None
 
     # construct new version tag
-    new_version = construct_version_tag(major, minor, micro, dev=dev)
+    new_version = construct_version_string(major, minor, micro, dev=dev)
 
     # ask user whether to conduct version tag update
     info_string = textwrap.dedent(f'''
         Current version tag : {current_version}
         New version tag     : {new_version}
+        Commit message      : {args.message}
 
         Set to new version tag? ''')
-    set_new_tag = query_yes_no(info_string, default="no")
+    set_new_tag = query_yes_no(info_string, default="no")  # bool
 
     # act according to answer from user
     if set_new_tag:
-        pass
+        # ref: https://git-scm.com/book/en/v2/Git-Basics-Tagging
+        _ = os.popen(f'git tag -a {new_version} -m "{args.message}"').read()
 
-        sys.stdout.write("\n[HOLD] New version tag has been set. Verify by running the following shell command:\n"
-                         "git describe --tag")
+        sys.stdout.write(textwrap.dedent(f'''
+            New version tag ({new_version}) has been set. 
+            
+            Verify the new tag by the following git command:
+            git describe --tag
+            
+            To reverse (delete) the new tag, use the following git command:
+            git tag -d {new_version}
+            '''))
+
     else:
         sys.stdout.write("\nNew tag has NOT been set.")
