@@ -689,7 +689,7 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
         nperseg = x.size/4
 
     # estimate psd using welch's definition
-    f, p = welch(x, fs=dt, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend, window='hanning',
+    f, p = welch(x, fs=1./dt, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend, window='hanning',
                  return_onesided=True, scaling='density', axis=-1)
 
     return f, p
