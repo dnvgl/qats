@@ -1049,6 +1049,10 @@ class TimeSeries(object):
             see documentation of TimeSeries.get() method for available options
 
         """
+        # This import registers the 3D projection, but is otherwise unused.
+        # noinspection PyUnresolvedReferences
+        from mpl_toolkits.mplot3d import Axes3D
+
         cycles = self.rfc(**kwargs)
         ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
 
