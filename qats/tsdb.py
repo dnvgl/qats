@@ -708,7 +708,7 @@ class TsDB(object):
         verbose : bool, optional
             Print information
         kwargs : optional
-            see documentation of :meth:`~qats.ts.TimeSeries.get` method for available options
+            see documentation of :meth:`~qats.TimeSeries.get` method for available options
 
         Notes
         -----
@@ -886,7 +886,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
         geta, getda, getl, getm
         """
         # check that at least one of the required parameters is given,
@@ -952,7 +952,7 @@ class TsDB(object):
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
-            See documentation of :meth:`~qats.ts.TimeSeries.get` method for available options
+            See documentation of :meth:`~qats.TimeSeries.get` method for available options
 
         Returns
         -------
@@ -967,7 +967,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries, qats.ts.TimeSeries.get
+        qats.TimeSeries, qats.TimeSeries.get
         get, getda, getl, getm
         """
         # use self.get() to avoid duplicate code
@@ -985,7 +985,7 @@ class TsDB(object):
         """
         Get dict of TimeSeries objects.
 
-        Note that this method is identical to :meth:`~qats.ts.TimeSeries.getm`.
+        Note that this method is identical to :meth:`~qats.TimeSeries.getm`.
 
         Parameters
         ----------
@@ -1006,7 +1006,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
         get, geta, getda, getl, getm
         """
         return self.getm(names=names, ind=ind, store=store, fullkey=fullkey)
@@ -1028,7 +1028,7 @@ class TsDB(object):
         fullkey : bool, optional
             Use full key in returned container
         kwargs : optional
-            see documentation of :meth:`~qats.ts.TimeSeries.get` method for available options
+            see documentation of :meth:`~qats.TimeSeries.get` method for available options
 
         Returns
         -------
@@ -1042,7 +1042,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries, qats.ts.TimeSeries.get
+        qats.TimeSeries, qats.TimeSeries.get
         get, geta, getl, getm
         """
         # read time series and put in ordered dictionary (reuse getm() to avoid duplicating code)
@@ -1076,7 +1076,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
         get, geta, getda, getm
         """
         # read time series and return in list (reuse getm() to avoid duplicating code)
@@ -1113,7 +1113,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
         get, geta, getda, getl
         """
         # check that non-compatible parameters are not combined
@@ -1397,7 +1397,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
 
         """
         # todo: add possibility for subplots in plot method. nsub=None (int), sharex=True.
@@ -1440,7 +1440,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
 
         """
         # dict with TimeSeries objects
@@ -1546,7 +1546,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries
+        qats.TimeSeries
 
         """
         # dict with TimeSeries objects
@@ -1651,7 +1651,7 @@ class TsDB(object):
 
         See also
         --------
-        qats.ts.TimeSeries.stats, qats.ts.TimeSeries.get
+        qats.TimeSeries.stats, qats.TimeSeries.get
 
         Examples
         --------
