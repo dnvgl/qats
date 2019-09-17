@@ -19,6 +19,14 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.1.1] // 17.09.2019
+
+#### Fixed
+- `qats.signal.psd()`: sampling frequency `fs` in the [welch function call](https://github.com/dnvgl/qats/blob/3378ea5972f1cd56a23a902397d195f03c0f8db2/qats/signal.py#L692) corrected to `fs=1./dt` (instead of `fs=dt` which was wrong). This error appeared between versions [4.0.1 and 4.1.0](https://github.com/dnvgl/qats/compare/4.0.1...4.1.0), and also affected `TimeSeries.psd()` and the "Power Spectrum" plot tab in the GUI. 
+- `TimeSeries.plot*()` methods: plot label is now set to time series name, to avoid warning when legends are invoked.
+
+#### Added
+Four new tests on `qats.signal.psd()` that would have caught the bug described above.
 
 ### [4.1.0] // 28.08.2019
 
@@ -76,7 +84,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.1.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.1.1...HEAD
+[4.1.1]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.1
 [4.1.0]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.0
 [4.0.1]: https://github.com/dnvgl/qats/compare/4.0.0...4.0.1
 [4.0.0]: https://github.com/dnvgl/qats/compare/3.0.6...4.0.0
