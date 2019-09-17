@@ -4,7 +4,7 @@ Module for testing signal processing functions
 """
 import unittest
 import numpy as np
-from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass
+from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass, psd
 
 
 class TestSignal(unittest.TestCase):
@@ -85,6 +85,34 @@ class TestSignal(unittest.TestCase):
         # variance of random uniform distributed number is amplitude squared
         # the processes are independent
         self.assertAlmostEqual(np.var(x), 0.5 + 0.1 ** 2., delta=0.001)
+
+    def test_psd_area_moment_0(self):
+        """Check zero area moment of the spectral density."""
+        dt = self.t[1] - self.t[0]
+        f, p = psd(self.x, dt)
+        df = f[1] - f[0]
+        self.assertAlmostEqual(df * np.sum(p), np.var(self.x), delta=1.e-3)
+
+    def test_psd_area_moment_2(self):
+        """Check second area moment of the spectral density."""
+        dt = self.t[1] - self.t[0]
+        f, p = psd(self.x2, dt)
+        df = f[1] - f[0]
+        m0 = df * np.sum(p)
+        m2 = df * np.sum(f ** 2. * p)
+        self.assertAlmostEqual(np.sqrt(m2 / m0), 0.2, delta=1.e-3)
+
+    def test_psd_nyquist_frequency(self):
+        """Check that the maximum psd frequency equals the Nyquist frequency."""
+        dt = self.t[1] - self.t[0]
+        f, _ = psd(self.x, dt)
+        self.assertAlmostEqual(np.max(f), 0.5 * 1. / dt, delta=1.e-6)
+
+    def test_psd_zero_frequency(self):
+        """Check that the maximum psd frequency equals the Nyquist frequency."""
+        dt = self.t[1] - self.t[0]
+        f, _ = psd(self.x, dt)
+        self.assertAlmostEqual(np.min(f), 0., delta=1.e-6)
 
 
 if __name__ == '__main__':

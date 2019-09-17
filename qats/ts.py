@@ -918,7 +918,7 @@ class TimeSeries(object):
         t, x = self.get(**kwargs)
 
         plt.figure(1)
-        plt.plot(t, x)
+        plt.plot(t, x, label=self.name)
         plt.xlabel('Time (s)')
         plt.grid()
         plt.legend()
@@ -942,7 +942,7 @@ class TimeSeries(object):
         # dict with TimeSeries objects
         plt.figure(1)
         f, p = self.psd(**kwargs)
-        plt.plot(f, p)
+        plt.plot(f, p, label=self.name)
         plt.xlabel('Frequency (Hz)')
         plt.ylabel('Power spectral density')
         plt.grid()
@@ -980,10 +980,11 @@ class TimeSeries(object):
 
         r, _, c = zip(*cycles)      # unpack cycle range and count, ignore mean value
         dr = r[1] - r[0]            # bar width
-        plt.bar(r, c, dr)
+        plt.bar(r, c, dr, label=self.name)
         plt.xlabel('Cycle range')
         plt.ylabel('Cycle count (-)')
         plt.grid()
+        plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
         else:
@@ -1021,12 +1022,12 @@ class TimeSeries(object):
 
         ranges, means, counts = zip(*cycles)      # unpack cycle range, mean and count
 
-        # the scatter plot
-        plt.scatter(means, ranges, s=[2. * c for c in counts], alpha=0.4)  # double marker size for improved readability
+        # the scatter plot (with double marker size for improved readability)
+        plt.scatter(means, ranges, s=[2. * c for c in counts], alpha=0.4, label=self.name)
         plt.xlabel('Cycle mean')
         plt.ylabel('Cycle range')
         plt.grid()
-
+        plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
         else:
@@ -1048,6 +1049,10 @@ class TimeSeries(object):
             see documentation of TimeSeries.get() method for available options
 
         """
+        # This import registers the 3D projection, but is otherwise unused.
+        # noinspection PyUnresolvedReferences
+        from mpl_toolkits.mplot3d import Axes3D
+
         cycles = self.rfc(**kwargs)
         ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
 
@@ -1057,7 +1062,6 @@ class TimeSeries(object):
         ax.set_xlabel('Cycle mean')
         ax.set_ylabel('Cycle range')
         ax.set_zlabel('Cycle count')
-
         if figurename is not None:
             plt.savefig(figurename)
         else:
