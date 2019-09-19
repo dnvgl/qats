@@ -238,7 +238,7 @@ class Qats(QMainWindow):
 
         # set initial value of time window spin boxes
         self.from_time.setValue(0)
-        self.to_time.setValue(1000000000000)
+        self.to_time.setValue(1000000000)
 
         # mutual exclusive peaks/troughs radio buttons
         minmax_group = QGroupBox("Select statistical quantity")
