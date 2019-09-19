@@ -9,9 +9,9 @@ import logging
 import os
 from itertools import cycle
 import numpy as np
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
+from qtpy.QtCore import *
+from qtpy.QtGui import *
+from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QDoubleSpinBox, QVBoxLayout, QPushButton, QAction, \
     QLineEdit, QComboBox, QSplitter, QFrame, QTabBar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -562,7 +562,7 @@ class Qats(QMainWindow):
             source_index = self.db_proxy_model.mapToSource(proxy_index)
 
             # is this item checked?
-            is_selected = self.db_source_model.data(source_index, Qt.CheckStateRole) == QVariant(Qt.Checked)
+            is_selected = self.db_source_model.data(source_index, Qt.CheckStateRole) != 0
 
             if is_selected:
                 # item path relative to common path in db
@@ -1023,6 +1023,7 @@ class Qats(QMainWindow):
 
             # Execute
             self.threadpool.start(worker)
+
         else:
             # inform user to select at least one time series before plotting
             logging.info("Select at least 1 time series before plotting.")

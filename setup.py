@@ -27,7 +27,7 @@ setup(
         "scipy>=1,<2",
         "matplotlib>=3,<4",
         "h5py>=2.7,<3",
-        "PyQt5>=5.6,<6",
+        "QtPy>=1,<2",
         "pandas>=0.24,<1",
         "pywin32; platform_system == 'Windows'"
     ],

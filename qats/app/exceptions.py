@@ -6,7 +6,7 @@ import os
 import sys
 import traceback
 import webbrowser
-from PyQt5.QtWidgets import QMessageBox
+from qtpy.QtWidgets import QMessageBox
 
 
 def handle_exception(exc_type, exc_value, exc_traceback):

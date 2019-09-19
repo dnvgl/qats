@@ -6,7 +6,7 @@ import os
 import sys
 import argparse
 import sysconfig
-from PyQt5.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication
 from pkg_resources import resource_filename
 from .app.exceptions import handle_exception
 from .app.gui import Qats, LOGGING_LEVELS
