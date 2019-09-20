@@ -9,6 +9,7 @@ import logging
 import os
 from itertools import cycle
 import numpy as np
+from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
@@ -950,7 +951,8 @@ class Qats(QMainWindow):
               "when you need advanced features or want to extend it's functionality.<br><br>" \
               "Please send feature requests, technical queries and bug reports to the developers on " \
               "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
-              "ENJOY!"
+              "ENJOY! <br><br>" \
+              f"QT API used: {QTPY_API_NAME}"
 
         msgbox = QMessageBox()
         msgbox.setWindowIcon(self.icon)
