@@ -40,13 +40,29 @@ Run the below command in a Python environment to install the latest QATS release
 pip install qats
 ```
 
-Launch the GUI...
+Import qats in your own scripts
+
+```python
+from qats import TsDB, TimeSeries
+```
+
+Note that as of version 4.2.0 you are quite free to choose which [Qt](https://www.qt.io) binding you would like to use for the GUI.
+Either: [https://pypi.org/project/PyQt4/](https://pypi.org/project/PyQt4/), [PyQt5](https://pypi.org/project/PyQt5/),
+[Pyside](https://pypi.org/project/PySide/) or [Pyside2](https://pypi.org/project/PySide2/).
+
+Install the chosen binding (here PyQt5 as an example) 
+
+```console
+pip install pyqt5
+```
+
+..and launch the GUI.
 
 ```console
 qats app
 ```
 
-and create a start menu link which you can even pin to the taskbar to ease access to the QATS GUI.
+Create a start menu link which you can even pin to the taskbar to ease access to the QATS GUI.
 
 ```console
 qats config --link-app
