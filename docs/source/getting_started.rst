@@ -15,7 +15,7 @@ Installation
     As of version 4.2.0, you must install the desired qt binding yourself (needed for the GUI to work).
     Supported packages are: PyQt5, Pyside2, PyQt4 and Pyside. See installation instructions below.
 
-Wether you are in a Python virtalenv or a Conda env, QATS is installed from PyPI by using `pip`:
+QATS is installed from PyPI by using `pip`:
 
 .. code-block:: console
 
