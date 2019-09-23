@@ -30,11 +30,6 @@ example):
 
 Supported qt bindings are: PyQt5, Pyside2, PyQt4 and Pyside.
 
-.. warning::
-    If you install QATS in a Conda environment make sure that the conda-package `pyqt` is not installed in that
-    same environment as that will conflict with `PyQt5` installed from PyPI. `PyQt5` is a dependency of
-    QATS.
-
 Now you should be able to import the package in the Python console
 
 .. code-block:: python
