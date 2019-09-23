@@ -9,9 +9,10 @@ import logging
 import os
 from itertools import cycle
 import numpy as np
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
+from qtpy import API_NAME as QTPY_API_NAME
+from qtpy.QtCore import *
+from qtpy.QtGui import *
+from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QDoubleSpinBox, QVBoxLayout, QPushButton, QAction, \
     QLineEdit, QComboBox, QSplitter, QFrame, QTabBar
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -238,7 +239,7 @@ class Qats(QMainWindow):
 
         # set initial value of time window spin boxes
         self.from_time.setValue(0)
-        self.to_time.setValue(1000000000000)
+        self.to_time.setValue(1000000000)
 
         # mutual exclusive peaks/troughs radio buttons
         minmax_group = QGroupBox("Select statistical quantity")
@@ -562,7 +563,7 @@ class Qats(QMainWindow):
             source_index = self.db_proxy_model.mapToSource(proxy_index)
 
             # is this item checked?
-            is_selected = self.db_source_model.data(source_index, Qt.CheckStateRole) == QVariant(Qt.Checked)
+            is_selected = self.db_source_model.data(source_index, Qt.CheckStateRole) != 0
 
             if is_selected:
                 # item path relative to common path in db
@@ -950,7 +951,8 @@ class Qats(QMainWindow):
               "when you need advanced features or want to extend it's functionality.<br><br>" \
               "Please send feature requests, technical queries and bug reports to the developers on " \
               "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
-              "ENJOY!"
+              "ENJOY! <br><br>" \
+              f"QT API used: {QTPY_API_NAME}"
 
         msgbox = QMessageBox()
         msgbox.setWindowIcon(self.icon)
@@ -1023,6 +1025,7 @@ class Qats(QMainWindow):
 
             # Execute
             self.threadpool.start(worker)
+
         else:
             # inform user to select at least one time series before plotting
             logging.info("Select at least 1 time series before plotting.")

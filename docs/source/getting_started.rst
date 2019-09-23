@@ -11,16 +11,24 @@ You need Python version 3.6 or later. You can find it at https://www.python.org 
 Installation
 ************
 
-Wether you are in a Python virtalenv or a Conda env you install QATS from PyPI as
+.. note::
+    As of version 4.2.0, you must install the desired qt binding yourself (needed for the GUI to work).
+    Supported packages are: PyQt5, Pyside2, PyQt4 and Pyside. See installation instructions below.
+
+QATS is installed from PyPI by using `pip`:
 
 .. code-block:: console
 
     pip install qats
 
-.. warning::
-    If you install QATS in a Conda environment make sure that the conda-package `pyqt` is not installed in that
-    same environment as that will conflict with `PyQt5` installed from PyPI. `PyQt5` is a dependency of
-    QATS.
+In order to use the GUI, you must also install a Python package with qt bindings (here, `PyQt5` is used as an
+example):
+
+.. code-block::
+
+    pip install pyqt5
+
+Supported qt bindings are: PyQt5, Pyside2, PyQt4 and Pyside.
 
 Now you should be able to import the package in the Python console
 

@@ -34,19 +34,43 @@ perfect for inspecting, comparing and reporting:
 
 ### Getting started
 
-Run the below command in a Python environment to install the latest QATS release.
+Run the below command in a Python environment to install the latest QATS release:
 
 ```console
 pip install qats
 ```
 
-Launch the GUI...
+To upgrade from a previous version, the command is:
+
+```console
+pip install --upgrade qats
+```
+
+You may now import qats in your own scripts:
+
+```python
+from qats import TsDB, TimeSeries
+```
+
+... or use the GUI to inspect time series. Note that as of version 4.2.0 you are quite free to choose which 
+[Qt](https://www.qt.io) binding you would like to use for the GUI: [PyQt5](https://pypi.org/project/PyQt5/) or 
+[Pyside2](https://pypi.org/project/PySide2/), or even [PyQt4](https://pypi.org/project/PyQt4/) / 
+[Pyside](https://pypi.org/project/PySide/).
+
+Install the chosen binding (here PyQt5 as an example):
+
+```console
+pip install pyqt5
+```
+
+... and launch the GUI:
 
 ```console
 qats app
 ```
 
-and create a start menu link which you can even pin to the taskbar to ease access to the QATS GUI.
+To create a start menu link, which you can even pin to the taskbar to ease access to the 
+QATS GUI, run the following command:
 
 ```console
 qats config --link-app
@@ -73,13 +97,15 @@ Install Python version 3.6 or later from either https://www.python.org or https:
 
 ### Clone the source code repository
 
-At the desired location run ```git clone https://github.com/dnvgl/qats.git```
+At the desired location, run: 
+
+```git clone https://github.com/dnvgl/qats.git```
 
 ### Installing
 
-To get the development environment running
+To get the development environment running:
 
-.. create an isolated Python environment and activate it,
+... create an isolated Python environment and activate it,
 
 ```console
 python -m venv /path/to/new/virtual/environment
@@ -87,7 +113,7 @@ python -m venv /path/to/new/virtual/environment
 /path/to/new/virtual/environment/Scripts/activate
 ```
 
-.. install the dev dependencies in [requirements.txt](requirements.txt)
+... install the dev dependencies in [requirements.txt](requirements.txt),
 
 ```console
 pip install -r requirements.txt
@@ -99,14 +125,14 @@ pip install -r requirements.txt
 python setup.py develop
 ```
 
-Now you should be able to import the package in the Python console
+You should now be able to import the package in the Python console,
 
 ```python
 import qats
 help(qats)
 ```
 
-.. and the command line interface (CLI).
+... and use the command line interface (CLI).
 
 ```console
 qats -h
@@ -124,7 +150,7 @@ The test automation is configured in the file `tox.ini`.
 
 ### Building the package
 
-Build tarball and wheel distributions by 
+Build tarball and wheel distributions by:
 
 ```console
 python setup.py sdist bdist_wheel

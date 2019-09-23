@@ -5,7 +5,7 @@ Module containing models such as item models, proxy models etc tailored for the 
 @author: perl
 """
 
-from PyQt5.QtCore import QSortFilterProxyModel
+from qtpy.QtCore import QSortFilterProxyModel
 
 
 class CustomSortFilterProxyModel(QSortFilterProxyModel):

@@ -5,7 +5,7 @@ Module with custom widgets
 
 @author: perl
 """
-from PyQt5.QtWidgets import QTabWidget
+from qtpy.QtWidgets import QTabWidget
 
 
 class CustomTabWidget (QTabWidget):
