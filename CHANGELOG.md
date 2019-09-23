@@ -19,6 +19,13 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.2.0] // 23.09.2019
+
+#### Changes
+Replaced hard dependency on `PyQt5` with `QtPy`, due to `PyQt5`'s strong copyleft GPL license. `QtPy` is a shim over various Qt bindings such as: `PyQt4`, `PyQt5`, `Pyside` and `Pyside2`. The user must now install the preferred binding himself/herself, in order to use the GUI.
+
+Note: If several qt bindings are installed (e.g. `PyQt5` and `Pyside2`), the environmental variable `QT_API` may be used to control which binding is used. See https://pypi.org/project/QtPy/ for details.
+
 ### [4.1.1] // 17.09.2019
 
 #### Fixed
@@ -84,7 +91,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.1.1...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.2.0...HEAD
+[4.2.0]: https://github.com/dnvgl/qats/compare/4.1.1...4.2.0
 [4.1.1]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.1
 [4.1.0]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.0
 [4.0.1]: https://github.com/dnvgl/qats/compare/4.0.0...4.0.1
