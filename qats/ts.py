@@ -500,7 +500,7 @@ class TimeSeries(object):
 
         The fit in example above is equivalent to:
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> maxima = ts.maxima(local=False, threshold=None, twin=(200., 1e12), rettime=False)
         >>> weib = Weibull.fit(maxima, method='msm')
 
