@@ -4,10 +4,32 @@
 Module with functions for signal processing.
 
 """
-import sys
 import numpy as np
-from scipy.fftpack import fft, ifft, rfft, irfft, fftfreq, rfftfreq
-from scipy.signal import welch
+from scipy.fftpack import fft, ifft, rfft, irfft
+from scipy.signal import welch, butter, filtfilt, sosfiltfilt
+
+
+def extend_signal_ends(x, n):
+    """Extend the signal ends with `n` values to mitigate the edge effect.
+
+    Parameters
+    ----------
+    x : array_like
+        Signal
+    n : int
+        Number of values prepended and appended to signal.
+
+    Notes
+    -----
+    At each end of the signal `n` values of the signal are replicated, flipped and joined with the signal to maintain
+    continuity in the signal level and slope at the joining points. This should mitigate end effects when filterin
+    the signal.
+
+    The original signal is retrieved as `x[n:-n:1]`.
+    """
+    start = 2. * x[0] - 1. * x[n:0:-1]
+    end = 2. * x[-1] - 1. * x[-2:-(n + 2):-1]
+    return np.concatenate((start, x, end))
 
 
 def smooth(x, window_len=11, window='rectangular', mode='same'):
@@ -176,107 +198,69 @@ def taper(x, window='tukey', alpha=0.001):
     return y, wcorr
 
 
-def lowpass(x, dt, fc):
+def lowpass(x, dt, fc, order=5):
     """
     Low pass filter data signal x at cut off frequency fc, blocking harmonic content above fc.
     
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     fc : float
-        cut off frequency (Hz)
+        Cut off frequency (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
-
-    Notes
-    -----
-    FFT filter.
+        Filtered signal
 
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.filtfilt
     """
-    x = np.asarray(x)
-
-    if fc == 0:
-        fc = sys.float_info.epsilon
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() <= fc] = 1.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() <= fc] = 1.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt         # nyquist frequency
+    normal_cutoff = fc / nyq    # normalized cut off frequency
+    b, a = butter(order, normal_cutoff, btype='lowpass', analog=False)
+    y = filtfilt(b, a, x)
+    return y
 
 
-def highpass(x, dt, fc):
+def highpass(x, dt, fc, order=5):
     """
     High pass filter data signal x at cut off frequency fc, blocking harmonic content below fc.
     
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     fc : float
-        cut off frequency (Hz)
+        Cut off frequency (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
-
-    Notes
-    -----
-    FFT filter.
+        Filtered signal
 
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.filtfilt
     """
-    x = np.asarray(x)
-
-    if fc == 0:
-        fc = sys.float_info.epsilon
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() >= fc] = 1.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() >= fc] = 1.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt         # nyquist frequency
+    normal_cutoff = fc / nyq    # normalized cut off frequency
+    b, a = butter(order, normal_cutoff, btype='highpass', analog=False)
+    y = filtfilt(b, a, x)
+    return y
 
 
-def bandpass(x, dt, flow, fupp):
+def bandpass(x, dt, flow, fupp, order=5):
     """
     Band pass filter data signal x at cut off frequencies flow and fupp, blocking harmonic content outside the
     frequency band [flow, fupp]
@@ -284,50 +268,31 @@ def bandpass(x, dt, flow, fupp):
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     flow, fupp : float
-        passing frequency band (Hz)
+        Passing frequency band (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
-
-    Notes
-    -----
-    FFT filter.
+        Filtered signal
 
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.sosfiltfilt
     """
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    if flow == 0:
-        flow = sys.float_info.epsilon
-    if fupp == 0:
-        fupp = sys.float_info.epsilon
-    
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 1.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 1.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt  # nyquist frequency
+    normal_cutoff = (flow / nyq, fupp / nyq)  # normalized cut off frequencies
+    sos = butter(order, normal_cutoff, btype='bandpass', analog=False, output='sos')
+    y = sosfiltfilt(sos, x)
+    return y
 
 
-def bandblock(x, dt, flow, fupp):
+def bandblock(x, dt, flow, fupp, order=5):
     """
     Band block filter data signal x at cut off frequencies flow and fupp, blocking harmonic content inside the
     frequency band [flow, fupp]
@@ -335,47 +300,33 @@ def bandblock(x, dt, flow, fupp):
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     flow, fupp : float
-        blocked frequency band (Hz)
+        Blocked frequency band (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
+        Filtered signal
 
     Notes
     -----
-    FFT filter.
-       
+    SciPy bandpass/bandstop filters designed with b, a are unstable and may result in erroneous filters at higher
+    filter orders. Here we use sos (second-order sections) output of filter design instead.
+
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.sosfiltfilt
     """
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    if flow == 0:
-        flow = sys.float_info.epsilon
-    if fupp == 0:
-        fupp = sys.float_info.epsilon
-
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.ones(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 0.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.ones(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 0.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt                         # nyquist frequency
+    normal_cutoff = (flow / nyq, fupp / nyq)    # normalized cut off frequencies
+    sos = butter(order, normal_cutoff, btype='bandstop', analog=False, output='sos')
+    y = sosfiltfilt(sos, x)
+    return y
 
 
 def threshold(x, thresholds):
