@@ -39,14 +39,16 @@ class TestSignal(unittest.TestCase):
         dt = self.t[1] - self.t[0]
         xlp = lowpass(self.xnoise, dt, 0.1)
         xhp = highpass(self.xnoise, dt, 0.1)
-        self.assertTrue(np.allclose(self.xnoise, xlp + xhp))
+        deviation = max((xlp + xhp - self.xnoise) / self.xnoise)
+        self.assertLessEqual(deviation, 0.05)
 
     def test_reconstruct_signal_from_bandstop_and_bandpass(self):
         """Check that the sum of the lowpassed signal and the highpassed signal equals the original signal."""
         dt = self.t[1] - self.t[0]
         band = bandpass(self.xnoise, dt, 0.15, 0.25)
         rest = bandblock(self.xnoise, dt, 0.15, 0.25)
-        self.assertTrue(np.allclose(self.xnoise, band + rest))
+        deviation = max((band + rest - self.xnoise) / self.xnoise)
+        self.assertLessEqual(deviation, 0.05)
 
     def test_statistics_of_lowpassed_signal(self):
         """Check statistics against analytical solution."""

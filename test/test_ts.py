@@ -102,8 +102,8 @@ class TestTs(unittest.TestCase):
         _, xlo = self.ts.filter('lp', freq, twin=twin)
         _, xhi = self.ts.filter('hp', freq, twin=twin)
         # check 2: sum of components (almots) equals total signal
-        np.testing.assert_array_almost_equal(xtot, xlo + xhi, 2,
-                                             "Sum of low- and high-pass components does not equal total signal")
+        deviation = np.max((xlo + xhi - xtot) / xtot)
+        self.assertLessEqual(deviation, 0.02, "Sum of low- and high-pass components does not equal total signal")
 
     def test_data_is_dict_type(self):
         """
