@@ -30,7 +30,7 @@ def calculate_psd(container, twin, fargs):
 
     for name, ts in container.items():
         # resampling to average time step for robustness (necessary for series with varying time step)
-        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt)
+        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1)
         container_out[name] = tuple([f, s])
 
     return container_out

@@ -89,14 +89,14 @@ class TestSignal(unittest.TestCase):
     def test_psd_area_moment_0(self):
         """Check zero area moment of the spectral density."""
         dt = self.t[1] - self.t[0]
-        f, p = psd(self.x, dt)
+        f, p = psd(self.x, dt, nperseg=1000)
         df = f[1] - f[0]
         self.assertAlmostEqual(df * np.sum(p), np.var(self.x), delta=1.e-3)
 
     def test_psd_area_moment_2(self):
         """Check second area moment of the spectral density."""
         dt = self.t[1] - self.t[0]
-        f, p = psd(self.x2, dt)
+        f, p = psd(self.x2, dt, nperseg=1000)
         df = f[1] - f[0]
         m0 = df * np.sum(p)
         m2 = df * np.sum(f ** 2. * p)

@@ -583,7 +583,7 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
         return maxima
 
 
-def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
+def psd(x, dt, **kwargs):
     """
     Estimate power spectral density using Welch’s method.
 
@@ -593,16 +593,8 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
         Input data signal.
     dt : float
         Time step.
-    nperseg : int, optional
-        Length of each segment. Can be set equal to the signal length to provide full frequency resolution.
-        Default 1/4 of the total signal length.
-    noverlap : int, optional
-        Number of points to overlap between segments. If None, noverlap = nperseg / 2. Defaults to None.
-    nfft : int, optional
-        Length of the FFT used, if a zero padded FFT is desired. Default the FFT length is nperseg.
-    detrend : str or function, optional
-        Specifies how to detrend each segment. If detrend is a string, it is passed as the type argument to
-        detrend. If it is a function, it takes a segment and returns a detrended segment. Defaults to ‘constant’.
+    kwargs: optional
+        See `scipy.signal.welch` documentation for available options.
 
     Returns
     -------
@@ -611,22 +603,7 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
 
     Notes
     -----
-    Welch’s method [1] computes an estimate of the power spectral density by dividing the data into overlapping
-    segments, computing a modified periodogram for each segment and averaging the periodograms. Welch method is
-    chosen over the periodogram as the spectral density is smoothed by adjusting the `nperseg` parameter. The
-    periodogram returns a raw spectrum which requires additional smoothing to get a readable spectral density plot.
-
-    An appropriate amount of overlap will depend on the choice of window and on your requirements. For the default
-    ‘hanning’ window an overlap of 50% is a reasonable trade off between accurately estimating the signal power,
-    while not over counting any of the data. Narrower windows may require a larger overlap.
-
-    If noverlap is 0, this method is equivalent to Bartlett’s method [2].
-
-    References
-    ----------
-    1. P. Welch, “The use of the fast Fourier transform for the estimation of power spectra: A method based on
-       time averaging over short, modified periodograms”, IEEE Trans. Audio Electroacoust. vol. 15, pp. 70-73, 1967.
-    2. M.S. Bartlett, “Periodogram Analysis and Continuous Spectra”, Biometrika, vol. 37, pp. 1-16, 1950.
+    This function basically wraps `scipy.signal.welch` to control defaults etc.
 
     See also
     --------
@@ -635,12 +612,7 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
     """
     x = np.asarray(x)
 
-    # if nperseg is not specified the segment length is set to 1/4 of the total signal.
-    if not nperseg:
-        nperseg = x.size/4
-
     # estimate psd using welch's definition
-    f, p = welch(x, fs=1./dt, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend, window='hanning',
-                 return_onesided=True, scaling='density', axis=-1)
+    f, p = welch(x, fs=1./dt, **kwargs)
 
     return f, p
