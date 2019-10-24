@@ -937,14 +937,14 @@ class Qats(QMainWindow):
             Time series statistics
         """
         self.reset_stats_table()
-        self.stats_table.setRowCount(len(container))
+        self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
             mean = data.get("mean")
             std = data.get("std")
             skew = data.get("skew")
             kurt = data.get("kurt")
-            min = data.get("min")
-            max = data.get("max")
+            minx = data.get("min")
+            maxx = data.get("max")
             tz = data.get("tz")
             wloc = data.get("wloc")
             wscale = data.get("wscale")
@@ -960,12 +960,10 @@ class Qats(QMainWindow):
             cell.setToolTip(name)
             self.stats_table.setItem(i, 0, cell)
 
-            for j, value in enumerate([mean, min, max, std, skew, kurt, tz, p_37, p_57, p_90]):
+            for j, value in enumerate([mean, minx, maxx, std, skew, kurt, tz, p_37, p_57, p_90]):
                 cell = QTableWidgetItem(f"{value:12.5g}")
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j + 1, cell)
-
-            self.stats_table.resizeColumnsToContents()
 
     def start_times_series_processing_thread(self, container):
         """
