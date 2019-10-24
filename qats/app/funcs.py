@@ -104,6 +104,51 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
+def calculate_stats(container, twin, fargs):
+    """
+    Calculate time series statistics
+
+    Parameters
+    ----------
+    container : dict
+        TimeSeries objects
+    twin : tuple
+        Time window. Time series are cropped to time window before extracting maxima.
+    fargs : tuple
+        Filter arguments. Time series are filtered before extracting maxima.
+
+    Returns
+    -------
+    dict
+        Filtered and windowed time series and peaks/throughs
+    """
+    container_out = dict()
+
+    for name, ts in container.items():
+        _ = ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9))
+        mean = _.get("mean")
+        std = _.get("std")
+        skew = _.get("skew")
+        kurt = _.get("kurt")
+        min = _.get("min")
+        max = _.get("max")
+        tz = _.get("tz")
+        wloc = _.get("wloc")
+        wscale = _.get("wscale")
+        wshape = _.get("wshape")
+        gloc = _.get("gloc")
+        gscale = _.get("gscale")
+        p_37 = _.get("p_37.00")
+        p_57 = _.get("p_57.00")
+        p_90 = _.get("p_90.00")
+
+        container_out[name] = dict(mean=mean, std=std, skew=skew, kurt=kurt, min=min, max=max, tz=tz, wloc=wloc,
+                                   wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, p_37=p_37, p_57=p_57,
+                                   p_90=p_90)
+
+    return container_out
+
+
 def calculate_weibull_fit(container, twin, fargs, minima=False):
     """
     Calculate time series maxima and fit Weibull distribution

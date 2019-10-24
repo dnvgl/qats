@@ -14,7 +14,7 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QDoubleSpinBox, QVBoxLayout, QPushButton, QAction, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar
+    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QTableWidget, QTableWidgetItem, QHeaderView
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -33,7 +33,8 @@ from .funcs import (
     calculate_psd,
     calculate_rfc,
     calculate_weibull_fit,
-    calculate_gumbel_fit
+    calculate_gumbel_fit,
+    calculate_stats
 )
 
 
@@ -48,7 +49,8 @@ LOGGING_LEVELS = dict(
 # TODO: Explore how to create consecutive threads without handshake in main loop
 # todo: settings on file menu: nperseg= and detrend= for welch psd, Hz, rad/s or s for filters
 # todo: add technical guidance and result interpretation to help menu, link docs website
-# todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions, gumbel distributions etc.)
+# todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions,
+#  gumbel distributions etc.)
 # todo: read orcaflex time series files
 
 
@@ -138,12 +140,23 @@ class Qats(QMainWindow):
         vbox.addWidget(self.spectrum_mpl_toolbar)
         w.setLayout(vbox)
 
+        # statistics table
+        w = QWidget()
+        self.tabs.addTab(w, "Statistics")
+        self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
+        self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
+        self.stats_table = QTableWidget()
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.stats_table)
+        w.setLayout(vbox)
+        self.reset_stats_table()
+
         # weibull paper plot tab
         w = QWidget()
         self.tabs.addTab(w, "Maxima/Minima CDF")
-        self.tabs.setTabToolTip(2, "Plot fitted Weibull cumulative distribution function to maxima/minima of "
+        self.tabs.setTabToolTip(3, "Plot fitted Weibull cumulative distribution function to maxima/minima of "
                                    "selected time series")
-        self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
+        self.tabs.tabBar().setTabButton(3, QTabBar.RightSide, None)  # disable close button
         self.weibull_fig = Figure()
         self.weibull_canvas = FigureCanvas(self.weibull_fig)
         self.weibull_canvas.setParent(w)
@@ -157,9 +170,9 @@ class Qats(QMainWindow):
         # cycle distribution plot tab
         w = QWidget()
         self.tabs.addTab(w, "Cycle distribution")
-        self.tabs.setTabToolTip(3, "Plot distribution of cycle magnitude versus cycle count for "
+        self.tabs.setTabToolTip(4, "Plot distribution of cycle magnitude versus cycle count for "
                                    "selected time series")
-        self.tabs.tabBar().setTabButton(3, QTabBar.RightSide, None)  # disable close button
+        self.tabs.tabBar().setTabButton(4, QTabBar.RightSide, None)  # disable close button
         self.cycles_fig = Figure()
         self.cycles_canvas = FigureCanvas(self.cycles_fig)
         self.cycles_canvas.setParent(w)
@@ -871,6 +884,89 @@ class Qats(QMainWindow):
         logging.info(f"Fitted Gumbel distribution to {txt} extreme sample of {sample.size}'. "
                      f"(location, scale) = ({loc}, {scale})")
 
+    def reset_stats_table(self):
+        """Reset statistics table."""
+        self.stats_table.setRowCount(0)
+        self.stats_table.setColumnCount(11)
+        self.stats_table.setAlternatingRowColors(True)
+        # self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Std.", "Skew.", "Kurt.", "Min.", "Max.", "Tz",
+        #                                             "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
+        #                                             "P .90"])
+        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Min.", "Max.", "Std.", "Skew.", "Kurt.", "Tz",
+                                                    "P .37", "P .57", "P .90"])
+        self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
+        self.stats_table.horizontalHeaderItem(1).setToolTip('Mean/average.')
+        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample minimum.')
+        self.stats_table.horizontalHeaderItem(3).setToolTip('Sample maximum.')
+        self.stats_table.horizontalHeaderItem(4).setToolTip('Unbiased standard deviation.')
+        self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
+        self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
+        self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
+        # self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
+        #                                                     'sample maxima/minima.')
+        # self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to'
+        #                                                     'sample maxima/minima.')
+        # self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to'
+        #                                                      'sample maxima/minima.')
+        # self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
+        #                                                      'derived from sample maxima/minima distribution.')
+        # self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
+        #                                                      'derived from sample maxima/minima distribution.')
+        self.stats_table.horizontalHeaderItem(8).setToolTip('Most probable largest maximum (MPM). 37 percentile in\n'
+                                                             'the extreme maxima/minima distribution. The generic\n'
+                                                             'Gumbel distribution is derived from the Weibull\n'
+                                                             'distribution fitted to sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(9).setToolTip('Expected largest maximum. 57 percentile in\n'
+                                                             'the extreme maxima/minima distribution. The generic\n'
+                                                             'Gumbel distribution is derived from the Weibull\n'
+                                                             'distribution fitted to sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(10).setToolTip('90 percentile in the extreme maxima/minima distribution.\n'
+                                                             'The generic Gumbel distribution is derived from the\n'
+                                                             'Weibull distribution fitted to sample maxima/minima.')
+        self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.stats_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.stats_table.verticalHeader().setVisible(False)
+
+    def tabulate_stats(self, container):
+        """
+        Update table with time series statistics
+
+        Parameters
+        ----------
+        container : dict
+            Time series statistics
+        """
+        self.reset_stats_table()
+        self.stats_table.setRowCount(len(container))
+        for i, (name, data) in enumerate(container.items()):
+            mean = data.get("mean")
+            std = data.get("std")
+            skew = data.get("skew")
+            kurt = data.get("kurt")
+            min = data.get("min")
+            max = data.get("max")
+            tz = data.get("tz")
+            wloc = data.get("wloc")
+            wscale = data.get("wscale")
+            wshape = data.get("wshape")
+            gloc = data.get("gloc")
+            gscale = data.get("gscale")
+            p_37 = data.get("p_37")
+            p_57 = data.get("p_57")
+            p_90 = data.get("p_90")
+
+            cell = QTableWidgetItem(name)
+            cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            cell.setToolTip(name)
+            self.stats_table.setItem(i, 0, cell)
+
+            for j, value in enumerate([mean, min, max, std, skew, kurt, tz, p_37, p_57, p_90]):
+                cell = QTableWidgetItem(f"{value:12.5g}")
+                cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.stats_table.setItem(i, j + 1, cell)
+
+            self.stats_table.resizeColumnsToContents()
+
     def start_times_series_processing_thread(self, container):
         """
         Start thread separate from main loop and process timeseries to calculate cycle distribution, power spectral
@@ -891,6 +987,12 @@ class Qats(QMainWindow):
         worker = Worker(calculate_trace, container, twin, fargs)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_trace)
+        self.threadpool.start(worker)
+
+        # start calculations of statistics
+        worker = Worker(calculate_stats, container, twin, fargs)
+        worker.signals.error.connect(self.log_thread_exception)
+        worker.signals.result.connect(self.tabulate_stats)
         self.threadpool.start(worker)
 
         # start calculations of psd
