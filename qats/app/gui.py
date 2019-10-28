@@ -6,6 +6,7 @@ Module containing windows, widgets etc. to create the QATS application
 @author: perl
 """
 import logging
+import sys
 import os
 from itertools import cycle
 import numpy as np
@@ -46,8 +47,10 @@ LOGGING_LEVELS = dict(
     warning=logging.WARNING,
     error=logging.ERROR,
 )
-
-SETTINGS_FILE = os.path.join(os.getenv("APPDATA"), "qats.settings")
+if sys.platform == "win32":
+    SETTINGS_FILE = os.path.join(os.getenv("APPDATA"), "qats.settings")
+else:
+    SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
 
 # TODO: New method that generalize threading
