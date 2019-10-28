@@ -593,7 +593,7 @@ def psd(x, dt, **kwargs):
         Input data signal.
     dt : float
         Time step.
-    kwargs: optional
+    kwargs : optional
         See `scipy.signal.welch` documentation for available options.
 
     Returns

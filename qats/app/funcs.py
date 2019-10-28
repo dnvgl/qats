@@ -8,7 +8,7 @@ from ..stats.gumbel import pwm as gumbel_pwm
 from ..fatigue.rainflow import rebin as rebin_cycles
 
 
-def calculate_psd(container, twin, fargs):
+def calculate_psd(container, twin, fargs, nperseg, normalize):
     """
     Calculate power spectral density and return as numpy arrays
 
@@ -20,6 +20,10 @@ def calculate_psd(container, twin, fargs):
         Time window. Time series are cropped to time window before estimating psd.
     fargs : tuple
         Filter arguments. Time series are filtered before estimating psd.
+    nperseg : int
+        Size of segments used for ustimating PSD using Welch's method.
+    normalize : bool
+        Normalize power spectral density on maximum density.
 
     Returns
     -------
@@ -30,13 +34,13 @@ def calculate_psd(container, twin, fargs):
 
     for name, ts in container.items():
         # resampling to average time step for robustness (necessary for series with varying time step)
-        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1)
+        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1, nperseg=nperseg, normalize=normalize)
         container_out[name] = tuple([f, s])
 
     return container_out
 
 
-def calculate_rfc(container, twin, fargs, nbins=256):
+def calculate_rfc(container, twin, fargs, nbins):
     """
     Count cycles using Rainflow counting method
 
@@ -48,7 +52,7 @@ def calculate_rfc(container, twin, fargs, nbins=256):
         Time window. Time series are cropped to time window before estimating psd.
     fargs : tuple
         Filter arguments. Time series are filtered before estimating psd.
-    nbins : int, optional
+    nbins : int
         Number of bins in cycle distribution.
 
     Returns

@@ -1059,22 +1059,23 @@ class TimeSeries(object):
         else:
             plt.show()
 
-    def psd(self, nperseg=None, noverlap=None, detrend=None, nfft=None, **kwargs):
+    def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, normalize=False, **kwargs):
         """
         Estimate power spectral density using Welch’s method.
 
         Parameters
         ----------
         nperseg : int, optional
-            Length of each segment. Can be set equal to the signal length to provide full frequency resolution.
-            Default 1/4 of the total signal length.
+            Length of each segment. Default 1/4 of the signal length.
         noverlap : int, optional
-            Number of points to overlap between segments. If None, noverlap = nperseg / 2. Defaults to None.
+            Number of points to overlap between segments. Default noverlap = nperseg / 2.
         nfft : int, optional
             Length of the FFT used, if a zero padded FFT is desired. Default the FFT length is nperseg.
         detrend : str or function, optional
             Specifies how to detrend each segment. If detrend is a string, it is passed as the type argument to
             detrend. If it is a function, it takes a segment and returns a detrended segment. Defaults to ‘constant’.
+        normalize : bool, optional
+            Normalize power spectral density on maxium density.
         kwargs : optional
             see documentation of get() method for available options
 
@@ -1110,6 +1111,9 @@ class TimeSeries(object):
         # get time and data arrays
         t, x = self.get(**kwargs)
 
+        if nperseg is None:
+            nperseg = int(0.25 * x.size)
+
         # ensure constant time step
         _dt = np.diff(t)
         # (use atol not zero to avoid false positives for zero values)
@@ -1121,13 +1125,12 @@ class TimeSeries(object):
         # average time step for requested series
         dt = float(np.mean(_dt))
 
-        # if nperseg is not specified the segment length is set to 1/4 of the total signal.
-        if nperseg is None:
-            nperseg = x.size / 4
-
         # estimate psd using qats.signal.psd (which uses welch's definition)
-        f, p = psd(x, dt, nperseg=nperseg, noverlap=noverlap, detrend=detrend, nfft=nfft, return_onesided=True,
-                   scaling='density', axis=-1)
+        f, p = psd(x, dt, nperseg=nperseg, noverlap=noverlap, detrend=detrend, nfft=nfft, scaling='density',
+                   return_onesided=True, axis=-1)
+
+        if normalize:
+            p = p / np.max(p)
 
         return f, p
 
