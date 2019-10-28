@@ -1100,13 +1100,11 @@ class Qats(QMainWindow):
     def reset_stats_table(self):
         """Reset statistics table."""
         self.stats_table.setRowCount(0)
-        self.stats_table.setColumnCount(11)
+        self.stats_table.setColumnCount(16)
         self.stats_table.setAlternatingRowColors(True)
-        # self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Std.", "Skew.", "Kurt.", "Min.", "Max.", "Tz",
-        #                                             "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
-        #                                             "P .90"])
-        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Min.", "Max.", "Std.", "Skew.", "Kurt.", "Tz",
-                                                    "P .37", "P .57", "P .90"])
+        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Std.", "Skew.", "Kurt.", "Min.", "Max.", "Tz",
+                                                    "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
+                                                    "P .90"])
         self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
         self.stats_table.horizontalHeaderItem(1).setToolTip('Mean/average.')
         self.stats_table.horizontalHeaderItem(2).setToolTip('Sample minimum.')
@@ -1115,25 +1113,25 @@ class Qats(QMainWindow):
         self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
         self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
         self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
-        # self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
-        #                                                     'sample maxima/minima.')
-        # self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to'
-        #                                                     'sample maxima/minima.')
-        # self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to'
-        #                                                      'sample maxima/minima.')
-        # self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
-        #                                                      'derived from sample maxima/minima distribution.')
-        # self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
-        #                                                      'derived from sample maxima/minima distribution.')
-        self.stats_table.horizontalHeaderItem(8).setToolTip('Most probable largest maximum (MPM). 37 percentile in\n'
+        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
+                                                            'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to'
+                                                            'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to'
+                                                             'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
+                                                             'derived from sample maxima/minima distribution.')
+        self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
+                                                             'derived from sample maxima/minima distribution.')
+        self.stats_table.horizontalHeaderItem(13).setToolTip('Most probable largest maximum (MPM). 37 percentile in\n'
                                                              'the extreme maxima/minima distribution. The generic\n'
                                                              'Gumbel distribution is derived from the Weibull\n'
                                                              'distribution fitted to sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(9).setToolTip('Expected largest maximum. 57 percentile in\n'
+        self.stats_table.horizontalHeaderItem(14).setToolTip('Expected largest maximum. 57 percentile in\n'
                                                              'the extreme maxima/minima distribution. The generic\n'
                                                              'Gumbel distribution is derived from the Weibull\n'
                                                              'distribution fitted to sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(10).setToolTip('90 percentile in the extreme maxima/minima distribution.\n'
+        self.stats_table.horizontalHeaderItem(15).setToolTip('90 percentile in the extreme maxima/minima distribution.\n'
                                                              'The generic Gumbel distribution is derived from the\n'
                                                              'Weibull distribution fitted to sample maxima/minima.')
         header = self.stats_table.horizontalHeader()
@@ -1293,7 +1291,8 @@ class Qats(QMainWindow):
             cell.setToolTip(name)
             self.stats_table.setItem(i, 0, cell)
 
-            for j, value in enumerate([mean, minx, maxx, std, skew, kurt, tz, p_37, p_57, p_90]):
+            for j, value in enumerate([mean, minx, maxx, std, skew, kurt, tz, wloc, wscale, wshape, gloc, gscale,
+                                       p_37, p_57, p_90]):
                 cell = QTableWidgetItem(f"{value:12.5g}")
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j + 1, cell)
