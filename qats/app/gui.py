@@ -1136,8 +1136,8 @@ class Qats(QMainWindow):
         self.stats_table.horizontalHeaderItem(10).setToolTip('90 percentile in the extreme maxima/minima distribution.\n'
                                                              'The generic Gumbel distribution is derived from the\n'
                                                              'Weibull distribution fitted to sample maxima/minima.')
-        self.stats_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.stats_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        header = self.stats_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Interactive)
         self.stats_table.verticalHeader().setVisible(False)
 
     def save_settings(self):
