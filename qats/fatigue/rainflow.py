@@ -19,6 +19,8 @@ def reversals(series, endpoints=False):
         data series
     endpoints : bool, optional
         If True, first and last points in `series` are included. Default is False.
+        Note that in general, inclusion of end points is only relevant if the series passed is already an array of
+        reversal points.
 
     Returns
     -------
@@ -136,7 +138,8 @@ def count_cycles(series, endpoints=False):
         Data series.
     endpoints : bool, optional
         If True, first and last points in `series` are included as cycle start/end points. This is convenient if the
-        series given is already an array of reversal points. Default is False.
+        series given is already an array of reversal points, but should in general not be used otherwise.
+        Default is False.
 
     Returns
     -------
