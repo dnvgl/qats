@@ -103,6 +103,9 @@ class Qats(QMainWindow):
         self.settings_file = SETTINGS_FILE
         self.settings = dict()
 
+        # clipboard
+        self.clip = QGuiApplication.clipboard()
+
         # create statusbar
         self.db_status = QLabel()
         self.statusBar().addPermanentWidget(self.db_status, stretch=0)
@@ -514,6 +517,21 @@ class Qats(QMainWindow):
             args = None
 
         return args
+
+    def keyPressEvent(self, e):
+        selected = self.stats_table.selectedRanges()
+        if e.key() == Qt.Key_C:  # Ctr+C
+            s = "\t".join([str(self.stats_table.horizontalHeaderItem(i).text()) for i in
+                                  range(selected[0].leftColumn(), selected[0].rightColumn() + 1)]) + "\n"
+
+            for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
+                for c in range(selected[0].leftColumn(), selected[0].rightColumn() + 1):
+                    try:
+                        s += str(self.stats_table.item(r, c).text()) + "\t"
+                    except AttributeError:
+                        s += "\t"
+                s = s[:-1] + "\n"  # eliminate last '\t'
+            self.clip.setText(s)
 
     def load_files(self, files):
         """
