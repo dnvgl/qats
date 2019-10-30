@@ -12,8 +12,14 @@ from qats.fatigue import rainflow
 class TestRainflowCounting(unittest.TestCase):
     # Load series and corresponding cycle counts from ASTM E1049-85
     series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
+    # reversals
+    reversals = series[1:-1]
     # raw cycles
     cycles = [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
+    # raw cycles if end points are included
+    # (first and last half cycles match to form a full cycle -> (2, -1.0, 1.0))
+    cycles_endpoints = [(2, -1.0, 1.0), (3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5),
+                        (8, 1.0, 0.5), (9, 0.5, 0.5)]
     # cycles grouped in 2 bins
     cycles_n2 = [(2.25, 0.125, 2.0), (6.75, 0.625, 2.0)]
     # cycles grouped in bins of width 2
@@ -21,11 +27,39 @@ class TestRainflowCounting(unittest.TestCase):
     # cycles grouped in bins of width 5
     cycles_bw5 = [(2.5, 0.125, 2.0), (7.5, 0.625, 2.0)]
 
+    def test_reversals(self):
+        """
+        Test that reversals returns expected points
+        """
+        self.assertEqual(self.reversals, list(rainflow.reversals(self.series)))
+
+    def test_reversals_recursive(self):
+        """
+        Test that reversals are unchanged if passed to reversals() with endpoints=True
+        """
+        reversals = self.reversals[:]
+        for _ in range(3):
+            reversals = list(rainflow.reversals(reversals, endpoints=True))
+            self.assertEqual(self.reversals, reversals)
+
     def test_rainflow_counting(self):
         """
         Standard test
         """
         self.assertEqual(self.cycles, rainflow.count_cycles(self.series))
+
+    def test_rainflow_counting_with_endpoints(self):
+        """
+        Test cycle counting when end points are included.
+        """
+        self.assertEqual(self.cycles_endpoints, rainflow.count_cycles(self.series, endpoints=True))
+
+    def test_rainflow_counting_using_reversals(self):
+        """
+        Test that cycle counting using reversals works if endpoints=True
+        """
+        reversals = list(rainflow.reversals(self.series))
+        self.assertEqual(self.cycles, rainflow.count_cycles(reversals, endpoints=True))
 
     def test_series_with_zero_derivatives(self):
         """
