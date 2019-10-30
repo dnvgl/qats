@@ -19,6 +19,18 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.3.0] // 30.10.2019
+
+#### Added
+The desktop application now:
+- Has a separate tab with tabulated time series statistics. The statistics can be copied to clipboard.
+- Enable user configuration of certain settings. The settings are saved between sessions.
+
+#### Changed
+The library now uses Scipy IIR filters instead of the self-made filters. Mainly to improve handling of edge effects and to simplify maintenance.
+
+Restructured the functions for calculating power spectral density. *Note: The desktop application now apply a default segment length of 1000 points when estimating power spectral density using Welch's method. This can be adjusted in the application settings dialog. Previously the default segment length was 1/4 of the signal length.*
+
 ### [4.2.0] // 23.09.2019
 
 #### Changes
@@ -91,7 +103,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.2.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.3.0...HEAD
+[4.3.0]: https://github.com/dnvgl/qats/compare/4.2.0...4.3.0
 [4.2.0]: https://github.com/dnvgl/qats/compare/4.1.1...4.2.0
 [4.1.1]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.1
 [4.1.0]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.0
