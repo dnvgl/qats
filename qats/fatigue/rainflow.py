@@ -9,7 +9,7 @@ import numpy as np
 # TODO: Evaluate from-to counting which stores the "orientation" of each cycle. Enables reconstruction of a time history
 
 
-def reversals(series):
+def reversals(series, endpoints=False):
     """
     A generator function which iterates over the reversals in the iterable *series*.
 
@@ -17,6 +17,8 @@ def reversals(series):
     ----------
     series : array_like
         data series
+    endpoints : bool, optional
+        If True, first and last points in `series` are included. Default is False.
 
     Returns
     -------
@@ -26,13 +28,17 @@ def reversals(series):
     Notes
     -----
     Reversals are the points at which the first derivative on the series changes sign. The generator never yields
-    the first and the last points in the series.
+    the first and the last points in the series, unless `endpoints` is set to True (in which case they are always
+    included).
 
     """
     series = iter(series)
 
     x_last, x = next(series), next(series)
     d_last = (x - x_last)
+
+    if endpoints is True:
+        yield x_last
 
     for x_next in series:
         if x_next == x:
@@ -43,8 +49,11 @@ def reversals(series):
         x_last, x = x, x_next
         d_last = d_next
 
+    if endpoints is True:
+        yield x
 
-def cycles(series):
+
+def cycles(series, endpoints=False):
     """
     Find full cycles and half-cycles range and mean value from *series* and count the number of occurrences using the
     Rainflow algorithm.
@@ -53,6 +62,9 @@ def cycles(series):
     ----------
     series : array_like
         data series
+    endpoints : bool, optional
+        If True, first and last points in `series` are included as cycle start/end points. This is convenient if the
+        series given is already an array of reversal points. Default is False.
 
     Returns
     -------
@@ -81,7 +93,7 @@ def cycles(series):
     points = deque()
     full, half = [], []
 
-    for r in reversals(series):
+    for r in reversals(series, endpoints=endpoints):
         points.append(r)
         while len(points) >= 3:
             # Form ranges X and Y from the three most recent points
@@ -114,7 +126,7 @@ def cycles(series):
     return full, half
 
 
-def count_cycles(series):
+def count_cycles(series, endpoints=False):
     """
     Count number of occurrences of cycle range and mean combinations.
 
@@ -122,6 +134,9 @@ def count_cycles(series):
     ----------
     series : array_like
         Data series.
+    endpoints : bool, optional
+        If True, first and last points in `series` are included as cycle start/end points. This is convenient if the
+        series given is already an array of reversal points. Default is False.
 
     Returns
     -------
@@ -155,7 +170,7 @@ def count_cycles(series):
     rainflow.reversals, rainflow.cycles, rainflow.cycle_ranges, rainflow.cycle_means, rainflow.cycle_rangemean
 
     """
-    full, half = cycles(series)
+    full, half = cycles(series, endpoints=endpoints)
 
     # Count cycles
     counts = defaultdict(float)
