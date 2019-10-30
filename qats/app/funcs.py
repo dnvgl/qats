@@ -8,7 +8,7 @@ from ..stats.gumbel import pwm as gumbel_pwm
 from ..fatigue.rainflow import rebin as rebin_cycles
 
 
-def calculate_psd(container, twin, fargs):
+def calculate_psd(container, twin, fargs, nperseg, normalize):
     """
     Calculate power spectral density and return as numpy arrays
 
@@ -20,6 +20,10 @@ def calculate_psd(container, twin, fargs):
         Time window. Time series are cropped to time window before estimating psd.
     fargs : tuple
         Filter arguments. Time series are filtered before estimating psd.
+    nperseg : int
+        Size of segments used for ustimating PSD using Welch's method.
+    normalize : bool
+        Normalize power spectral density on maximum density.
 
     Returns
     -------
@@ -30,13 +34,13 @@ def calculate_psd(container, twin, fargs):
 
     for name, ts in container.items():
         # resampling to average time step for robustness (necessary for series with varying time step)
-        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt)
+        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1, nperseg=nperseg, normalize=normalize)
         container_out[name] = tuple([f, s])
 
     return container_out
 
 
-def calculate_rfc(container, twin, fargs, nbins=256):
+def calculate_rfc(container, twin, fargs, nbins):
     """
     Count cycles using Rainflow counting method
 
@@ -48,7 +52,7 @@ def calculate_rfc(container, twin, fargs, nbins=256):
         Time window. Time series are cropped to time window before estimating psd.
     fargs : tuple
         Filter arguments. Time series are filtered before estimating psd.
-    nbins : int, optional
+    nbins : int
         Number of bins in cycle distribution.
 
     Returns
@@ -100,6 +104,51 @@ def calculate_trace(container, twin, fargs):
 
         container_out[name] = dict(t=t, x=x, tmin=tmin, xmin=xmin,
                                    tmax=tmax, xmax=xmax)
+
+    return container_out
+
+
+def calculate_stats(container, twin, fargs):
+    """
+    Calculate time series statistics
+
+    Parameters
+    ----------
+    container : dict
+        TimeSeries objects
+    twin : tuple
+        Time window. Time series are cropped to time window before extracting maxima.
+    fargs : tuple
+        Filter arguments. Time series are filtered before extracting maxima.
+
+    Returns
+    -------
+    dict
+        Filtered and windowed time series and peaks/throughs
+    """
+    container_out = dict()
+
+    for name, ts in container.items():
+        _ = ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9))
+        mean = _.get("mean")
+        std = _.get("std")
+        skew = _.get("skew")
+        kurt = _.get("kurt")
+        min = _.get("min")
+        max = _.get("max")
+        tz = _.get("tz")
+        wloc = _.get("wloc")
+        wscale = _.get("wscale")
+        wshape = _.get("wshape")
+        gloc = _.get("gloc")
+        gscale = _.get("gscale")
+        p_37 = _.get("p_37.00")
+        p_57 = _.get("p_57.00")
+        p_90 = _.get("p_90.00")
+
+        container_out[name] = dict(mean=mean, std=std, skew=skew, kurt=kurt, min=min, max=max, tz=tz, wloc=wloc,
+                                   wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, p_37=p_37, p_57=p_57,
+                                   p_90=p_90)
 
     return container_out
 

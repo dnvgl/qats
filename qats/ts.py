@@ -500,7 +500,7 @@ class TimeSeries(object):
 
         The fit in example above is equivalent to:
 
-        >>> from qats.weibull import Weibull
+        >>> from qats.stats.weibull import Weibull
         >>> maxima = ts.maxima(local=False, threshold=None, twin=(200., 1e12), rettime=False)
         >>> weib = Weibull.fit(maxima, method='msm')
 
@@ -532,10 +532,10 @@ class TimeSeries(object):
             - to specified time if `resample` is an array or list
 
         window_len : int, optional
-            Smooth time serie based on convoluting the time series with a rectangular window of specified length. An odd
+            Smooth time serie based on convoluting the time series with a window of specified length. An odd
             number is recommended.
         window : str, optional
-            Type of window function, default 'rectangular', see `qats.filters.smooth` for options.
+            Type of window function used for smoothing, default 'rectangular', see `qats.signal.smooth` for options.
         taperfrac : float, optional
             Fraction of time domain signal to be tapered. A taper of 0.001-0.01 is recommended before calculation of
             the power spectral density.
@@ -578,6 +578,12 @@ class TimeSeries(object):
         assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), \
             "Cannot specify both resampling to `newt` and cropping to time window `twin`."
 
+        def new_timearray(t0, t1, d):
+            """ Establish time array from specified start (t0), end (t1) and time step (d) """
+            n = int(round((t1 - t0) / d)) + 1
+            t_ = np.linspace(t0, t1, n, retstep=False)
+            return t_
+
         # copy time series
         t = copy.copy(self.t)
         x = copy.copy(self.x)
@@ -587,12 +593,6 @@ class TimeSeries(object):
             t_start, t_end = twin
             i = (t >= t_start) & (t <= t_end)
             t, x = t[i], x[i]
-
-        def new_timearray(t0, t1, d):
-            """ Establish time array from specified start (t0), end (t1) and time step (d) """
-            n = int(round((t1 - t0) / d)) + 1
-            t_ = np.linspace(t0, t1, n, retstep=False)
-            return t_
 
         # resampling
         if resample is not None:
@@ -613,10 +613,6 @@ class TimeSeries(object):
             x = self.interpolate(t)
         else:
             pass
-
-        # remove mean value (added later except for highpass filtered time series)
-        xmean = np.mean(x)
-        x = x - xmean
 
         # data tapering
         if (taperfrac is not None) and (isinstance(taperfrac, float)) and (taperfrac > 0.) and (taperfrac < 1.):
@@ -652,10 +648,6 @@ class TimeSeries(object):
             else:
                 # invalid filter type
                 raise ValueError(f"Invalid filter type: {filterargs[0]}")
-
-        # re-add mean value (except if high-pass filter has been applied)
-        if filterargs is None or filterargs[0] != 'hp':
-            x = x + xmean
 
         # smoothing
         if (window_len is not None) and (isinstance(window_len, int)) and (window_len > 0):
@@ -1067,22 +1059,23 @@ class TimeSeries(object):
         else:
             plt.show()
 
-    def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, **kwargs):
+    def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, normalize=False, **kwargs):
         """
         Estimate power spectral density using Welch’s method.
 
         Parameters
         ----------
         nperseg : int, optional
-            Length of each segment. Can be set equal to the signal length to provide full frequency resolution.
-            Default 1/4 of the total signal length.
+            Length of each segment. Default 1/4 of the signal length.
         noverlap : int, optional
-            Number of points to overlap between segments. If None, noverlap = nperseg / 2. Defaults to None.
+            Number of points to overlap between segments. Default noverlap = nperseg / 2.
         nfft : int, optional
             Length of the FFT used, if a zero padded FFT is desired. Default the FFT length is nperseg.
         detrend : str or function, optional
             Specifies how to detrend each segment. If detrend is a string, it is passed as the type argument to
             detrend. If it is a function, it takes a segment and returns a detrended segment. Defaults to ‘constant’.
+        normalize : bool, optional
+            Normalize power spectral density on maxium density.
         kwargs : optional
             see documentation of get() method for available options
 
@@ -1093,7 +1086,22 @@ class TimeSeries(object):
 
         Notes
         -----
-        For description of Welch's method and references, see :meth:`qats.signal.psd()`.
+        Welch’s method [1] computes an estimate of the power spectral density by dividing the data into overlapping
+        segments, computing a modified periodogram for each segment and averaging the periodograms. Welch method is
+        chosen over the periodogram as the spectral density is smoothed by adjusting the `nperseg` parameter. The
+        periodogram returns a raw spectrum which requires additional smoothing to get a readable spectral density plot.
+
+        An appropriate amount of overlap will depend on the choice of window and on your requirements. For the default
+        ‘hanning’ window an overlap of 50% is a reasonable trade off between accurately estimating the signal power,
+        while not over counting any of the data. Narrower windows may require a larger overlap.
+
+        If noverlap is 0, this method is equivalent to Bartlett’s method [2].
+
+        References
+        ----------
+        1. P. Welch, “The use of the fast Fourier transform for the estimation of power spectra: A method based on
+           time averaging over short, modified periodograms”, IEEE Trans. Audio Electroacoust. vol. 15, pp. 70-73, 1967.
+        2. M.S. Bartlett, “Periodogram Analysis and Continuous Spectra”, Biometrika, vol. 37, pp. 1-16, 1950.
 
         See also
         --------
@@ -1102,6 +1110,9 @@ class TimeSeries(object):
         """
         # get time and data arrays
         t, x = self.get(**kwargs)
+
+        if nperseg is None:
+            nperseg = int(0.25 * x.size)
 
         # ensure constant time step
         _dt = np.diff(t)
@@ -1115,7 +1126,11 @@ class TimeSeries(object):
         dt = float(np.mean(_dt))
 
         # estimate psd using qats.signal.psd (which uses welch's definition)
-        f, p = psd(x, dt, nperseg=nperseg, noverlap=noverlap, detrend=detrend, nfft=nfft)
+        f, p = psd(x, dt, nperseg=nperseg, noverlap=noverlap, detrend=detrend, nfft=nfft, scaling='density',
+                   return_onesided=True, axis=-1)
+
+        if normalize:
+            p = p / np.max(p)
 
         return f, p
 

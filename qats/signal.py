@@ -4,10 +4,32 @@
 Module with functions for signal processing.
 
 """
-import sys
 import numpy as np
-from scipy.fftpack import fft, ifft, rfft, irfft, fftfreq, rfftfreq
-from scipy.signal import welch
+from scipy.fftpack import fft, ifft, rfft, irfft
+from scipy.signal import welch, butter, filtfilt, sosfiltfilt
+
+
+def extend_signal_ends(x, n):
+    """Extend the signal ends with `n` values to mitigate the edge effect.
+
+    Parameters
+    ----------
+    x : array_like
+        Signal
+    n : int
+        Number of values prepended and appended to signal.
+
+    Notes
+    -----
+    At each end of the signal `n` values of the signal are replicated, flipped and joined with the signal to maintain
+    continuity in the signal level and slope at the joining points. This should mitigate end effects when filterin
+    the signal.
+
+    The original signal is retrieved as `x[n:-n:1]`.
+    """
+    start = 2. * x[0] - 1. * x[n:0:-1]
+    end = 2. * x[-1] - 1. * x[-2:-(n + 2):-1]
+    return np.concatenate((start, x, end))
 
 
 def smooth(x, window_len=11, window='rectangular', mode='same'):
@@ -176,107 +198,69 @@ def taper(x, window='tukey', alpha=0.001):
     return y, wcorr
 
 
-def lowpass(x, dt, fc):
+def lowpass(x, dt, fc, order=5):
     """
     Low pass filter data signal x at cut off frequency fc, blocking harmonic content above fc.
     
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     fc : float
-        cut off frequency (Hz)
+        Cut off frequency (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
-
-    Notes
-    -----
-    FFT filter.
+        Filtered signal
 
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.filtfilt
     """
-    x = np.asarray(x)
-
-    if fc == 0:
-        fc = sys.float_info.epsilon
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() <= fc] = 1.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() <= fc] = 1.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt         # nyquist frequency
+    normal_cutoff = fc / nyq    # normalized cut off frequency
+    b, a = butter(order, normal_cutoff, btype='lowpass', analog=False)
+    y = filtfilt(b, a, x)
+    return y
 
 
-def highpass(x, dt, fc):
+def highpass(x, dt, fc, order=5):
     """
     High pass filter data signal x at cut off frequency fc, blocking harmonic content below fc.
     
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     fc : float
-        cut off frequency (Hz)
+        Cut off frequency (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
-
-    Notes
-    -----
-    FFT filter.
+        Filtered signal
 
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.filtfilt
     """
-    x = np.asarray(x)
-
-    if fc == 0:
-        fc = sys.float_info.epsilon
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() >= fc] = 1.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[f.__abs__() >= fc] = 1.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt         # nyquist frequency
+    normal_cutoff = fc / nyq    # normalized cut off frequency
+    b, a = butter(order, normal_cutoff, btype='highpass', analog=False)
+    y = filtfilt(b, a, x)
+    return y
 
 
-def bandpass(x, dt, flow, fupp):
+def bandpass(x, dt, flow, fupp, order=5):
     """
     Band pass filter data signal x at cut off frequencies flow and fupp, blocking harmonic content outside the
     frequency band [flow, fupp]
@@ -284,50 +268,31 @@ def bandpass(x, dt, flow, fupp):
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     flow, fupp : float
-        passing frequency band (Hz)
+        Passing frequency band (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
-
-    Notes
-    -----
-    FFT filter.
+        Filtered signal
 
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.sosfiltfilt
     """
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    if flow == 0:
-        flow = sys.float_info.epsilon
-    if fupp == 0:
-        fupp = sys.float_info.epsilon
-    
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 1.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.zeros(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 1.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt  # nyquist frequency
+    normal_cutoff = (flow / nyq, fupp / nyq)  # normalized cut off frequencies
+    sos = butter(order, normal_cutoff, btype='bandpass', analog=False, output='sos')
+    y = sosfiltfilt(sos, x)
+    return y
 
 
-def bandblock(x, dt, flow, fupp):
+def bandblock(x, dt, flow, fupp, order=5):
     """
     Band block filter data signal x at cut off frequencies flow and fupp, blocking harmonic content inside the
     frequency band [flow, fupp]
@@ -335,47 +300,33 @@ def bandblock(x, dt, flow, fupp):
     Parameters
     ----------
     x : array_like
-        input data signal
+        Signal
     dt : float
-        time step
+        Signal sampling rate (s)
     flow, fupp : float
-        blocked frequency band (Hz)
+        Blocked frequency band (Hz)
+    order : int, optional
+        Butterworth filter order. Default 5.
     
     Returns
     -------
     array
-        filtered data signal
+        Filtered signal
 
     Notes
     -----
-    FFT filter.
-       
+    SciPy bandpass/bandstop filters designed with b, a are unstable and may result in erroneous filters at higher
+    filter orders. Here we use sos (second-order sections) output of filter design instead.
+
     See Also
     --------
-    scipy.fftpack
+    scipy.signal.butter, scipy.signal.sosfiltfilt
     """
-    real_signal = np.all(np.isreal(x))
-    n = x.size
-    nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    if flow == 0:
-        flow = sys.float_info.epsilon
-    if fupp == 0:
-        fupp = sys.float_info.epsilon
-
-    if real_signal:
-        fa = rfft(x, nfft)
-        f = rfftfreq(nfft, d=dt)
-        h = np.ones(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 0.
-        x1 = irfft(fa * h, nfft)
-    else:
-        fa = fft(x, nfft)
-        f = fftfreq(nfft, d=dt)
-        h = np.ones(np.shape(f))
-        h[(f.__abs__() >= flow) & (f.__abs__() <= fupp)] = 0.
-        x1 = ifft(fa * h, nfft)
-
-    return x1[:n]
+    nyq = 0.5 * 1. / dt                         # nyquist frequency
+    normal_cutoff = (flow / nyq, fupp / nyq)    # normalized cut off frequencies
+    sos = butter(order, normal_cutoff, btype='bandstop', analog=False, output='sos')
+    y = sosfiltfilt(sos, x)
+    return y
 
 
 def threshold(x, thresholds):
@@ -632,7 +583,7 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
         return maxima
 
 
-def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
+def psd(x, dt, **kwargs):
     """
     Estimate power spectral density using Welch’s method.
 
@@ -642,16 +593,8 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
         Input data signal.
     dt : float
         Time step.
-    nperseg : int, optional
-        Length of each segment. Can be set equal to the signal length to provide full frequency resolution.
-        Default 1/4 of the total signal length.
-    noverlap : int, optional
-        Number of points to overlap between segments. If None, noverlap = nperseg / 2. Defaults to None.
-    nfft : int, optional
-        Length of the FFT used, if a zero padded FFT is desired. Default the FFT length is nperseg.
-    detrend : str or function, optional
-        Specifies how to detrend each segment. If detrend is a string, it is passed as the type argument to
-        detrend. If it is a function, it takes a segment and returns a detrended segment. Defaults to ‘constant’.
+    kwargs : optional
+        See `scipy.signal.welch` documentation for available options.
 
     Returns
     -------
@@ -660,22 +603,7 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
 
     Notes
     -----
-    Welch’s method [1] computes an estimate of the power spectral density by dividing the data into overlapping
-    segments, computing a modified periodogram for each segment and averaging the periodograms. Welch method is
-    chosen over the periodogram as the spectral density is smoothed by adjusting the `nperseg` parameter. The
-    periodogram returns a raw spectrum which requires additional smoothing to get a readable spectral density plot.
-
-    An appropriate amount of overlap will depend on the choice of window and on your requirements. For the default
-    ‘hanning’ window an overlap of 50% is a reasonable trade off between accurately estimating the signal power,
-    while not over counting any of the data. Narrower windows may require a larger overlap.
-
-    If noverlap is 0, this method is equivalent to Bartlett’s method [2].
-
-    References
-    ----------
-    1. P. Welch, “The use of the fast Fourier transform for the estimation of power spectra: A method based on
-       time averaging over short, modified periodograms”, IEEE Trans. Audio Electroacoust. vol. 15, pp. 70-73, 1967.
-    2. M.S. Bartlett, “Periodogram Analysis and Continuous Spectra”, Biometrika, vol. 37, pp. 1-16, 1950.
+    This function basically wraps `scipy.signal.welch` to control defaults etc.
 
     See also
     --------
@@ -684,12 +612,7 @@ def psd(x, dt, nperseg=None, noverlap=None, detrend='constant', nfft=None):
     """
     x = np.asarray(x)
 
-    # if nperseg is not specified the segment length is set to 1/4 of the total signal.
-    if not nperseg:
-        nperseg = x.size/4
-
     # estimate psd using welch's definition
-    f, p = welch(x, fs=1./dt, nperseg=nperseg, noverlap=noverlap, nfft=nfft, detrend=detrend, window='hanning',
-                 return_onesided=True, scaling='density', axis=-1)
+    f, p = welch(x, fs=1./dt, **kwargs)
 
     return f, p

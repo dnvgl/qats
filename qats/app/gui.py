@@ -6,6 +6,7 @@ Module containing windows, widgets etc. to create the QATS application
 @author: perl
 """
 import logging
+import sys
 import os
 from itertools import cycle
 import numpy as np
@@ -13,11 +14,13 @@ from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
-    QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QDoubleSpinBox, QVBoxLayout, QPushButton, QAction, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar
+    QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
+    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QAction, \
+    QDialogButtonBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
+import json
 from pkg_resources import resource_filename, get_distribution, DistributionNotFound
 from .logger import QLogger
 from .threading import Worker
@@ -33,7 +36,8 @@ from .funcs import (
     calculate_psd,
     calculate_rfc,
     calculate_weibull_fit,
-    calculate_gumbel_fit
+    calculate_gumbel_fit,
+    calculate_stats
 )
 
 
@@ -43,12 +47,18 @@ LOGGING_LEVELS = dict(
     warning=logging.WARNING,
     error=logging.ERROR,
 )
+if sys.platform == "win32":
+    SETTINGS_FILE = os.path.join(os.getenv("APPDATA"), "qats.settings")
+else:
+    SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
+ICON_FILE = resource_filename("qats.app", "qats.ico")
 
 # TODO: New method that generalize threading
 # TODO: Explore how to create consecutive threads without handshake in main loop
 # todo: settings on file menu: nperseg= and detrend= for welch psd, Hz, rad/s or s for filters
 # todo: add technical guidance and result interpretation to help menu, link docs website
-# todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions, gumbel distributions etc.)
+# todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions,
+#  gumbel distributions etc.)
 # todo: read orcaflex time series files
 
 
@@ -79,16 +89,22 @@ class Qats(QMainWindow):
 
         """
         super(Qats, self).__init__(parent)
-
         assert logging_level in LOGGING_LEVELS, "invalid logging level: '%s'" % logging_level
+
+        # window title and icon (assumed located in 'images' at same level)
+        self.setWindowTitle("QATS")
+        self.icon = QIcon(ICON_FILE)
+        self.setWindowIcon(self.icon)
 
         # create pool for managing threads
         self.threadpool = QThreadPool()
 
-        # window title and icon (assumed located in 'images' at same level)
-        self.setWindowTitle("QATS")
-        self.icon = QIcon(resource_filename("qats.app", "qats.ico"))
-        self.setWindowIcon(self.icon)
+        # dictionary to hold settings
+        self.settings_file = SETTINGS_FILE
+        self.settings = dict()
+
+        # clipboard
+        self.clip = QGuiApplication.clipboard()
 
         # create statusbar
         self.db_status = QLabel()
@@ -138,12 +154,23 @@ class Qats(QMainWindow):
         vbox.addWidget(self.spectrum_mpl_toolbar)
         w.setLayout(vbox)
 
+        # statistics table
+        w = QWidget()
+        self.tabs.addTab(w, "Statistics")
+        self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
+        self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
+        self.stats_table = QTableWidget()
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.stats_table)
+        w.setLayout(vbox)
+        self.reset_stats_table()
+
         # weibull paper plot tab
         w = QWidget()
         self.tabs.addTab(w, "Maxima/Minima CDF")
-        self.tabs.setTabToolTip(2, "Plot fitted Weibull cumulative distribution function to maxima/minima of "
+        self.tabs.setTabToolTip(3, "Plot fitted Weibull cumulative distribution function to maxima/minima of "
                                    "selected time series")
-        self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
+        self.tabs.tabBar().setTabButton(3, QTabBar.RightSide, None)  # disable close button
         self.weibull_fig = Figure()
         self.weibull_canvas = FigureCanvas(self.weibull_fig)
         self.weibull_canvas.setParent(w)
@@ -157,9 +184,9 @@ class Qats(QMainWindow):
         # cycle distribution plot tab
         w = QWidget()
         self.tabs.addTab(w, "Cycle distribution")
-        self.tabs.setTabToolTip(3, "Plot distribution of cycle magnitude versus cycle count for "
+        self.tabs.setTabToolTip(4, "Plot distribution of cycle magnitude versus cycle count for "
                                    "selected time series")
-        self.tabs.tabBar().setTabButton(3, QTabBar.RightSide, None)  # disable close button
+        self.tabs.tabBar().setTabButton(4, QTabBar.RightSide, None)  # disable close button
         self.cycles_fig = Figure()
         self.cycles_canvas = FigureCanvas(self.cycles_fig)
         self.cycles_canvas.setParent(w)
@@ -398,6 +425,10 @@ class Qats(QMainWindow):
         clear_action.setStatusTip("Clear all time series from database")
         clear_action.triggered.connect(self.on_clear)
 
+        settings_action = QAction("Settings", self)
+        settings_action.setStatusTip("Configure application settings")
+        settings_action.triggered.connect(self.on_open_settings)
+
         quit_action = QAction("&Quit", self)
         quit_action.setShortcut("Ctrl+Q")
         quit_action.setToolTip("Close the application")
@@ -416,6 +447,7 @@ class Qats(QMainWindow):
         file_menu.addAction(import_action)
         file_menu.addAction(export_action)
         file_menu.addAction(clear_action)
+        file_menu.addAction(settings_action)
         file_menu.addSeparator()
         file_menu.addAction(quit_action)
         tool_menu.addAction(plot_gumbel_action)
@@ -427,6 +459,9 @@ class Qats(QMainWindow):
                 self.load_files([files_on_init])
             elif isinstance(files_on_init, tuple) or isinstance(files_on_init, list):
                 self.load_files(files_on_init)
+
+        # load settings from previous sessions.
+        self.load_settings()
 
         # refresh
         self.reset_axes()
@@ -446,6 +481,10 @@ class Qats(QMainWindow):
         # choose to pipe only the the exception value, not type nor full traceback
         logging.error("%s - %s" % exc[1:])
 
+    def closeEvent(self, event):
+        """Overload close event to save settings before exit."""
+        self.save_settings()
+
     def dragEnterEvent(self, event):
         """
         Event handler for dragging objects over main window. Overrides method in QWidget.
@@ -462,36 +501,37 @@ class Qats(QMainWindow):
         files = [u.toLocalFile() for u in event.mimeData().urls()]
         self.load_files(files)
 
-    def model_view_filter_changed(self):
+    def filter_settings(self):
         """
-        Apply filter changes to db proxy model
+        Return filter type and cut off frequencies
         """
-        syntax = QRegExp.PatternSyntax(self.db_view_filter_syntax.itemData(self.db_view_filter_syntax.currentIndex()))
-        case_sensitivity = (self.db_view_filter_casesensitivity.isChecked() and Qt.CaseSensitive or Qt.CaseInsensitive)
-        reg_exp = QRegExp(self.db_view_filter_pattern.text(), case_sensitivity, syntax)
-        self.db_proxy_model.setFilterRegExp(reg_exp)
+        if self.lowpass.isChecked():
+            args = ('lp', self.lowpass_f.value())
+        elif self.hipass.isChecked():
+            args = ('hp', self.hipass_f.value())
+        elif self.bandpass.isChecked():
+            args = ('bp', self.bandpass_lf.value(), self.bandpass_hf.value())
+        elif self.bandblock.isChecked():
+            args = ('bs', self.bandblock_lf.value(), self.bandblock_hf.value())
+        else:
+            args = None
 
-    def set_status(self, message=None, msecs=None):
-        """
-        Display status of the database and other temporary messages in the status bar
+        return args
 
-        Parameters
-        ----------
-        message : str, optional
-            Status message
-        msecs : int, optional
-            Duration of status message. By default the message will stay until overwritten.
-        """
-        # Update database status (permanent widget right of statusbar)
-        self.db_status.setText("%d time series in database" % self.db.n)
+    def keyPressEvent(self, e):
+        selected = self.stats_table.selectedRanges()
+        if e.key() == Qt.Key_C:  # Ctr+C
+            s = "\t".join([str(self.stats_table.horizontalHeaderItem(i).text()) for i in
+                                  range(selected[0].leftColumn(), selected[0].rightColumn() + 1)]) + "\n"
 
-        # show temporary message
-        if not message:
-            message = ""    # statusbar.showMessage() does not accept NoneType
-        if not msecs:
-            msecs = 0       # statusbar.showMessage() does not accept NoneType
-
-        self.statusBar().showMessage(message, msecs=msecs)
+            for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
+                for c in range(selected[0].leftColumn(), selected[0].rightColumn() + 1):
+                    try:
+                        s += str(self.stats_table.item(r, c).text()) + "\t"
+                    except AttributeError:
+                        s += "\t"
+                s = s[:-1] + "\n"  # eliminate last '\t'
+            self.clip.setText(s)
 
     def load_files(self, files):
         """
@@ -523,103 +563,271 @@ class Qats(QMainWindow):
             # Execute
             self.threadpool.start(worker)
 
-    def update_model(self, newdb):
+    def load_settings(self):
+        """Load settings from file."""
+        try:
+            with open(self.settings_file) as fp:
+                self.settings = json.load(fp)
+        except FileNotFoundError:
+            self.settings = dict()
+
+    def model_view_filter_changed(self):
         """
-        Fill item model with time series identifiers
-
-        Parameters
-        ----------
-        newdb : TsDB
-            Time series database
+        Apply filter changes to db proxy model
         """
-        # merge the loaded time series into the database
-        self.db.update(newdb)
+        syntax = QRegExp.PatternSyntax(self.db_view_filter_syntax.itemData(self.db_view_filter_syntax.currentIndex()))
+        case_sensitivity = (self.db_view_filter_casesensitivity.isChecked() and Qt.CaseSensitive or Qt.CaseInsensitive)
+        reg_exp = QRegExp(self.db_view_filter_pattern.text(), case_sensitivity, syntax)
+        self.db_proxy_model.setFilterRegExp(reg_exp)
 
-        # fill item model with time series by unique id (common path is removed)
-        names = self.db.list(names="*", relative=True, display=False)
-        self.db_source_model.clear()    # clear before re-adding
+    def on_about(self):
+        """
+        Show information about the application
+        """
+        # get distribution version
+        try:
+            # version at runtime from distribution/package info
+            version = get_distribution("qats").version
+        except DistributionNotFound:
+            # package is not installed
+            version = ""
 
-        for name in names:
-            # set each item as unchecked initially
-            item = QStandardItem(name)
-            item.setCheckState(Qt.Unchecked)
-            item.setCheckable(True)
-            item.setToolTip(os.path.join(self.db_common_path, name))
-            self.db_source_model.appendRow(item)
+        msg = "This is a low threshold tool for inspection of time series, power spectra and statistics. " \
+              "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
+              "Import qats Python package and use the <a href='https://qats.readthedocs.io/en/latest/'>API</a> " \
+              "when you need advanced features or want to extend it's functionality.<br><br>" \
+              "Please send feature requests, technical queries and bug reports to the developers on " \
+              "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
+              "ENJOY! <br><br>" \
+              f"QT API used: {QTPY_API_NAME}"
 
-        # common path of all time series id in db
-        self.db_common_path = self.db.common
+        msgbox = QMessageBox()
+        msgbox.setWindowIcon(self.icon)
+        msgbox.setIcon(QMessageBox.Information)
+        msgbox.setTextFormat(Qt.RichText)
+        msgbox.setText(msg.strip())
+        msgbox.setWindowTitle(f"About QATS - version {version}")
+        msgbox.exec_()
+
+    def on_clear(self):
+        """
+        Clear all time series from database
+        """
+        self.db.clear(names="*", display=False)
+        self.db_common_path = ""
+        self.db_source_model.clear()
+        self.reset_axes()
+        logging.info("Cleared all time series from database...")
         self.set_status()
 
-    def selected_series(self):
+    def on_create_gumbel_plot(self):
         """
-        Return list of names of checked series in item model
+        Create new tab with canvas and plot extremes sample on Gumbel scales
         """
-        selected_items = []
 
+        # list of selected series
+        selected_series = self.selected_series()
+
+        if len(selected_series) > 1:
+            # update statusbar
+            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
+
+            # Pass the function to execute, args, kwargs are passed to the run function
+            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
+            worker = Worker(read_timeseries, self.db, selected_series)
+
+            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
+            worker.signals.error.connect(self.log_thread_exception)
+
+            # grab results start further calculations
+            worker.signals.result.connect(self.start_gumbel_fit_thread)
+
+            # Execute
+            self.threadpool.start(worker)
+        else:
+            # inform user to select at least one time series before plotting
+            logging.info("Select more than 1 time series to fit a Gumbel distribution to sample of extremes.")
+
+    def on_display(self):
+        """
+        Plot checked data series when pressing the 'show' button.
+        """
+
+        # list of selected series
+        selected_series = self.selected_series()
+
+        if len(selected_series) >= 1:
+            # update statusbar
+            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
+
+            # Pass the function to execute, args, kwargs are passed to the run function
+            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
+            worker = Worker(read_timeseries, self.db, selected_series)
+
+            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
+            worker.signals.error.connect(self.log_thread_exception)
+
+            # grab results start further calculations
+            worker.signals.result.connect(self.start_times_series_processing_thread)
+
+            # Execute
+            self.threadpool.start(worker)
+
+        else:
+            # inform user to select at least one time series before plotting
+            logging.info("Select at least 1 time series before plotting.")
+
+    def on_export(self):
+        """
+        Export selected time series to file
+        """
+        # file save dialogue
+        dlg = QFileDialog()
+        dlg.setWindowIcon(self.icon)
+        options = dlg.Options()
+
+        name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
+                                      "Direct access file (*.ts);;"
+                                      "ASCII file with header (*.dat);;"
+                                      "All Files (*)", options=options)
+
+        # get list of selected time series
+        keys = self.selected_series()
+
+        # get ui settings
+        fargs = self.filter_settings()
+        twin = self.time_window()
+
+        if name:    # nullstring if file dialog is cancelled
+            # update statusbar
+            self.set_status("Exporting....")
+
+            # Pass the function to execute, args, kwargs are passed to the run function
+            worker = Worker(export_to_file, name, self.db, keys, twin, fargs)
+
+            # pipe exceptions to logger
+            worker.signals.error.connect(self.log_thread_exception)
+
+            # update status bar once finished
+            worker.signals.finished.connect(self.set_status)
+
+            # Execute
+            self.threadpool.start(worker)
+
+    def on_import(self):
+        """
+        File open dialogue
+        """
+        dlg = QFileDialog()
+        dlg.setWindowIcon(self.icon)
+        options = dlg.Options()
+        files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
+                                        "Direct access files (*.ts);;"
+                                        "SIMO S2X direct access files with info array (*.tda);;"
+                                        "RIFLEX SIMO binary files (*.bin);;"
+                                        "RIFLEX SIMO ASCII files (*.asc);;"
+                                        "Matlab files (*.mat);;"
+                                        "ASCII file with header (*.dat);;"
+                                        "SIMA H5 files (*.h5);;"
+                                        "CSV file with header (*.csv);;"
+                                        "All Files (*)", options=options)
+
+        # load files into db and update application model and view
+        self.load_files(files)
+
+    def on_no_filter(self):
+        """
+        Toggle off all filters and disable spin boxes
+        """
+        if self.db.n > 0:
+            self.lowpass_f.setEnabled(False)
+            self.hipass_f.setEnabled(False)
+            self.bandpass_lf.setEnabled(False)
+            self.bandpass_hf.setEnabled(False)
+            self.bandblock_lf.setEnabled(False)
+            self.bandblock_hf.setEnabled(False)
+
+    def on_lowpass(self):
+        """
+        Toggle off filters and disable spin boxes, except low-pass
+        """
+        if self.db.n > 0:
+            self.lowpass_f.setEnabled(True)
+            self.hipass_f.setEnabled(False)
+            self.bandpass_lf.setEnabled(False)
+            self.bandpass_hf.setEnabled(False)
+            self.bandblock_lf.setEnabled(False)
+            self.bandblock_hf.setEnabled(False)
+
+    def on_hipass(self):
+        """
+        Toggle off filters and disable spin boxes, except high-pass
+        """
+        if self.db.n > 0:
+            self.lowpass_f.setEnabled(False)
+            self.hipass_f.setEnabled(True)
+            self.bandpass_lf.setEnabled(False)
+            self.bandpass_hf.setEnabled(False)
+            self.bandblock_lf.setEnabled(False)
+            self.bandblock_hf.setEnabled(False)
+
+    def on_bandpass(self):
+        """
+        Toggle off filters and disable spin boxes, except band-pass
+        """
+        if self.db.n > 0:
+            self.lowpass_f.setEnabled(False)
+            self.hipass_f.setEnabled(False)
+            self.bandpass_lf.setEnabled(True)
+            self.bandpass_hf.setEnabled(True)
+            self.bandblock_lf.setEnabled(False)
+            self.bandblock_hf.setEnabled(False)
+
+    def on_bandblock(self):
+        """
+        Toggle off filters and disable spin boxes, except band-block
+        """
+        if self.db.n > 0:
+            self.lowpass_f.setEnabled(False)
+            self.hipass_f.setEnabled(False)
+            self.bandpass_lf.setEnabled(False)
+            self.bandpass_hf.setEnabled(False)
+            self.bandblock_lf.setEnabled(True)
+            self.bandblock_hf.setEnabled(True)
+
+    def on_select_all(self):
+        """
+        Check all items in item model
+        """
         for row_number in range(self.db_proxy_model.rowCount()):
-            # get index of item in proxy model and index of the same item in the source model
             proxy_index = self.db_proxy_model.index(row_number, 0)
             source_index = self.db_proxy_model.mapToSource(proxy_index)
+            item = self.db_source_model.itemFromIndex(source_index)
+            item.setCheckState(Qt.Checked)
 
-            # is this item checked?
-            is_selected = self.db_source_model.data(source_index, Qt.CheckStateRole) != 0
-
-            if is_selected:
-                # item path relative to common path in db
-                rpath = self.db_source_model.data(source_index)
-
-                # join with common path and add to list of checked items
-                selected_items.append(os.path.join(self.db_common_path, rpath))
-
-        return selected_items
-
-    def time_window(self):
+    def on_open_settings(self):
         """
-        Time window from spin boxes
+        Configure the application settings.
         """
-        return self.from_time.value(), self.to_time.value()
+        # load settings dialog with current settings
+        defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins())
+        psdnorm, nperseg, nbins, ok = SettingsDialog.settings(defaults, parent=self)
 
-    def reset_axes(self):
-        """
-        Clear and reset plot axes
-        """
-        self.history_axes.clear()
-        self.history_axes.grid(True)
-        self.history_axes.set_xlabel('Time (s)')
-        self.history_canvas.draw()
-        self.spectrum_axes.clear()
-        self.spectrum_axes.grid(True)
-        self.spectrum_axes.set_xlabel('Frequency (Hz)')
-        self.spectrum_axes.set_ylabel('Spectral density')
-        self.spectrum_canvas.draw()
-        self.weibull_axes.clear()
-        self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel('X - location')
-        self.weibull_axes.set_ylabel('Cumulative probability (-)')
-        self.weibull_canvas.draw()
-        self.cycles_axes.clear()
-        self.cycles_axes.grid(True)
-        self.cycles_axes.set_xlabel('Cycle magnitude')
-        self.cycles_axes.set_ylabel('Cycle count (-)')
-        self.cycles_canvas.draw()
+        # update settings
+        if ok:
+            self.settings["psd_normalized"] = psdnorm
+            self.settings["psd_nperseg"] = nperseg
+            self.settings["rfc_nbins"] = nbins
 
-    def filter_settings(self):
+    def on_unselect_all(self):
         """
-        Return filter type and cut off frequencies
+        Uncheck all items in item model
         """
-        if self.lowpass.isChecked():
-            args = ('lp', self.lowpass_f.value())
-        elif self.hipass.isChecked():
-            args = ('hp', self.hipass_f.value())
-        elif self.bandpass.isChecked():
-            args = ('bp', self.bandpass_lf.value(), self.bandpass_hf.value())
-        elif self.bandblock.isChecked():
-            args = ('bs', self.bandblock_lf.value(), self.bandblock_hf.value())
-        else:
-            args = None
-
-        return args
+        for row_number in range(self.db_proxy_model.rowCount()):
+            proxy_index = self.db_proxy_model.index(row_number, 0)
+            source_index = self.db_proxy_model.mapToSource(proxy_index)
+            item = self.db_source_model.itemFromIndex(source_index)
+            item.setCheckState(Qt.Unchecked)
 
     def plot_trace(self, container):
         """
@@ -871,6 +1079,133 @@ class Qats(QMainWindow):
         logging.info(f"Fitted Gumbel distribution to {txt} extreme sample of {sample.size}'. "
                      f"(location, scale) = ({loc}, {scale})")
 
+    def psd_nperseg(self):
+        """int: Length of segments used to estimate PSD with Welch's method."""
+        return self.settings.get("psd_nperseg", 20000)
+
+    def psd_normalized(self):
+        """bool: Plot PSD normalized by sample variance or not."""
+        return self.settings.get("psd_normalized", False)
+
+    def rfc_nbins(self):
+        """int: Number of bins in cycle distribution."""
+        return self.settings.get("rfc_nbins", 256)
+
+    def reset_axes(self):
+        """
+        Clear and reset plot axes
+        """
+        self.history_axes.clear()
+        self.history_axes.grid(True)
+        self.history_axes.set_xlabel('Time (s)')
+        self.history_canvas.draw()
+        self.spectrum_axes.clear()
+        self.spectrum_axes.grid(True)
+        self.spectrum_axes.set_xlabel('Frequency (Hz)')
+        self.spectrum_axes.set_ylabel('Spectral density')
+        self.spectrum_canvas.draw()
+        self.weibull_axes.clear()
+        self.weibull_axes.grid(True)
+        self.weibull_axes.set_xlabel('X - location')
+        self.weibull_axes.set_ylabel('Cumulative probability (-)')
+        self.weibull_canvas.draw()
+        self.cycles_axes.clear()
+        self.cycles_axes.grid(True)
+        self.cycles_axes.set_xlabel('Cycle magnitude')
+        self.cycles_axes.set_ylabel('Cycle count (-)')
+        self.cycles_canvas.draw()
+
+    def reset_stats_table(self):
+        """Reset statistics table."""
+        self.stats_table.setRowCount(0)
+        self.stats_table.setColumnCount(16)
+        self.stats_table.setAlternatingRowColors(True)
+        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Std.", "Skew.", "Kurt.", "Min.", "Max.", "Tz",
+                                                    "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
+                                                    "P .90"])
+        self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
+        self.stats_table.horizontalHeaderItem(1).setToolTip('Mean/average.')
+        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample minimum.')
+        self.stats_table.horizontalHeaderItem(3).setToolTip('Sample maximum.')
+        self.stats_table.horizontalHeaderItem(4).setToolTip('Unbiased standard deviation.')
+        self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
+        self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
+        self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
+        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
+                                                            'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to'
+                                                            'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to'
+                                                             'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
+                                                             'derived from sample maxima/minima distribution.')
+        self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
+                                                             'derived from sample maxima/minima distribution.')
+        self.stats_table.horizontalHeaderItem(13).setToolTip('Most probable largest maximum (MPM). 37 percentile in\n'
+                                                             'the extreme maxima/minima distribution. The generic\n'
+                                                             'Gumbel distribution is derived from the Weibull\n'
+                                                             'distribution fitted to sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(14).setToolTip('Expected largest maximum. 57 percentile in\n'
+                                                             'the extreme maxima/minima distribution. The generic\n'
+                                                             'Gumbel distribution is derived from the Weibull\n'
+                                                             'distribution fitted to sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(15).setToolTip('90 percentile in the extreme maxima/minima distribution.\n'
+                                                             'The generic Gumbel distribution is derived from the\n'
+                                                             'Weibull distribution fitted to sample maxima/minima.')
+        header = self.stats_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Interactive)
+        self.stats_table.verticalHeader().setVisible(False)
+
+    def save_settings(self):
+        """Save settings to file."""
+        with open(self.settings_file, "w") as fp:
+            json.dump(self.settings, fp, indent=2)
+
+    def set_status(self, message=None, msecs=None):
+        """
+        Display status of the database and other temporary messages in the status bar
+
+        Parameters
+        ----------
+        message : str, optional
+            Status message
+        msecs : int, optional
+            Duration of status message. By default the message will stay until overwritten.
+        """
+        # Update database status (permanent widget right of statusbar)
+        self.db_status.setText("%d time series in database" % self.db.n)
+
+        # show temporary message
+        if not message:
+            message = ""    # statusbar.showMessage() does not accept NoneType
+        if not msecs:
+            msecs = 0       # statusbar.showMessage() does not accept NoneType
+
+        self.statusBar().showMessage(message, msecs=msecs)
+
+    def selected_series(self):
+        """
+        Return list of names of checked series in item model
+        """
+        selected_items = []
+
+        for row_number in range(self.db_proxy_model.rowCount()):
+            # get index of item in proxy model and index of the same item in the source model
+            proxy_index = self.db_proxy_model.index(row_number, 0)
+            source_index = self.db_proxy_model.mapToSource(proxy_index)
+
+            # is this item checked?
+            is_selected = self.db_source_model.data(source_index, Qt.CheckStateRole) != 0
+
+            if is_selected:
+                # item path relative to common path in db
+                rpath = self.db_source_model.data(source_index)
+
+                # join with common path and add to list of checked items
+                selected_items.append(os.path.join(self.db_common_path, rpath))
+
+        return selected_items
+
     def start_times_series_processing_thread(self, container):
         """
         Start thread separate from main loop and process timeseries to calculate cycle distribution, power spectral
@@ -886,6 +1221,9 @@ class Qats(QMainWindow):
         # ui selections
         twin = self. time_window()
         fargs = self.filter_settings()
+        nperseg = self.psd_nperseg()
+        psdnorm = self.psd_normalized()
+        nbins = self.rfc_nbins()
 
         # start calculation of filtered and windows time series trace
         worker = Worker(calculate_trace, container, twin, fargs)
@@ -893,8 +1231,14 @@ class Qats(QMainWindow):
         worker.signals.result.connect(self.plot_trace)
         self.threadpool.start(worker)
 
+        # start calculations of statistics
+        worker = Worker(calculate_stats, container, twin, fargs)
+        worker.signals.error.connect(self.log_thread_exception)
+        worker.signals.result.connect(self.tabulate_stats)
+        self.threadpool.start(worker)
+
         # start calculations of psd
-        worker = Worker(calculate_psd, container, twin, fargs)
+        worker = Worker(calculate_psd, container, twin, fargs, nperseg, psdnorm)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_psd)
         self.threadpool.start(worker)
@@ -906,7 +1250,7 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of rfc
-        worker = Worker(calculate_rfc, container, twin, fargs)
+        worker = Worker(calculate_rfc, container, twin, fargs, nbins)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_rfc)
         self.threadpool.start(worker)
@@ -932,238 +1276,172 @@ class Qats(QMainWindow):
         worker.signals.result.connect(self.plot_gumbel)
         self.threadpool.start(worker)
 
-    def on_about(self):
+    def tabulate_stats(self, container):
         """
-        Show information about the application
-        """
-        # get distribution version
-        try:
-            # version at runtime from distribution/package info
-            version = get_distribution("qats").version
-        except DistributionNotFound:
-            # package is not installed
-            version = ""
+        Update table with time series statistics
 
-        # todo: Insert link to github issue tracker
-        msg = "This is a low threshold tool for inspection of time series, power spectra and statistics. " \
-              "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
-              "Import qats Python package and use the <a href='https://readthedocs.org/projects/qats/'>API</a> " \
-              "when you need advanced features or want to extend it's functionality.<br><br>" \
-              "Please send feature requests, technical queries and bug reports to the developers on " \
-              "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
-              "ENJOY! <br><br>" \
-              f"QT API used: {QTPY_API_NAME}"
-
-        msgbox = QMessageBox()
-        msgbox.setWindowIcon(self.icon)
-        msgbox.setIcon(QMessageBox.Information)
-        msgbox.setTextFormat(Qt.RichText)
-        msgbox.setText(msg.strip())
-        msgbox.setWindowTitle(f"About QATS - version {version}")
-        msgbox.exec_()
-
-    def on_clear(self):
+        Parameters
+        ----------
+        container : dict
+            Time series statistics
         """
-        Clear all time series from database
+        self.reset_stats_table()
+        self.stats_table.setRowCount(max(len(container), 50))
+        for i, (name, data) in enumerate(container.items()):
+            mean = data.get("mean")
+            std = data.get("std")
+            skew = data.get("skew")
+            kurt = data.get("kurt")
+            minx = data.get("min")
+            maxx = data.get("max")
+            tz = data.get("tz")
+            wloc = data.get("wloc")
+            wscale = data.get("wscale")
+            wshape = data.get("wshape")
+            gloc = data.get("gloc")
+            gscale = data.get("gscale")
+            p_37 = data.get("p_37")
+            p_57 = data.get("p_57")
+            p_90 = data.get("p_90")
+
+            cell = QTableWidgetItem(name)
+            cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            cell.setToolTip(name)
+            self.stats_table.setItem(i, 0, cell)
+
+            for j, value in enumerate([mean, minx, maxx, std, skew, kurt, tz, wloc, wscale, wshape, gloc, gscale,
+                                       p_37, p_57, p_90]):
+                cell = QTableWidgetItem(f"{value:12.5g}")
+                cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                self.stats_table.setItem(i, j + 1, cell)
+
+    def time_window(self):
         """
-        self.db.clear(names="*", display=False)
-        self.db_common_path = ""
-        self.db_source_model.clear()
-        self.reset_axes()
-        logging.info("Cleared all time series from database...")
+        Time window from spin boxes
+        """
+        return self.from_time.value(), self.to_time.value()
+
+    def update_model(self, newdb):
+        """
+        Fill item model with time series identifiers
+
+        Parameters
+        ----------
+        newdb : TsDB
+            Time series database
+        """
+        # merge the loaded time series into the database
+        self.db.update(newdb)
+
+        # fill item model with time series by unique id (common path is removed)
+        names = self.db.list(names="*", relative=True, display=False)
+        self.db_source_model.clear()    # clear before re-adding
+
+        for name in names:
+            # set each item as unchecked initially
+            item = QStandardItem(name)
+            item.setCheckState(Qt.Unchecked)
+            item.setCheckable(True)
+            item.setToolTip(os.path.join(self.db_common_path, name))
+            self.db_source_model.appendRow(item)
+
+        # common path of all time series id in db
+        self.db_common_path = self.db.common
         self.set_status()
 
-    def on_create_gumbel_plot(self):
+
+class SettingsDialog(QDialog):
+    """
+    Dialog to configure application settings.
+
+    Parameters
+    ----------
+    psdnorm : bool
+        Default value for PSD normalization.
+    nperseg : int
+        Default number of points in segment when estimating PSD.
+    nbins : int
+        Default number of bins in cycle distribution.
+    parent : QWidget, optional
+        Parent widget.
+    """
+    def __init__(self, psdnorm, nperseg, nbins, parent=None):
+        super(SettingsDialog, self).__init__(parent)
+        self.setWindowTitle("Configure application settings")
+        self.setWindowIcon(QIcon(ICON_FILE))
+        layout = QVBoxLayout()
+
+        self.psdnormcheckbox = QCheckBox("Plot normalized power spectral density")
+        self.psdnormcheckbox.setToolTip("Normalize power spectral density on maximum value to ease comparison of\n"
+                                        "signals of different order of magnitude.")
+        self.psdnormcheckbox.setChecked(False)
+        if psdnorm:
+            self.psdnormcheckbox.setChecked(True)
+        layout.addWidget(self.psdnormcheckbox)
+
+        self.psdnpersegspinbox = QSpinBox()
+        self.psdnpersegspinbox.setRange(100, 100000)
+        self.psdnpersegspinbox.setSingleStep(10)
+        self.psdnpersegspinbox.setEnabled(True)
+        self.psdnpersegspinbox.setValue(nperseg)
+        self.psdnpersegspinbox.setToolTip("When esimtating power spectral density using Welch's method the signal\n"
+                                          "is dived into overlapping segments and psd is estimated for each segment\n"
+                                          "and then averaged. The overlap is half of the segment length. The \n"
+                                          "psd-estimate is smoother with shorter segments.")
+        psdlayout = QHBoxLayout()
+        psdlayout.addWidget(QLabel("Length of segment used when estimating power spectral density"))
+        psdlayout.addStretch(1)
+        psdlayout.addWidget(self.psdnpersegspinbox)
+        layout.addLayout(psdlayout)
+
+        self.rfcnbinsspinbox = QSpinBox()
+        self.rfcnbinsspinbox.setRange(10, 1000)
+        self.rfcnbinsspinbox.setSingleStep(1)
+        self.rfcnbinsspinbox.setEnabled(True)
+        self.rfcnbinsspinbox.setValue(nbins)
+        self.rfcnbinsspinbox.setToolTip("Group the cycles counted using the Rainflow algorithm into a certain number\n"
+                                        "of bins of equal width.")
+        rfclayout = QHBoxLayout()
+        rfclayout.addWidget(QLabel("Number of bins in cycle distribution based on RFC method"))
+        rfclayout.addStretch(1)
+        rfclayout.addWidget(self.rfcnbinsspinbox)
+        layout.addLayout(rfclayout)
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+        self.setLayout(layout)
+
+    def get_settings(self):
+        """Collect settings."""
+        return self.psdnormcheckbox.isChecked(), self.psdnpersegspinbox.value(), self.rfcnbinsspinbox.value()
+
+    @staticmethod
+    def settings(defaults, parent=None):
+        """Create settings dialog and return settings.
+
+        Parameters
+        ----------
+        defaults : tuple
+            Default values for parameters norm, nperseg and nbins.
+        parent : QWidget, optional
+            Parent widget
+
+        Returns
+        -------
+        norm : bool
+            Normalized PSD estimates.
+        nperseg : int
+            Number of points in segment when estimating PSD using Welch's method.
+        nbins : int
+            Number of bins in cycle distributions.
         """
-        Create new tab with canvas and plot extremes sample on Gumbel scales
-        """
+        dnorm, dnperseg, dnbins = defaults
+        dialog = SettingsDialog(dnorm, dnperseg, dnbins, parent=parent)
+        result = dialog.exec_()
+        norm, nperseg, nbins = dialog.get_settings()
+        return norm, nperseg, nbins, result == QDialog.Accepted
 
-        # list of selected series
-        selected_series = self.selected_series()
 
-        if len(selected_series) > 1:
-            # update statusbar
-            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
-
-            # Pass the function to execute, args, kwargs are passed to the run function
-            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
-            worker = Worker(read_timeseries, self.db, selected_series)
-
-            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
-            worker.signals.error.connect(self.log_thread_exception)
-
-            # grab results start further calculations
-            worker.signals.result.connect(self.start_gumbel_fit_thread)
-
-            # Execute
-            self.threadpool.start(worker)
-        else:
-            # inform user to select at least one time series before plotting
-            logging.info("Select more than 1 time series to fit a Gumbel distribution to sample of extremes.")
-
-    def on_display(self):
-        """
-        Plot checked data series when pressing the 'show' button.
-        """
-
-        # list of selected series
-        selected_series = self.selected_series()
-
-        if len(selected_series) >= 1:
-            # update statusbar
-            self.set_status("Reading time series...", msecs=10000)  # will probably be erased by new status message
-
-            # Pass the function to execute, args, kwargs are passed to the run function
-            # todo: consider if it is necessary to pass copied db to avoid main loop freeze
-            worker = Worker(read_timeseries, self.db, selected_series)
-
-            # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
-            worker.signals.error.connect(self.log_thread_exception)
-
-            # grab results start further calculations
-            worker.signals.result.connect(self.start_times_series_processing_thread)
-
-            # Execute
-            self.threadpool.start(worker)
-
-        else:
-            # inform user to select at least one time series before plotting
-            logging.info("Select at least 1 time series before plotting.")
-
-    def on_export(self):
-        """
-        Export selected time series to file
-        """
-        # file save dialogue
-        dlg = QFileDialog()
-        dlg.setWindowIcon(self.icon)
-        options = dlg.Options()
-
-        name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
-                                      "Direct access file (*.ts);;"
-                                      "ASCII file with header (*.dat);;"
-                                      "All Files (*)", options=options)
-
-        # get list of selected time series
-        keys = self.selected_series()
-
-        # get ui settings
-        fargs = self.filter_settings()
-        twin = self.time_window()
-
-        if name:    # nullstring if file dialog is cancelled
-            # update statusbar
-            self.set_status("Exporting....")
-
-            # Pass the function to execute, args, kwargs are passed to the run function
-            worker = Worker(export_to_file, name, self.db, keys, twin, fargs)
-
-            # pipe exceptions to logger
-            worker.signals.error.connect(self.log_thread_exception)
-
-            # update status bar once finished
-            worker.signals.finished.connect(self.set_status)
-
-            # Execute
-            self.threadpool.start(worker)
-
-    def on_import(self):
-        """
-        File open dialogue
-        """
-        dlg = QFileDialog()
-        dlg.setWindowIcon(self.icon)
-        options = dlg.Options()
-        files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
-                                        "Direct access files (*.ts);;"
-                                        "SIMO S2X direct access files with info array (*.tda);;"
-                                        "RIFLEX SIMO binary files (*.bin);;"
-                                        "RIFLEX SIMO ASCII files (*.asc);;"
-                                        "Matlab files (*.mat);;"
-                                        "ASCII file with header (*.dat);;"
-                                        "SIMA H5 files (*.h5);;"
-                                        "CSV file with header (*.csv);;"
-                                        "All Files (*)", options=options)
-
-        # load files into db and update application model and view
-        self.load_files(files)
-
-    def on_no_filter(self):
-        """
-        Toggle off all filters and disable spin boxes
-        """
-        if self.db.n > 0:
-            self.lowpass_f.setEnabled(False)
-            self.hipass_f.setEnabled(False)
-            self.bandpass_lf.setEnabled(False)
-            self.bandpass_hf.setEnabled(False)
-            self.bandblock_lf.setEnabled(False)
-            self.bandblock_hf.setEnabled(False)
-
-    def on_lowpass(self):
-        """
-        Toggle off filters and disable spin boxes, except low-pass
-        """
-        if self.db.n > 0:
-            self.lowpass_f.setEnabled(True)
-            self.hipass_f.setEnabled(False)
-            self.bandpass_lf.setEnabled(False)
-            self.bandpass_hf.setEnabled(False)
-            self.bandblock_lf.setEnabled(False)
-            self.bandblock_hf.setEnabled(False)
-
-    def on_hipass(self):
-        """
-        Toggle off filters and disable spin boxes, except high-pass
-        """
-        if self.db.n > 0:
-            self.lowpass_f.setEnabled(False)
-            self.hipass_f.setEnabled(True)
-            self.bandpass_lf.setEnabled(False)
-            self.bandpass_hf.setEnabled(False)
-            self.bandblock_lf.setEnabled(False)
-            self.bandblock_hf.setEnabled(False)
-
-    def on_bandpass(self):
-        """
-        Toggle off filters and disable spin boxes, except band-pass
-        """
-        if self.db.n > 0:
-            self.lowpass_f.setEnabled(False)
-            self.hipass_f.setEnabled(False)
-            self.bandpass_lf.setEnabled(True)
-            self.bandpass_hf.setEnabled(True)
-            self.bandblock_lf.setEnabled(False)
-            self.bandblock_hf.setEnabled(False)
-
-    def on_bandblock(self):
-        """
-        Toggle off filters and disable spin boxes, except band-block
-        """
-        if self.db.n > 0:
-            self.lowpass_f.setEnabled(False)
-            self.hipass_f.setEnabled(False)
-            self.bandpass_lf.setEnabled(False)
-            self.bandpass_hf.setEnabled(False)
-            self.bandblock_lf.setEnabled(True)
-            self.bandblock_hf.setEnabled(True)
-
-    def on_select_all(self):
-        """
-        Check all items in item model
-        """
-        for row_number in range(self.db_proxy_model.rowCount()):
-            proxy_index = self.db_proxy_model.index(row_number, 0)
-            source_index = self.db_proxy_model.mapToSource(proxy_index)
-            item = self.db_source_model.itemFromIndex(source_index)
-            item.setCheckState(Qt.Checked)
-
-    def on_unselect_all(self):
-        """
-        Uncheck all items in item model
-        """
-        for row_number in range(self.db_proxy_model.rowCount()):
-            proxy_index = self.db_proxy_model.index(row_number, 0)
-            source_index = self.db_proxy_model.mapToSource(proxy_index)
-            item = self.db_source_model.itemFromIndex(source_index)
-            item.setCheckState(Qt.Unchecked)

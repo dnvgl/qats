@@ -39,14 +39,16 @@ class TestSignal(unittest.TestCase):
         dt = self.t[1] - self.t[0]
         xlp = lowpass(self.xnoise, dt, 0.1)
         xhp = highpass(self.xnoise, dt, 0.1)
-        self.assertTrue(np.allclose(self.xnoise, xlp + xhp))
+        deviation = max((xlp + xhp - self.xnoise) / self.xnoise)
+        self.assertLessEqual(deviation, 0.05)
 
     def test_reconstruct_signal_from_bandstop_and_bandpass(self):
         """Check that the sum of the lowpassed signal and the highpassed signal equals the original signal."""
         dt = self.t[1] - self.t[0]
         band = bandpass(self.xnoise, dt, 0.15, 0.25)
         rest = bandblock(self.xnoise, dt, 0.15, 0.25)
-        self.assertTrue(np.allclose(self.xnoise, band + rest))
+        deviation = max((band + rest - self.xnoise) / self.xnoise)
+        self.assertLessEqual(deviation, 0.05)
 
     def test_statistics_of_lowpassed_signal(self):
         """Check statistics against analytical solution."""
@@ -89,14 +91,14 @@ class TestSignal(unittest.TestCase):
     def test_psd_area_moment_0(self):
         """Check zero area moment of the spectral density."""
         dt = self.t[1] - self.t[0]
-        f, p = psd(self.x, dt)
+        f, p = psd(self.x, dt, nperseg=1000)
         df = f[1] - f[0]
         self.assertAlmostEqual(df * np.sum(p), np.var(self.x), delta=1.e-3)
 
     def test_psd_area_moment_2(self):
         """Check second area moment of the spectral density."""
         dt = self.t[1] - self.t[0]
-        f, p = psd(self.x2, dt)
+        f, p = psd(self.x2, dt, nperseg=1000)
         df = f[1] - f[0]
         m0 = df * np.sum(p)
         m2 = df * np.sum(f ** 2. * p)
