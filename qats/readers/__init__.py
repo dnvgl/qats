@@ -4,6 +4,7 @@ Sub-package with readers for various file formats.
 """
 from . import csv
 from . import direct_access
+from . import matlab_v72
 from . import matlab
 from . import other
 from . import sima
