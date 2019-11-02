@@ -5,6 +5,7 @@ Built on Sintef Ocean's model test export format
 import os
 import hdf5storage
 import fnmatch
+import numpy as np
 
 
 def read_names(path, verbose=False):
@@ -106,7 +107,7 @@ def read_data(path, names, verbose=False):
 
     for name in names:
         index_pos = mat_indices.index(name)
-        data[name] = mat['data'][:, index_pos]
+        data[name] = mat['data'][index_pos]
 
     return data
 
