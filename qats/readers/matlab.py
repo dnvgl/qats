@@ -107,7 +107,7 @@ def read_data(path, names, verbose=False):
 
     for name in names:
         index_pos = mat_indices.index(name)
-        data[name] = mat['data'][index_pos]
+        data[name] = mat['data'][:, index_pos]
 
     return data
 
