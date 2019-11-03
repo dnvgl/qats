@@ -653,7 +653,7 @@ class Qats(QMainWindow):
         """
         Plot checked data series when pressing the 'show' button.
         """
-
+        # self.reset_stats_table()  # debug
         # list of selected series
         selected_series = self.selected_series()
 
@@ -1289,30 +1289,34 @@ class Qats(QMainWindow):
         self.reset_stats_table()
         self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
-            mean = data.get("mean")
-            std = data.get("std")
-            skew = data.get("skew")
-            kurt = data.get("kurt")
-            minx = data.get("min")
-            maxx = data.get("max")
-            tz = data.get("tz")
-            wloc = data.get("wloc")
-            wscale = data.get("wscale")
-            wshape = data.get("wshape")
-            gloc = data.get("gloc")
-            gscale = data.get("gscale")
-            p_37 = data.get("p_37")
-            p_57 = data.get("p_57")
-            p_90 = data.get("p_90")
+            # mean = data.get("mean")
+            # std = data.get("std")
+            # skew = data.get("skew")
+            # kurt = data.get("kurt")
+            # minx = data.get("min")
+            # maxx = data.get("max")
+            # tz = data.get("tz")
+            # wloc = data.get("wloc")
+            # wscale = data.get("wscale")
+            # wshape = data.get("wshape")
+            # gloc = data.get("gloc")
+            # gscale = data.get("gscale")
+            # p_37 = data.get("p_37")
+            # p_57 = data.get("p_57")
+            # p_90 = data.get("p_90")
 
             cell = QTableWidgetItem(name)
             cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             cell.setToolTip(name)
             self.stats_table.setItem(i, 0, cell)
 
-            for j, value in enumerate([mean, std, skew, kurt, minx, maxx, tz, wloc, wscale, wshape, gloc, gscale,
-                                       p_37, p_57, p_90]):
-                cell = QTableWidgetItem(f"{value:12.5g}")
+            for j, key in enumerate(["mean", "std", "skew", "kurt", "min", "max", "tz", "wloc", "wscale", "wshape",
+                                     "gloc", "gscale", "p_37", "p_57", "p_90"]):
+                value = data.get(key, np.nan)
+                try:
+                    cell = QTableWidgetItem(f"{value:12.5g}")
+                except TypeError:
+                    cell = QTableWidgetItem("NaN")
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j + 1, cell)
 

@@ -1329,14 +1329,22 @@ class TimeSeries(object):
         # find global maxima, estimate weibull and gumbel parameters
         maxima = find_maxima(x)
 
+        wloc = wscale = wshape = gloc = gscale = tz = None
         if maxima is not None:
-            wloc, wscale, wshape = pwm(maxima)
-            nmax = maxima.size
-            n = round(statsdur / (t[-1] - t[0]) * nmax)
-            gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
-            tz = 1. / average_frequency(t, x)
-        else:
-            wloc = wscale = wshape = gloc = gscale = tz = None
+            try:
+                tz = 1. / average_frequency(t, x)
+            except IndexError:
+                # too few maxima, tz may not calculated (keep it as None)
+                pass
+            try:
+                wloc, wscale, wshape = pwm(maxima)
+                nmax = maxima.size
+                n = round(statsdur / (t[-1] - t[0]) * nmax)
+                gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
+            except ZeroDivisionError:
+                # Weibull fit failed -> let parameters stay None
+                # todo: if weibull2gumbel fails, is it handled by current try-except statement?
+                pass
 
         # establish output dictionary
         d = OrderedDict(
@@ -1346,14 +1354,18 @@ class TimeSeries(object):
             wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale
         )
 
-        # estimate extreme values
-        if maxima is not None:
-            g = Gumbel(loc=gloc, scale=gscale)
-            try:
-                values = g.invcdf(p=quantiles)
-            except AssertionError:
-                # return none for invalid combinations of distribution parameters
+        # if requested, estimate extreme values
+        if quantiles is not None:
+            if gloc is None:
+                # quantiles may not be calculated -> set to None
                 values = np.array([None] * len(quantiles))
+            else:
+                g = Gumbel(loc=gloc, scale=gscale)
+                try:
+                    values = g.invcdf(p=quantiles)
+                except AssertionError:
+                    # return none for invalid combinations of distribution parameters
+                    values = np.array([None] * len(quantiles))
 
             for q, v in zip(quantiles, values):
                 d["p_%.2f" % (100 * q)] = v
