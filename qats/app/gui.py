@@ -1126,11 +1126,11 @@ class Qats(QMainWindow):
                                                     "P .90"])
         self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
         self.stats_table.horizontalHeaderItem(1).setToolTip('Mean/average.')
-        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample minimum.')
-        self.stats_table.horizontalHeaderItem(3).setToolTip('Sample maximum.')
-        self.stats_table.horizontalHeaderItem(4).setToolTip('Unbiased standard deviation.')
-        self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
-        self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
+        self.stats_table.horizontalHeaderItem(2).setToolTip('Unbiased standard deviation.')
+        self.stats_table.horizontalHeaderItem(3).setToolTip('Skewness.')
+        self.stats_table.horizontalHeaderItem(4).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
+        self.stats_table.horizontalHeaderItem(5).setToolTip('Sample minimum.')
+        self.stats_table.horizontalHeaderItem(6).setToolTip('Sample maximum.')
         self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
         self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
                                                             'sample maxima/minima.')
@@ -1310,7 +1310,7 @@ class Qats(QMainWindow):
             cell.setToolTip(name)
             self.stats_table.setItem(i, 0, cell)
 
-            for j, value in enumerate([mean, minx, maxx, std, skew, kurt, tz, wloc, wscale, wshape, gloc, gscale,
+            for j, value in enumerate([mean, std, skew, kurt, minx, maxx, tz, wloc, wscale, wshape, gloc, gscale,
                                        p_37, p_57, p_90]):
                 cell = QTableWidgetItem(f"{value:12.5g}")
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
