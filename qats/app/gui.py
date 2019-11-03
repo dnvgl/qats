@@ -617,6 +617,7 @@ class Qats(QMainWindow):
         self.db_common_path = ""
         self.db_source_model.clear()
         self.reset_axes()
+        self.reset_stats_table()
         logging.info("Cleared all time series from database...")
         self.set_status()
 
