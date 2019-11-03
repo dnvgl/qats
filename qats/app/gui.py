@@ -1121,7 +1121,7 @@ class Qats(QMainWindow):
         self.stats_table.setRowCount(0)
         self.stats_table.setColumnCount(16)
         self.stats_table.setAlternatingRowColors(True)
-        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Std.", "Skew.", "Kurt.", "Min.", "Max.", "Tz",
+        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Min.", "Max.", "Std.", "Skew.", "Kurt.", "Tz",
                                                     "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
                                                     "P .90"])
         self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
