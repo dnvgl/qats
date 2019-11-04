@@ -653,7 +653,7 @@ class Qats(QMainWindow):
         """
         Plot checked data series when pressing the 'show' button.
         """
-        # self.reset_stats_table()  # debug
+        self.reset_stats_table()  # TODO: Rework the gui logic and implement an overall reseti()
         # list of selected series
         selected_series = self.selected_series()
 
@@ -1287,7 +1287,6 @@ class Qats(QMainWindow):
         container : dict
             Time series statistics
         """
-        self.reset_stats_table()
         self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
             cell = QTableWidgetItem(name)
