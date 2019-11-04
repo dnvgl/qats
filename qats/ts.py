@@ -892,7 +892,7 @@ class TimeSeries(object):
         """
         self._t, self.x = self.get(**kwargs)
 
-    def plot(self, figurename=None, **kwargs):
+    def plot(self, figurename=None, show=None, num=1, **kwargs):
         """
         Plot time series trace.
 
@@ -902,6 +902,10 @@ class TimeSeries(object):
             Time series names
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         kwargs : optional
             See documentation of TimeSeries.get() method for available options
 
@@ -909,17 +913,17 @@ class TimeSeries(object):
         # dict with numpy arrays: time and data
         t, x = self.get(**kwargs)
 
-        plt.figure(1)
+        plt.figure(num=num)
         plt.plot(t, x, label=self.name)
         plt.xlabel('Time (s)')
         plt.grid()
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_psd(self, figurename=None, **kwargs):
+    def plot_psd(self, figurename=None, show=None, num=1, **kwargs):
         """
         Plot time series power spectral density.
 
@@ -927,12 +931,16 @@ class TimeSeries(object):
         ----------
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         kwargs : optional
             see documentation of TimeSeries.psd() method for available options
 
         """
         # dict with TimeSeries objects
-        plt.figure(1)
+        plt.figure(num=num)
         f, p = self.psd(**kwargs)
         plt.plot(f, p, label=self.name)
         plt.xlabel('Frequency (Hz)')
@@ -941,10 +949,10 @@ class TimeSeries(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_range(self, n=200, w=None, figurename=None, **kwargs):
+    def plot_cycle_range(self, n=200, w=None, figurename=None, show=None, num=1, **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -956,6 +964,10 @@ class TimeSeries(object):
             Group by cycle range in *w* wide equidistant bins. Overrides *n*.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         kwargs : optional
             see documentation of TimeSeries.rfc() method for available options
 
@@ -972,6 +984,7 @@ class TimeSeries(object):
 
         r, _, c = zip(*cycles)      # unpack cycle range and count, ignore mean value
         dr = r[1] - r[0]            # bar width
+        plt.figure(num=num)
         plt.bar(r, c, dr, label=self.name)
         plt.xlabel('Cycle range')
         plt.ylabel('Cycle count (-)')
@@ -979,10 +992,10 @@ class TimeSeries(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_rangemean(self, n=None, w=None, figurename=None, **kwargs):
+    def plot_cycle_rangemean(self, n=None, w=None, figurename=None, show=None, num=1, **kwargs):
         """
         Plot cycle range-mean versus number of occurrences.
 
@@ -994,6 +1007,10 @@ class TimeSeries(object):
             Group by cycle range in *w* wide equidistant bins. Overrides *n*.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         kwargs : optional
             see documentation of TimeSeries.rfc() method for available options
 
@@ -1015,6 +1032,7 @@ class TimeSeries(object):
         ranges, means, counts = zip(*cycles)      # unpack cycle range, mean and count
 
         # the scatter plot (with double marker size for improved readability)
+        plt.figure(num=num)
         plt.scatter(means, ranges, s=[2. * c for c in counts], alpha=0.4, label=self.name)
         plt.xlabel('Cycle mean')
         plt.ylabel('Cycle range')
@@ -1022,10 +1040,10 @@ class TimeSeries(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_rangemean3d(self, nr=100, nm=100, figurename=None, **kwargs):
+    def plot_cycle_rangemean3d(self, nr=100, nm=100, figurename=None, show=None, num=1, **kwargs):
         """
         Plot cycle range-mean versus number of occurrences as 3D surface.
 
@@ -1037,6 +1055,10 @@ class TimeSeries(object):
             Group by cycle mean in *nm* equidistant bins.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         kwargs : optional
             see documentation of TimeSeries.get() method for available options
 
@@ -1048,7 +1070,7 @@ class TimeSeries(object):
         cycles = self.rfc(**kwargs)
         ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
 
-        fig = plt.figure()
+        fig = plt.figure(num=num)
         ax = fig.gca(projection='3d')
         ax.plot_surface(means, ranges, counts, cmap=cm.coolwarm)
         ax.set_xlabel('Cycle mean')
@@ -1056,7 +1078,7 @@ class TimeSeries(object):
         ax.set_zlabel('Cycle count')
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
     def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, normalize=False, **kwargs):
