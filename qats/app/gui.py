@@ -1132,12 +1132,12 @@ class Qats(QMainWindow):
         self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
         self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
         self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
-        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
-                                                            'sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to'
-                                                            'sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to'
-                                                             'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to\n'
+                                                            'sample maxima or -1 multiplied with the sample minima.')
+        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to\n'
+                                                            'sample maxima or -1 multiplied with the sample minima.')
+        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to\n'
+                                                             'sample maxima or -1 multiplied with the sample minima.')
         self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
                                                              'derived from sample maxima/minima distribution.')
         self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
