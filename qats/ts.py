@@ -952,7 +952,7 @@ class TimeSeries(object):
         if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_range(self, n=200, w=None, figurename=None, show=None, num=1, **kwargs):
+    def plot_cycle_range(self, n=200, w=None, bw=1., figurename=None, show=None, num=1, **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -962,6 +962,8 @@ class TimeSeries(object):
             Group by cycle range in *n* equidistant bins.
         w : float, optional
             Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+        bw : float, optional
+            Bar width, expressed as ratio of bin width.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         show : bool, optional
@@ -982,10 +984,10 @@ class TimeSeries(object):
                                                    "be different from None"
         cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
-        r, _, c = zip(*cycles)      # unpack cycle range and count, ignore mean value
-        dr = r[1] - r[0]            # bar width
+        r, _, c = zip(*cycles)  # unpack cycle range and count, ignore mean value
+        dr = r[1] - r[0]        # bin width, used as basis for bar width
         plt.figure(num=num)
-        plt.bar(r, c, dr, label=self.name)
+        plt.bar(r, c, dr * bw, label=self.name)
         plt.xlabel('Cycle range')
         plt.ylabel('Cycle count (-)')
         plt.grid()
