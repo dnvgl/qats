@@ -1121,16 +1121,16 @@ class Qats(QMainWindow):
         self.stats_table.setRowCount(0)
         self.stats_table.setColumnCount(16)
         self.stats_table.setAlternatingRowColors(True)
-        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Min.", "Max.", "Std.", "Skew.", "Kurt.", "Tz",
+        self.stats_table.setHorizontalHeaderLabels(["Name", "Min.", "Max.", "Mean", "Std.", "Skew.", "Kurt.", "Tz",
                                                     "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
                                                     "P .90"])
         self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
-        self.stats_table.horizontalHeaderItem(1).setToolTip('Mean/average.')
-        self.stats_table.horizontalHeaderItem(2).setToolTip('Unbiased standard deviation.')
-        self.stats_table.horizontalHeaderItem(3).setToolTip('Skewness.')
-        self.stats_table.horizontalHeaderItem(4).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
-        self.stats_table.horizontalHeaderItem(5).setToolTip('Sample minimum.')
-        self.stats_table.horizontalHeaderItem(6).setToolTip('Sample maximum.')
+        self.stats_table.horizontalHeaderItem(1).setToolTip('Sample minimum.')
+        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample maximum.')
+        self.stats_table.horizontalHeaderItem(3).setToolTip('Mean/average.')
+        self.stats_table.horizontalHeaderItem(4).setToolTip('Unbiased standard deviation.')
+        self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
+        self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
         self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
         self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
                                                             'sample maxima/minima.')
@@ -1289,34 +1289,18 @@ class Qats(QMainWindow):
         self.reset_stats_table()
         self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
-            # mean = data.get("mean")
-            # std = data.get("std")
-            # skew = data.get("skew")
-            # kurt = data.get("kurt")
-            # minx = data.get("min")
-            # maxx = data.get("max")
-            # tz = data.get("tz")
-            # wloc = data.get("wloc")
-            # wscale = data.get("wscale")
-            # wshape = data.get("wshape")
-            # gloc = data.get("gloc")
-            # gscale = data.get("gscale")
-            # p_37 = data.get("p_37")
-            # p_57 = data.get("p_57")
-            # p_90 = data.get("p_90")
-
             cell = QTableWidgetItem(name)
             cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             cell.setToolTip(name)
             self.stats_table.setItem(i, 0, cell)
 
-            for j, key in enumerate(["mean", "std", "skew", "kurt", "min", "max", "tz", "wloc", "wscale", "wshape",
+            for j, key in enumerate(["min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
                                      "gloc", "gscale", "p_37", "p_57", "p_90"]):
                 value = data.get(key, np.nan)
                 try:
                     cell = QTableWidgetItem(f"{value:12.5g}")
                 except TypeError:
-                    cell = QTableWidgetItem("NaN")
+                    cell = QTableWidgetItem("nan")
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j + 1, cell)
 
