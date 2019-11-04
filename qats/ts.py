@@ -1340,6 +1340,9 @@ class TimeSeries(object):
             pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
         else:
             wloc, wscale, wshape = pwm(mx)
+            if any(np.isnan([wloc, wscale, wshape])):
+                # force all parameters to nan if one (typically scale or shape) is
+                wloc = wscale = wshape = np.nan
             n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             try:
                 gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
