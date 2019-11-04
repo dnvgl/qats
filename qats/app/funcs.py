@@ -108,7 +108,7 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
-def calculate_stats(container, twin, fargs):
+def calculate_stats(container, twin, fargs, minima=False):
     """
     Calculate time series statistics
 
@@ -120,6 +120,8 @@ def calculate_stats(container, twin, fargs):
         Time window. Time series are cropped to time window before extracting maxima.
     fargs : tuple
         Filter arguments. Time series are filtered before extracting maxima.
+    minima : bool, optional
+        Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
 
     Returns
     -------
@@ -129,7 +131,7 @@ def calculate_stats(container, twin, fargs):
     container_out = dict()
 
     for name, ts in container.items():
-        _ = ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9))
+        _ = ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9), minima=minima)
         mean = _.get("mean")
         std = _.get("std")
         skew = _.get("skew")

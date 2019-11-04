@@ -1252,7 +1252,7 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), **kwargs):
+    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), minima=False, **kwargs):
         """
         Returns dictionary with time series properties and statistics
 
@@ -1263,6 +1263,8 @@ class TimeSeries(object):
             Default is 10800 seconds (3 hours).
         quantiles : tuple, optional
             Quantiles in the Gumbel distribution used for extreme value estimation, defaults to (0.37, 0.57, 0.90).
+        minima : bool, optional
+            Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
         kwargs
             Optional parameters passed to TimeSeries.get()
 
@@ -1325,19 +1327,24 @@ class TimeSeries(object):
             # too few maxima, tz may not calculated (keep it as None)
             tz = np.nan
 
-        # find global maxima
-        maxima = find_maxima(x)
-        if np.size(maxima) <= 1:
-            wloc, wscale, wshape, gloc, gscale = np.nan
+        # find global maxima or minima
+        if not minima:
+            f = 1.
+        else:
+            f = -1.
+
+        mx = find_maxima(f * x)
+        if np.size(mx) <= 1:
+            wloc = wscale = wshape = gloc = gscale = np.nan
             pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
         else:
-            wloc, wscale, wshape = pwm(maxima)
-            n = round(statsdur / (t[-1] - t[0]) * np.size(maxima))
+            wloc, wscale, wshape = pwm(mx)
+            n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             try:
                 gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
             except (AssertionError, ZeroDivisionError) as e:
                 # invalid distribution parameters or bad combinations
-                gloc, gscale = np.nan
+                gloc = gscale = np.nan
 
             try:
                 g = Gumbel(loc=gloc, scale=gscale)
@@ -1347,7 +1354,7 @@ class TimeSeries(object):
             else:
                 values = g.invcdf(p=quantiles)
             finally:
-                pvalues = {f"p_{100 * q:.2f}": v for q, v in zip(quantiles, values)}
+                pvalues = {f"p_{100 * q:.2f}": f * v for q, v in zip(quantiles, values)}
 
         # establish output dictionary
         d = OrderedDict(

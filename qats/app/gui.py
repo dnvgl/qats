@@ -1225,6 +1225,7 @@ class Qats(QMainWindow):
         nperseg = self.psd_nperseg()
         psdnorm = self.psd_normalized()
         nbins = self.rfc_nbins()
+        minima_stats = self.minima.isChecked()
 
         # start calculation of filtered and windows time series trace
         worker = Worker(calculate_trace, container, twin, fargs)
@@ -1233,7 +1234,7 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of statistics
-        worker = Worker(calculate_stats, container, twin, fargs)
+        worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.tabulate_stats)
         self.threadpool.start(worker)
@@ -1245,7 +1246,7 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of weibull
-        worker = Worker(calculate_weibull_fit, container, twin, fargs, self.minima.isChecked())
+        worker = Worker(calculate_weibull_fit, container, twin, fargs, minima=minima_stats)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_weibull)
         self.threadpool.start(worker)
