@@ -31,7 +31,7 @@ For comparison to specific branches, use the [GitHub compare](https://github.com
 `.plot_*()` methods of `TimeSeries` and `TsDB` classes (for background and more details, see [issue #55](https://github.com/dnvgl/qats/issues/55)):
 
 - Introduced optional parameter `num`, to control `matplotlib.pyplot` figure number.
-- Introduced optional parameter show (bool), to control whether pyplot.show() is invoked or not.
+- Introduced optional parameter `show` (bool), to control whether `pyplot.show()` is invoked or not.
 - `.plot_cycle_range()`: introduced optional parameter `bw`, to control bar width.
 
 #### Fixed
