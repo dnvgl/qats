@@ -1252,7 +1252,7 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), minima=False, **kwargs):
+    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), is_minima=False, include_sample=False, **kwargs):
         """
         Returns dictionary with time series properties and statistics
 
@@ -1263,8 +1263,10 @@ class TimeSeries(object):
             Default is 10800 seconds (3 hours).
         quantiles : tuple, optional
             Quantiles in the Gumbel distribution used for extreme value estimation, defaults to (0.37, 0.57, 0.90).
-        minima : bool, optional
+        is_minima : bool, optional
             Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
+        include_sample : bool, optional
+            Return sample of maxima or minima (minima=True).
         kwargs
             Optional parameters passed to TimeSeries.get()
 
@@ -1272,7 +1274,6 @@ class TimeSeries(object):
         -------
         OrderedDict
             Time series statistics (for details, see Notes below).
-
 
         Notes
         -----
@@ -1328,7 +1329,7 @@ class TimeSeries(object):
             tz = np.nan
 
         # find global maxima or minima
-        if not minima:
+        if not is_minima:
             f = 1.
         else:
             f = -1.
@@ -1361,8 +1362,8 @@ class TimeSeries(object):
             start=t[0], end=t[-1], duration=t[-1] - t[0], dtavg=np.mean(np.diff(t)),
             mean=x.mean(), std=tstd(x), skew=skew(x, bias=False),
             kurt=kurtosis(x, fisher=False, bias=False), min=x.min(), max=x.max(), tz=tz,
-            wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale,
-            **pvalues
+            wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, is_minima=is_minima,
+            sample=f * mx if include_sample else None, **pvalues
         )
         return d
 
