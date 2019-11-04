@@ -35,7 +35,6 @@ from .funcs import (
     calculate_trace,
     calculate_psd,
     calculate_rfc,
-    calculate_weibull_fit,
     calculate_gumbel_fit,
     calculate_stats
 )
@@ -617,6 +616,7 @@ class Qats(QMainWindow):
         self.db_common_path = ""
         self.db_source_model.clear()
         self.reset_axes()
+        self.reset_stats_table()
         logging.info("Cleared all time series from database...")
         self.set_status()
 
@@ -652,7 +652,7 @@ class Qats(QMainWindow):
         """
         Plot checked data series when pressing the 'show' button.
         """
-
+        self.reset_stats_table()  # TODO: Rework the gui logic and implement an overall reseti()
         # list of selected series
         selected_series = self.selected_series()
 
@@ -947,10 +947,10 @@ class Qats(QMainWindow):
         # draw
         for name, value in container.items():
             x = value.get("sample")
-            loc = value.get("loc")
-            scale = value.get("scale")
-            shape = value.get("shape")
-            is_minima = value.get("minima")
+            loc = value.get("wloc")
+            scale = value.get("wscale")
+            shape = value.get("wshape")
+            is_minima = value.get("is_minima")
 
             if x is None:
                 # skip
@@ -975,9 +975,6 @@ class Qats(QMainWindow):
                 logging.warning("Invalid sample for time series '%s'. Cannot fit Weibull distribution." % name)
 
             else:
-                logging.info(f"Fitted Weibull distribution to {txt} sample of {x.size} from '{name}'. "
-                             f"(location, scale, shape) = ({loc}, {scale}, {shape})")
-
                 # normalized quantiles from fitted distribution (inside if-statement to avoid log(negative_num)
                 q_norm_fitted = np.log(q_fitted)
 
@@ -1120,23 +1117,23 @@ class Qats(QMainWindow):
         self.stats_table.setRowCount(0)
         self.stats_table.setColumnCount(16)
         self.stats_table.setAlternatingRowColors(True)
-        self.stats_table.setHorizontalHeaderLabels(["Name", "Mean", "Std.", "Skew.", "Kurt.", "Min.", "Max.", "Tz",
+        self.stats_table.setHorizontalHeaderLabels(["Name", "Min.", "Max.", "Mean", "Std.", "Skew.", "Kurt.", "Tz",
                                                     "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
                                                     "P .90"])
         self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
-        self.stats_table.horizontalHeaderItem(1).setToolTip('Mean/average.')
-        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample minimum.')
-        self.stats_table.horizontalHeaderItem(3).setToolTip('Sample maximum.')
+        self.stats_table.horizontalHeaderItem(1).setToolTip('Sample minimum.')
+        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample maximum.')
+        self.stats_table.horizontalHeaderItem(3).setToolTip('Mean/average.')
         self.stats_table.horizontalHeaderItem(4).setToolTip('Unbiased standard deviation.')
         self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
         self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
         self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
-        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to'
-                                                            'sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to'
-                                                            'sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to'
-                                                             'sample maxima/minima.')
+        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to\n'
+                                                            'sample maxima or -1 multiplied with the sample minima.')
+        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to\n'
+                                                            'sample maxima or -1 multiplied with the sample minima.')
+        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to\n'
+                                                             'sample maxima or -1 multiplied with the sample minima.')
         self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
                                                              'derived from sample maxima/minima distribution.')
         self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
@@ -1224,6 +1221,7 @@ class Qats(QMainWindow):
         nperseg = self.psd_nperseg()
         psdnorm = self.psd_normalized()
         nbins = self.rfc_nbins()
+        minima_stats = self.minima.isChecked()
 
         # start calculation of filtered and windows time series trace
         worker = Worker(calculate_trace, container, twin, fargs)
@@ -1232,21 +1230,16 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of statistics
-        worker = Worker(calculate_stats, container, twin, fargs)
+        worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.tabulate_stats)
+        worker.signals.result.connect(self.plot_weibull)
         self.threadpool.start(worker)
 
         # start calculations of psd
         worker = Worker(calculate_psd, container, twin, fargs, nperseg, psdnorm)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_psd)
-        self.threadpool.start(worker)
-
-        # start calculations of weibull
-        worker = Worker(calculate_weibull_fit, container, twin, fargs, self.minima.isChecked())
-        worker.signals.error.connect(self.log_thread_exception)
-        worker.signals.result.connect(self.plot_weibull)
         self.threadpool.start(worker)
 
         # start calculations of rfc
@@ -1285,33 +1278,17 @@ class Qats(QMainWindow):
         container : dict
             Time series statistics
         """
-        self.reset_stats_table()
         self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
-            mean = data.get("mean")
-            std = data.get("std")
-            skew = data.get("skew")
-            kurt = data.get("kurt")
-            minx = data.get("min")
-            maxx = data.get("max")
-            tz = data.get("tz")
-            wloc = data.get("wloc")
-            wscale = data.get("wscale")
-            wshape = data.get("wshape")
-            gloc = data.get("gloc")
-            gscale = data.get("gscale")
-            p_37 = data.get("p_37")
-            p_57 = data.get("p_57")
-            p_90 = data.get("p_90")
-
             cell = QTableWidgetItem(name)
             cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             cell.setToolTip(name)
             self.stats_table.setItem(i, 0, cell)
 
-            for j, value in enumerate([mean, minx, maxx, std, skew, kurt, tz, wloc, wscale, wshape, gloc, gscale,
-                                       p_37, p_57, p_90]):
-                cell = QTableWidgetItem(f"{value:12.5g}")
+            for j, key in enumerate(["min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
+                                     "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]):
+                value = data.get(key, np.nan)
+                cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j + 1, cell)
 

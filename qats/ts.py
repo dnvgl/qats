@@ -1252,7 +1252,7 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=None, quantiles=None, **kwargs):
+    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), is_minima=False, include_sample=False, **kwargs):
         """
         Returns dictionary with time series properties and statistics
 
@@ -1260,9 +1260,13 @@ class TimeSeries(object):
         ----------
         statsdur : float
             Duration in seconds for estimation of extreme value distribution (Gumbel) from peak distribution (Weibull).
-            Default is 3 hours.
+            Default is 10800 seconds (3 hours).
         quantiles : tuple, optional
-            Quantiles in the Gumbel distribution used for extreme value estimation
+            Quantiles in the Gumbel distribution used for extreme value estimation, defaults to (0.37, 0.57, 0.90).
+        is_minima : bool, optional
+            Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
+        include_sample : bool, optional
+            Return sample of maxima or minima (minima=True).
         kwargs
             Optional parameters passed to TimeSeries.get()
 
@@ -1270,7 +1274,6 @@ class TimeSeries(object):
         -------
         OrderedDict
             Time series statistics (for details, see Notes below).
-
 
         Notes
         -----
@@ -1316,48 +1319,55 @@ class TimeSeries(object):
 
         >>> stats = ts.stats(twin=(500., 1e12))
         """
-        # handle defaults
-        if not statsdur:
-            statsdur = 10800.
-
-        if not quantiles:
-            quantiles = (0.37, 0.57, 0.9)
-
         # get time series as array
         t, x = self.get(**kwargs)
 
-        # find global maxima, estimate weibull and gumbel parameters
-        maxima = find_maxima(x)
-
-        if maxima is not None:
-            wloc, wscale, wshape = pwm(maxima)
-            nmax = maxima.size
-            n = round(statsdur / (t[-1] - t[0]) * nmax)
-            gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
+        try:
             tz = 1. / average_frequency(t, x)
+        except IndexError:
+            # too few maxima, tz may not calculated (keep it as None)
+            tz = np.nan
+
+        # find global maxima or minima
+        if not is_minima:
+            f = 1.
         else:
-            wloc = wscale = wshape = gloc = gscale = tz = None
+            f = -1.
+
+        mx = find_maxima(f * x)
+        if np.size(mx) <= 1:
+            wloc = wscale = wshape = gloc = gscale = np.nan
+            pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
+        else:
+            wloc, wscale, wshape = pwm(mx)
+            if any(np.isnan([wloc, wscale, wshape])):
+                # force all parameters to nan if one (typically scale or shape) is
+                wloc = wscale = wshape = np.nan
+            n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
+            try:
+                gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
+            except (AssertionError, ZeroDivisionError) as e:
+                # invalid distribution parameters or bad combinations
+                gloc = gscale = np.nan
+
+            try:
+                g = Gumbel(loc=gloc, scale=gscale)
+            except AssertionError as e:
+                # invalid distribution parameters
+                values = np.nan * np.ones(np.shape(quantiles))
+            else:
+                values = g.invcdf(p=quantiles)
+            finally:
+                pvalues = {f"p_{100 * q:.2f}": f * v for q, v in zip(quantiles, values)}
 
         # establish output dictionary
         d = OrderedDict(
             start=t[0], end=t[-1], duration=t[-1] - t[0], dtavg=np.mean(np.diff(t)),
             mean=x.mean(), std=tstd(x), skew=skew(x, bias=False),
             kurt=kurtosis(x, fisher=False, bias=False), min=x.min(), max=x.max(), tz=tz,
-            wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale
+            wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, is_minima=is_minima,
+            sample=f * mx if include_sample else None, **pvalues
         )
-
-        # estimate extreme values
-        if maxima is not None:
-            g = Gumbel(loc=gloc, scale=gscale)
-            try:
-                values = g.invcdf(p=quantiles)
-            except AssertionError:
-                # return none for invalid combinations of distribution parameters
-                values = np.array([None] * len(quantiles))
-
-            for q, v in zip(quantiles, values):
-                d["p_%.2f" % (100 * q)] = v
-
         return d
 
     def std(self, **kwargs):

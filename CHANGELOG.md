@@ -19,6 +19,10 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+#### Fixed
+- `TimeSeries.stats()`: `np.nan` is inserted for statistical values that cannot be calculated (e.g. Weibull parameters if fit fails).
+- Desktop application (GUI), statistics tab: fixed issues related to clearing the table, updating when Weibull fit fails and mismatch between values and table heading. For details, see [issue #58](https://github.com/dnvgl/qats/issues/58).
+
 ### [4.3.0] // 30.10.2019
 
 #### Added
