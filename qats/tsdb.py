@@ -1375,7 +1375,7 @@ class TsDB(object):
                 print("Loaded %d records from file '%s'." % (len(names), thefile))
                 print('\n'.join(names))
 
-    def plot(self, names=None, figurename=None, store=True, **kwargs):
+    def plot(self, names=None, figurename=None, show=None, num=1, store=True, **kwargs):
         """
         Plot time series traces.
 
@@ -1385,6 +1385,10 @@ class TsDB(object):
             Time series names
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
@@ -1405,7 +1409,7 @@ class TsDB(object):
         # dict with numpy arrays: time and data
         container = self.getda(names=names, store=store, **kwargs)
 
-        plt.figure(1)
+        plt.figure(num=num)
         for k, v in container.items():
             label = k  # todo: more readable label, e.g. remove commonpath
             plt.plot(v[0], v[1], label=label)
@@ -1415,10 +1419,10 @@ class TsDB(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_psd(self, names=None, figurename=None, store=True, **kwargs):
+    def plot_psd(self, names=None, figurename=None, show=None, num=1, store=True, **kwargs):
         """
         Plot time series power spectral density.
 
@@ -1428,6 +1432,10 @@ class TsDB(object):
             Time series names
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
@@ -1446,7 +1454,7 @@ class TsDB(object):
         # dict with TimeSeries objects
         container = self.getm(names=names, store=store)
 
-        plt.figure(1)
+        plt.figure(num=num)
         for k, v in container.items():
             f, p = v.psd(**kwargs)
             plt.plot(f, p, label=k)
@@ -1457,10 +1465,11 @@ class TsDB(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_range(self, names=None, n=200, w=None, figurename=None, store=True, **kwargs):
+    def plot_cycle_range(self, names=None, n=200, w=None, bw=1., figurename=None, show=None, num=1, store=True,
+                         **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -1472,8 +1481,14 @@ class TsDB(object):
             Group by cycle range in *n* equidistant bins.
         w : float, optional
             Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+        bw : float, optional
+            Bar width, expressed as ratio of bin width.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
@@ -1496,7 +1511,7 @@ class TsDB(object):
         assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
                                                    "be different from None"
 
-        plt.figure(1)
+        plt.figure(num=num)
         for k, v in container.items():
             # extract cycles
             cycles = v.rfc(**kwargs)
@@ -1504,9 +1519,9 @@ class TsDB(object):
             # rebin cycles
             cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
-            r, _, c = zip(*cycles)   # unpack range and count pairs, ignore mean value
-            dr = r[1] - r[0]     # bar width
-            plt.bar(r, c, dr, label=k, alpha=0.4)
+            r, _, c = zip(*cycles)  # unpack range and count pairs, ignore mean value
+            dr = r[1] - r[0]        # bin width, used as basis for bar width
+            plt.bar(r, c, dr * bw, label=k, alpha=0.4)
 
         plt.xlabel('Cycle range')
         plt.ylabel('Cycle count (-)')
@@ -1514,10 +1529,10 @@ class TsDB(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_rangemean(self, names=None, n=None, w=None, figurename=None, store=True, **kwargs):
+    def plot_cycle_rangemean(self, names=None, n=None, w=None, figurename=None, show=True, num=1, store=True, **kwargs):
         """
         Plot cycle range-mean versus number of occurrences.
 
@@ -1531,6 +1546,10 @@ class TsDB(object):
             Group by cycle range in *w* wide equidistant bins. Overrides *n*.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
+        show : bool, optional
+            Show figure? Defaults to False if `figurename` is specified, otherwise True.
+        num : int, optional
+            Matplotlib figure number. Defaults to 1.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         kwargs : optional
@@ -1552,7 +1571,7 @@ class TsDB(object):
         # dict with TimeSeries objects
         container = self.getm(names=names, store=store)
 
-        plt.figure(1)
+        plt.figure(num=num)
         for k, v in container.items():
             # extract cycles
             cycles = v.rfc(**kwargs)
@@ -1570,7 +1589,7 @@ class TsDB(object):
         plt.legend()
         if figurename is not None:
             plt.savefig(figurename)
-        else:
+        if show is True or (show is None and figurename is None):
             plt.show()
 
     def rename(self, name, newname):

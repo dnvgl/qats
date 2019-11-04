@@ -19,9 +19,26 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+
+### [4.4.0] // 04.11.2019
+
+#### Added
+
+`qats.fatigue.rainflow` module:
+
+- Introduced a new optional parameter `endpoints` (bool) to functions `reversals()`, `cycles()` and `cycle_counting()`. If set to True, first and last points in series passed are included as cycle start/end points. This is convenient if the series passed is already an array of reversal points, but should in general not be used otherwise. Default is `endpoints=False`, which gives the same behavior as before.
+
+`.plot_*()` methods of `TimeSeries` and `TsDB` classes (for background and more details, see [issue #55](https://github.com/dnvgl/qats/issues/55)):
+
+- Introduced optional parameter `num`, to control `matplotlib.pyplot` figure number.
+- Introduced optional parameter `show` (bool), to control whether `pyplot.show()` is invoked or not.
+- `.plot_cycle_range()`: introduced optional parameter `bw`, to control bar width.
+
 #### Fixed
+
 - `TimeSeries.stats()`: `np.nan` is inserted for statistical values that cannot be calculated (e.g. Weibull parameters if fit fails).
 - Desktop application (GUI), statistics tab: fixed issues related to clearing the table, updating when Weibull fit fails and mismatch between values and table heading. For details, see [issue #58](https://github.com/dnvgl/qats/issues/58).
+
 
 ### [4.3.0] // 30.10.2019
 
@@ -37,7 +54,7 @@ Restructured the functions for calculating power spectral density. *Note: The de
 
 ### [4.2.0] // 23.09.2019
 
-#### Changes
+#### Changed
 Replaced hard dependency on `PyQt5` with `QtPy`, due to `PyQt5`'s strong copyleft GPL license. `QtPy` is a shim over various Qt bindings such as: `PyQt4`, `PyQt5`, `Pyside` and `Pyside2`. The user must now install the preferred binding himself/herself, in order to use the GUI.
 
 Note: If several qt bindings are installed (e.g. `PyQt5` and `Pyside2`), the environmental variable `QT_API` may be used to control which binding is used. See https://pypi.org/project/QtPy/ for details.
@@ -107,7 +124,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.3.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.4.0...HEAD
+[4.4.0]: https://github.com/dnvgl/qats/compare/4.3.0...4.4.0
 [4.3.0]: https://github.com/dnvgl/qats/compare/4.2.0...4.3.0
 [4.2.0]: https://github.com/dnvgl/qats/compare/4.1.1...4.2.0
 [4.1.1]: https://github.com/dnvgl/qats/compare/4.0.1...4.1.1
