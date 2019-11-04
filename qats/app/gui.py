@@ -976,9 +976,6 @@ class Qats(QMainWindow):
                 logging.warning("Invalid sample for time series '%s'. Cannot fit Weibull distribution." % name)
 
             else:
-                logging.info(f"Fitted Weibull distribution to {txt} sample of {x.size} from '{name}'. "
-                             f"(location, scale, shape) = ({loc}, {scale}, {shape})")
-
                 # normalized quantiles from fitted distribution (inside if-statement to avoid log(negative_num)
                 q_norm_fitted = np.log(q_fitted)
 
