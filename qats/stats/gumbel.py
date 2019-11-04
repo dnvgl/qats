@@ -79,6 +79,8 @@ class Gumbel(object):
     """
 
     def __init__(self, loc, scale, data=None):
+        assert loc is not None, "Location parameter must be finite."
+        assert scale is not None and scale > 0, "Scale parameter must be finit and larger than 0."
         self.loc = loc
         self.scale = scale
 
