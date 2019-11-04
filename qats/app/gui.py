@@ -35,7 +35,6 @@ from .funcs import (
     calculate_trace,
     calculate_psd,
     calculate_rfc,
-    calculate_weibull_fit,
     calculate_gumbel_fit,
     calculate_stats
 )
@@ -948,10 +947,10 @@ class Qats(QMainWindow):
         # draw
         for name, value in container.items():
             x = value.get("sample")
-            loc = value.get("loc")
-            scale = value.get("scale")
-            shape = value.get("shape")
-            is_minima = value.get("minima")
+            loc = value.get("wloc")
+            scale = value.get("wscale")
+            shape = value.get("wshape")
+            is_minima = value.get("is_minima")
 
             if x is None:
                 # skip
@@ -1234,18 +1233,13 @@ class Qats(QMainWindow):
         worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.tabulate_stats)
+        worker.signals.result.connect(self.plot_weibull)
         self.threadpool.start(worker)
 
         # start calculations of psd
         worker = Worker(calculate_psd, container, twin, fargs, nperseg, psdnorm)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_psd)
-        self.threadpool.start(worker)
-
-        # start calculations of weibull
-        worker = Worker(calculate_weibull_fit, container, twin, fargs, minima=minima_stats)
-        worker.signals.error.connect(self.log_thread_exception)
-        worker.signals.result.connect(self.plot_weibull)
         self.threadpool.start(worker)
 
         # start calculations of rfc
@@ -1292,7 +1286,7 @@ class Qats(QMainWindow):
             self.stats_table.setItem(i, 0, cell)
 
             for j, key in enumerate(["min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
-                                     "gloc", "gscale", "p_37", "p_57", "p_90"]):
+                                     "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]):
                 value = data.get(key, np.nan)
                 cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)

@@ -128,75 +128,8 @@ def calculate_stats(container, twin, fargs, minima=False):
     dict
         Filtered and windowed time series and peaks/throughs
     """
-    container_out = dict()
-
-    for name, ts in container.items():
-        _ = ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9), minima=minima)
-        mean = _.get("mean")
-        std = _.get("std")
-        skew = _.get("skew")
-        kurt = _.get("kurt")
-        min = _.get("min")
-        max = _.get("max")
-        tz = _.get("tz")
-        wloc = _.get("wloc")
-        wscale = _.get("wscale")
-        wshape = _.get("wshape")
-        gloc = _.get("gloc")
-        gscale = _.get("gscale")
-        p_37 = _.get("p_37.00")
-        p_57 = _.get("p_57.00")
-        p_90 = _.get("p_90.00")
-
-        container_out[name] = dict(mean=mean, std=std, skew=skew, kurt=kurt, min=min, max=max, tz=tz, wloc=wloc,
-                                   wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, p_37=p_37, p_57=p_57,
-                                   p_90=p_90)
-
-    return container_out
-
-
-def calculate_weibull_fit(container, twin, fargs, minima=False):
-    """
-    Calculate time series maxima and fit Weibull distribution
-
-    Parameters
-    ----------
-    container : dict
-        TimeSeries objects
-    twin : tuple
-        Time window. Time series are cropped to time window before extracting maxima.
-    fargs : tuple
-        Filter arguments. Time series are filtered before extracting maxima.
-    minima : bool, optional
-        Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
-
-    Returns
-    -------
-    dict
-        Sample and fitted weibull distribution parameters
-    """
-    container_out = dict()
-
-    for name, ts in container.items():
-        if not minima:
-            # global maxima
-            m = ts.maxima(twin=twin, rettime=False, filterargs=fargs)
-            f = 1
-        else:
-            # global minima
-            m = ts.minima(twin=twin, rettime=False, filterargs=fargs)
-            f = -1     # flip sample for weibull fit
-
-        if (m is not None) and (len(m) > 1):
-            # fit weibull distribution parameter
-            a, b, c = weibull_pwm(f * m)
-        else:
-            # no sample or too small sample for estimation of parameters
-            m = a = b = c = None
-
-        container_out[name] = dict(sample=m, loc=a, scale=b, shape=c, minima=minima)
-
-    return container_out
+    return {name: ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9),
+                           is_minima=minima, include_sample=True) for name, ts in container.items()}
 
 
 def calculate_gumbel_fit(container, twin, fargs, minima=False):
