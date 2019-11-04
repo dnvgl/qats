@@ -1297,10 +1297,7 @@ class Qats(QMainWindow):
             for j, key in enumerate(["min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
                                      "gloc", "gscale", "p_37", "p_57", "p_90"]):
                 value = data.get(key, np.nan)
-                try:
-                    cell = QTableWidgetItem(f"{value:12.5g}")
-                except TypeError:
-                    cell = QTableWidgetItem("nan")
+                cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j + 1, cell)
 

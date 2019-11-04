@@ -1329,6 +1329,7 @@ class TimeSeries(object):
         maxima = find_maxima(x)
         if np.size(maxima) <= 1:
             wloc, wscale, wshape, gloc, gscale = np.nan
+            pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
         else:
             wloc, wscale, wshape = pwm(maxima)
             n = round(statsdur / (t[-1] - t[0]) * np.size(maxima))
