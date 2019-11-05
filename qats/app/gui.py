@@ -202,7 +202,6 @@ class Qats(QMainWindow):
 
         # initiate time series data base and checkable model and view with filter
         self.db = TsDB()
-        self.db_common_path = ""
         self.db_source_model = QStandardItemModel()
         self.db_proxy_model = CustomSortFilterProxyModel()
         self.db_proxy_model.setDynamicSortFilter(True)
@@ -618,7 +617,6 @@ class Qats(QMainWindow):
         Clear all time series from database
         """
         self.db.clear(names="*", display=False)
-        self.db_common_path = ""
         self.db_source_model.clear()
         self.reset_axes()
         self.reset_stats_table()
@@ -1208,7 +1206,7 @@ class Qats(QMainWindow):
                 rpath = self.db_source_model.data(source_index)
 
                 # join with common path and add to list of checked items
-                selected_items.append(os.path.join(self.db_common_path, rpath))
+                selected_items.append(os.path.join(self.db.common, rpath))
 
         return selected_items
 
@@ -1328,11 +1326,9 @@ class Qats(QMainWindow):
             item = QStandardItem(name)
             item.setCheckState(Qt.Unchecked)
             item.setCheckable(True)
-            item.setToolTip(os.path.join(self.db_common_path, name))
+            item.setToolTip(os.path.join(self.db.common, name))
             self.db_source_model.appendRow(item)
 
-        # common path of all time series id in db
-        self.db_common_path = self.db.common
         self.set_status()
 
 
