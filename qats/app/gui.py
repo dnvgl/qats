@@ -54,7 +54,6 @@ ICON_FILE = resource_filename("qats.app", "qats.ico")
 
 # TODO: New method that generalize threading
 # TODO: Explore how to create consecutive threads without handshake in main loop
-# todo: settings on file menu: nperseg= and detrend= for welch psd, Hz, rad/s or s for filters
 # todo: add technical guidance and result interpretation to help menu, link docs website
 # todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions,
 #  gumbel distributions etc.)
@@ -409,20 +408,25 @@ class Qats(QMainWindow):
         help_menu = self.menu_bar.addMenu("&Help")
 
         # create File menu and actions
-        import_action = QAction("&Import from file", self)
+        import_action = QAction("Import from file", self)
         import_action.setShortcut("Ctrl+I")
         import_action.setStatusTip("Import time series from file")
         import_action.triggered.connect(self.on_import)
 
-        export_action = QAction("&Export to file", self)
+        export_action = QAction("Export to file", self)
         export_action.setShortcut("Ctrl+E")
         export_action.setStatusTip("Export time series to file")
         export_action.triggered.connect(self.on_export)
 
-        clear_action = QAction("&Clear", self)
+        clear_action = QAction("Clear", self)
         clear_action.setShortcut("Ctrl+Del")
         clear_action.setStatusTip("Clear all time series from database")
         clear_action.triggered.connect(self.on_clear)
+
+        clear_log_action = QAction("Clear logger", self)
+        clear_log_action.setShortcut("Ctrl+Shift+Del")
+        clear_log_action.setStatusTip("Clear logger widget")
+        clear_log_action.triggered.connect(self.on_clear_logger)
 
         settings_action = QAction("Settings", self)
         settings_action.setStatusTip("Configure application settings")
@@ -446,6 +450,7 @@ class Qats(QMainWindow):
         file_menu.addAction(import_action)
         file_menu.addAction(export_action)
         file_menu.addAction(clear_action)
+        file_menu.addAction(clear_log_action)
         file_menu.addAction(settings_action)
         file_menu.addSeparator()
         file_menu.addAction(quit_action)
@@ -619,6 +624,10 @@ class Qats(QMainWindow):
         self.reset_stats_table()
         logging.info("Cleared all time series from database...")
         self.set_status()
+
+    def on_clear_logger(self):
+        """Clears logger widget."""
+        self.logger.widget.setText("")
 
     def on_create_gumbel_plot(self):
         """
