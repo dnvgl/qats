@@ -425,7 +425,7 @@ class Qats(QMainWindow):
         clear_log_action = QAction("Clear logger", self)
         clear_log_action.setShortcut("Ctrl+Shift+Del")
         clear_log_action.setStatusTip("Clear logger widget")
-        clear_log_action.triggered.connect(self.on_clear_logger)
+        clear_log_action.triggered.connect(self.logger.clear)
 
         settings_action = QAction("Settings", self)
         settings_action.setStatusTip("Configure application settings")
@@ -622,10 +622,6 @@ class Qats(QMainWindow):
         self.reset_stats_table()
         logging.info("Cleared all time series from database...")
         self.set_status()
-
-    def on_clear_logger(self):
-        """Clears logger widget."""
-        self.logger.widget.setText("")
 
     def on_create_gumbel_plot(self):
         """

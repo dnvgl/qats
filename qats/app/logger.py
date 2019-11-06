@@ -18,9 +18,13 @@ class QLogger(logging.Handler):
         self.widget = QTextBrowser(parent)
         self.widget.setReadOnly(True)
 
+    def clear(self):
+        """Clear widget."""
+        self.widget.setText("")
+
     def emit(self, record):
         """
-        Append logger record to text browser
+        Append logger record to text browser.
 
         Parameters
         ----------
