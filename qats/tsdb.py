@@ -89,6 +89,22 @@ class TsDB(object):
         self.register_keys = []     # register keys in the order the associated time series where loaded
         self._timekeys = dict()  # register of time keys (only relevant for .mat files)
 
+    def __contains__(self, item):
+        if isinstance(item, str):
+            # item interpreted as time series name
+            names = item
+        elif isinstance(item, TimeSeries):
+            names = TimeSeries.fullname
+        else:
+            raise TypeError(f"Unable to check containment of type '{type(item)}' items. Item must be string or"
+                            f"TimeSeries.")
+
+        match = self.list(names=names, display=False)
+        if len(match) > 0:
+            return True
+        else:
+            return False
+
     def __iter__(self):
         """
         Generator yielding time series in database
