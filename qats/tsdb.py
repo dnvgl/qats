@@ -100,6 +100,9 @@ class TsDB(object):
         else:
             return False
 
+    def __eq__(self, other):
+        return isinstance(other, TsDB) and other.uuid == self.uuid
+
     def __iter__(self):
         """
         Generator yielding time series in database
