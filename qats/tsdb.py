@@ -7,6 +7,7 @@ import os
 import glob
 import copy
 import fnmatch
+from uuid import uuid4
 import matplotlib.pyplot as plt
 import numpy as np
 from struct import pack
@@ -82,6 +83,7 @@ class TsDB(object):
     """
 
     def __init__(self, name=None):
+        self.uuid = uuid4()
         self.name = name
         self.register = OrderedDict()           # dictionary of unique id and time series objects
         self.register_parent = OrderedDict()    # dictionary of unique id and parent name (source/file name)
@@ -94,7 +96,7 @@ class TsDB(object):
             # item interpreted as time series name
             names = item
         elif isinstance(item, TimeSeries):
-            names = TimeSeries.fullname
+            names = item.fullname
         else:
             raise TypeError(f"Unable to check containment of type '{type(item)}' items. Item must be string or"
                             f"TimeSeries.")
@@ -118,7 +120,14 @@ class TsDB(object):
             yield self.register[key]
 
     def __repr__(self):
-        return '<TsDB "%s">' % self.name
+        return f"<TsDB id='{self.uuid}'>"
+
+    def __str__(self):
+        _ = f"type: TsDB\n" \
+            f"id : {self.uuid}\n" \
+            f"name : {self.name}\n" \
+            f"number of time series : {self.n}\n"
+        return _
 
     @classmethod
     def fromfile(cls, filenames, read=False, verbose=False):
