@@ -1,49 +1,71 @@
 """
-Readers for Matlab v >= 7.3 binary time series files, which ar in HDF5 format
-Built on Sintef Ocean's model test export format
+Readers for SINTEF Ocean test data exhange format based on the Matlab .mat file.
 """
 import os
 import hdf5storage
 import fnmatch
+import numpy as np
+from scipy.io import loadmat
+from datetime import datetime, timedelta
 
 
-def read_names(path, verbose=False):
+def read_names(path):
     """
-    Extracts time series names for `mat` data sets containing (or; interpreted as) time series from h5 based mat-file
-    exported from Matlab v=>7.3.
+    Read time series names from SINTEF Ocean test data exhange format based on the Matlab .mat file.
 
     Parameters
     ----------
-    path: str
-        Path (relative or absolute) to h5-file
-    verbose: bool, optional
-        If True, print info.
+    path : str
+        File path
 
     Returns
     -------
+    str
+        Name of the time array
     list
-        List of time series names (datasets)
+        Time series names
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
+
     """
-    if not os.path.isfile(path):
-        raise FileNotFoundError("file not found: %s" % path)
+    try:
+        # scipy loadmat will raise an NotImplementedError if file is v7.3 or newer (HDF5)
+        tname, names = read_names_v72(path)
+    except NotImplementedError:
+        tname, names = read_names_v73(path)
 
-    if verbose:
-        print('Identifying datasets on %s ...' % path)
+    return tname, names
 
-    names = []  # list of dataset names/keys (only for data sets that are time series)
 
-    # hdfstorage
-    mat = hdf5storage.loadmat(path)
-    shape = mat['chan_names'].shape
+def read_names_v72(path):
+    """
+    Read time series names from SINTEF Ocean test data exhange format based on the Matlab .mat file version < 7.3.
 
-    if shape[0] == 1 and shape[1] >= 1:
-        for name in mat['chan_names'][0]:
-            names.append((str(name[0][0])))
-    elif shape[0] >= 1 and shape[1] == 1:
-        for name in mat['chan_names']:
-            names.append((str(name[0][0][0])))
-    else:
-        raise KeyError("File does not contain a channel name vector: %s" % path)
+    Parameters
+    ----------
+    path : str
+        MAT file path (relative or absolute)
+
+    Returns
+    -------
+    str
+        Name of the time array
+    list
+        Time series names
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
+
+    Notes
+    -----
+    This code works for Matlab version < 7.3. For version >= 7.3, .mat is on hdf5 format
+    <http://pyhogs.github.io/reading-mat-files.html>.
+    """
+    mat = loadmat(path)
+    names = list(mat.keys())  # make list, since type dict_keys does not support remove()
 
     # identify time key, check that there is only one
     _tn = fnmatch.filter(names, '[Tt]ime*')
@@ -52,43 +74,146 @@ def read_names(path, verbose=False):
     elif len(_tn) > 1:
         raise KeyError("Duplicate time vectors on file: %s" % path)
 
-    # remove time key from list of time series
+    # filter names, keep only np.ndarrays of same size as time array
     timename = _tn[0]
-    names.remove(timename)
+    tsize = mat[timename].size
+    names = [k for k, v in mat.items() if (isinstance(v, np.ndarray) and v.size == tsize)]
 
-    print(names)
+    # remove time key from list of time series
+    names.remove(timename)
 
     return timename, names
 
 
-def read_data(path, names, verbose=False):
+def read_names_v73(path):
     """
-        Read time-series from MATLAB .mat v => 7.3 file.
+    Read time series names from SINTEF Ocean test data exhange format based on the Matlab .mat file version >= 7.3.
 
-        Parameters
-        ----------
-        path : str
-            Path (relative or absolute) to the time series file.
-        names : list
-            Names of the requested time series incl. the time array itself
-        verbose : bool, optional
-            Increase verbosity
+    Parameters
+    ----------
+    path: str
+        File path
 
-        Returns
-        -------
-        dict
-            Time and data
+    Returns
+    -------
+    str
+        Name of the time array
+    list
+        List of time series names (datasets)
+    """
+    if not os.path.isfile(path):
+        raise FileNotFoundError("file not found: %s" % path)
 
-        Examples
-        --------
-        >>> tname, names = read_names('data.mat')
-        >>> data = read_data('data.mat', names)
-        >>> t = data[tname]   # time
-        >>> x1 = data[names[0]]  # first data series
-        """
-    if verbose:
-        print('Reading %s ...' % path)
+    # hdfstorage
+    mat = hdf5storage.loadmat(path)
+    shape = mat['chan_names'].shape
+    names = list()
 
+    if shape[0] == 1 and shape[1] >= 1:
+        for name in mat['chan_names'][0]:
+            names.append((str(name[0][0])))
+    elif shape[0] >= 1 and shape[1] == 1:
+        for name in mat['chan_names']:
+            names.append((str(name[0][0][0])))
+    else:
+        raise KeyError(f"File does not contain a channel name vector: {path}")
+
+    # identify time key, check that there is only one
+    _tn = fnmatch.filter(names, '[Tt]ime*')
+    if len(_tn) < 1:
+        raise KeyError(f"File does not contain a time vector: {path}")
+    elif len(_tn) > 1:
+        raise KeyError(f"Duplicate time vectors on file: {path}")
+
+    # remove time key from list of time series
+    timename = _tn[0]
+    names.remove(timename)
+
+    return timename, names
+
+
+def read_data(path, names):
+    """
+    Read time series data from SINTEF Ocean test data exhange format based on the Matlab .mat file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    names : list
+        Names of the requested time series incl. the time array itself
+
+    Returns
+    -------
+    dict
+        Time and data
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
+    >>> data = read_data('data.mat', [tname, *names])
+    >>> t = data[tname]   # time
+    >>> x1 = data[names[0]]  # first data series
+
+    """
+    try:
+        # scipy loadmat will raise an NotImplementedError if file is v7.3 or newer (HDF5)
+        data = read_data_v72(path, names)
+    except NotImplementedError:
+        data = read_data_v73(path, names)
+
+    return data
+
+
+def read_data_v72(path, names):
+    """
+    Read time series data from SINTEF Ocean test data exhange format based on the Matlab .mat file version < 7.3.
+
+    Parameters
+    ----------
+    path : str
+        Path (relative or absolute) to the time series file.
+    names : list
+        Names of the requested time series incl. the time array itself
+
+    Returns
+    -------
+    dict
+        Time and data
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
+    >>> data = read_data('data.mat', [tname, *names])
+    >>> t = data[tname]   # time
+    >>> x1 = data[names[0]]  # first data series
+    """
+    return loadmat(path, squeeze_me=True, variable_names=names)
+
+
+def read_data_v73(path, names):
+    """
+    Read time series names from SINTEF Ocean test data exhange format based on the Matlab .mat file version >= 7.3.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    names : list
+        Names of the requested time series incl. the time array itself
+
+    Returns
+    -------
+    dict
+        Time and data
+
+    Examples
+    --------
+    >>> tname, names = read_names('data.mat')
+    >>> data = read_data('data.mat', [tname, *names])
+    >>> t = data[tname]   # time
+    >>> x1 = data[names[0]]  # first data series
+    """
     mat_indices = []
     data = {}
 
@@ -111,8 +236,33 @@ def read_data(path, names, verbose=False):
     return data
 
 
-if __name__ == '__main__':
-    path = os.path.join('C:\\Users', 'ebg', 'OneDrive - SevanSSP AS', 'Projects', 'Cambo', 'ModelTest', 'CE21130.mat')
-    tname, names = read_names(path)
-    data = read_data(path, names)
-    x1 = data[names[0]]  # first data series
+def _datenums_to_datetime(timearr):
+    """
+    Convert array of MATLAB datenum floats to array of datetime objects.
+
+    Parameters
+    ----------
+    timearr: array_like or float
+        Time array.
+
+    Returns
+    -------
+    array
+        Array of datetime objects, same shape as input array.
+    """
+    def convert(dn):
+        # ref: https://stackoverflow.com/questions/13965740/converting-matlabs-datenum-format-to-python
+        _dtg = datetime.fromordinal(int(dn)) + timedelta(days=dn % 1) - timedelta(days=366)
+        return _dtg
+
+    # return quickly if float (not array) is given
+    if np.ndim(timearr) == 0:
+        return convert(timearr)
+
+    # convert array
+    timearr = np.asarray(timearr)
+    was_shape = timearr.shape
+    timearr = timearr.flatten()
+    dtarray = np.array([convert(t) for t in timearr])
+    return dtarray.reshape(was_shape)
+

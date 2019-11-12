@@ -729,7 +729,7 @@ class Qats(QMainWindow):
                                         "SIMO S2X direct access files with info array (*.tda);;"
                                         "RIFLEX SIMO binary files (*.bin);;"
                                         "RIFLEX SIMO ASCII files (*.asc);;"
-                                        "Matlab files (*.mat);;"
+                                        "SINTEF Ocean test data export format (*.mat);;"
                                         "ASCII file with header (*.dat);;"
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"

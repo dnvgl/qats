@@ -38,10 +38,6 @@ from .readers.matlab import (
     read_names as read_mat_names,
     read_data as read_mat_data
 )
-from .readers.matlab_v72 import (
-    read_names as read_mat_v72_names,
-    read_data as read_mat_v72_data
-)
 from .readers.other import (
     read_dat_names,
     read_dat_data
@@ -551,14 +547,9 @@ class TsDB(object):
 
             elif fext == '.mat':
                 _tk = self._timekeys[parent]
-                try:
-                    data = read_mat_v72_data(parent, [_tk, *names])
-                    for i, name in enumerate(names):
-                        tslist[i] = TimeSeries(name, data[_tk], data[name], parent=parent)
-                except NotImplementedError:
-                    data = read_mat_data(parent, [_tk, *names])
-                    for i, name in enumerate(names):
-                        tslist[i] = TimeSeries(name, data[_tk], data[name], parent=parent)
+                data = read_mat_data(parent, [_tk, *names])
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[_tk], data[name], parent=parent)
 
             elif fext in ('.h5', '.hdf5'):
                 data = read_sima_h5_data(parent, names=names)
@@ -1370,18 +1361,9 @@ class TsDB(object):
                 names = read_dat_names(thefile)
 
             elif fext == '.mat':
-                try:
-                    # Matlab format for versions < 7.3
-                    _tk, names = read_mat_v72_names(thefile)
-                    self._timekeys[thefile] = _tk   # remember the name of the time array
-                except NotImplementedError:
-                    # Matlab format for version => 7.3
-                    print('Matlab 7.3 file!')
-                    _tk, names = read_mat_names(thefile)
-                    print(_tk)
-                    for name in names:
-                        print(name)
-                    self._timekeys[thefile] = _tk   # remember the name of the time array
+                # SINTEF Ocean test data export format based on Matlab .mat files.
+                _tk, names = read_mat_names(thefile)
+                self._timekeys[thefile] = _tk   # remember the name of the time array
 
             elif fext in ('.h5', '.hdf5'):
                 # sima h5
