@@ -49,13 +49,6 @@ from .readers.other import (
 
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
-# todo: consider implementing TsDB.__contains__ hook
-'''
-Regarding __contains__ hook, see:
-https://docs.python.org/3/reference/datamodel.html#object.__contains__
-https://stackoverflow.com/questions/30081275/why-is-1000000000000000-in-range1000000000000001-so-fast-in-python-3?rq=1
---> is it needed? Eg. ``'line1' in tsdb``
-'''
 
 
 class TsDB(object):
@@ -118,6 +111,9 @@ class TsDB(object):
         """
         for key in self.register_keys:
             yield self.register[key]
+
+    def __len__(self):
+        return self.n
 
     def __repr__(self):
         return f"<TsDB id='{self.uuid}'>"
