@@ -34,7 +34,7 @@ from .readers.direct_access import (
     read_ts_data,
     read_tda_data,
 )
-from .readers.matlab import (
+from .readers.sintef_mat import (
     read_names as read_mat_names,
     read_data as read_mat_data
 )
