@@ -109,7 +109,9 @@ class TsDB(object):
             time series in database
         """
         for key in self.register_keys:
-            yield self.register[key]
+            item = self.register[key]
+            if item is not None:
+                yield self.register[key]
 
     def __len__(self):
         return self.n
@@ -1393,7 +1395,6 @@ class TsDB(object):
 
             if read is True:
                 keys = [os.path.join(thefile, name) for name in names]
-                print(keys)
                 _ = self._read(keys, store=True)
 
             if verbose:
