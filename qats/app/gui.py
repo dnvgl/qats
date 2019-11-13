@@ -47,7 +47,7 @@ LOGGING_LEVELS = dict(
     error=logging.ERROR,
 )
 if sys.platform == "win32":
-    SETTINGS_FILE = os.path.join(os.getenv("APPDATA"), "qats.settings")
+    SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")
 else:
     SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
