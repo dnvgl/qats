@@ -22,7 +22,7 @@ setup(
     python_requires="~=3.6",
     setup_requires=["setuptools_scm"],
     install_requires=[
-        "openpyxl>=2,<3",
+        "openpyxl>=3,<4",
         "numpy>=1,<2",
         "scipy>=1,<2",
         "matplotlib>=3,<4",
