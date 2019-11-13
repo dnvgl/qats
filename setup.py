@@ -29,7 +29,7 @@ setup(
         "h5py>=2.7,<3",
         "QtPy>=1,<2",
         "pandas>=0.24,<1",
-        "pymatreader>=0.0.20,<1"
+        "pymatreader>=0.0.20,<1",
         "pywin32; platform_system == 'Windows'"
     ],
     entry_points={
