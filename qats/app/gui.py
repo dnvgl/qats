@@ -47,7 +47,7 @@ LOGGING_LEVELS = dict(
     error=logging.ERROR,
 )
 if sys.platform == "win32":
-    SETTINGS_FILE = os.path.join(os.getenv("APPDATA"), "qats.settings")
+    SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")
 else:
     SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
@@ -425,7 +425,7 @@ class Qats(QMainWindow):
         clear_log_action = QAction("Clear logger", self)
         clear_log_action.setShortcut("Ctrl+Shift+Del")
         clear_log_action.setStatusTip("Clear logger widget")
-        clear_log_action.triggered.connect(self.on_clear_logger)
+        clear_log_action.triggered.connect(self.logger.clear)
 
         settings_action = QAction("Settings", self)
         settings_action.setStatusTip("Configure application settings")
@@ -623,10 +623,6 @@ class Qats(QMainWindow):
         logging.info("Cleared all time series from database...")
         self.set_status()
 
-    def on_clear_logger(self):
-        """Clears logger widget."""
-        self.logger.widget.setText("")
-
     def on_create_gumbel_plot(self):
         """
         Create new tab with canvas and plot extremes sample on Gumbel scales
@@ -733,7 +729,7 @@ class Qats(QMainWindow):
                                         "SIMO S2X direct access files with info array (*.tda);;"
                                         "RIFLEX SIMO binary files (*.bin);;"
                                         "RIFLEX SIMO ASCII files (*.asc);;"
-                                        "Matlab files (*.mat);;"
+                                        "SINTEF Ocean test data export format (*.mat);;"
                                         "ASCII file with header (*.dat);;"
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"

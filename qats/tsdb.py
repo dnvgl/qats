@@ -7,6 +7,7 @@ import os
 import glob
 import copy
 import fnmatch
+from uuid import uuid4
 import matplotlib.pyplot as plt
 import numpy as np
 from struct import pack
@@ -33,7 +34,7 @@ from .readers.direct_access import (
     read_ts_data,
     read_tda_data,
 )
-from .readers.matlab import (
+from .readers.sintef_mat import (
     read_names as read_mat_names,
     read_data as read_mat_data
 )
@@ -44,13 +45,6 @@ from .readers.other import (
 
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
-# todo: consider implementing TsDB.__contains__ hook
-'''
-Regarding __contains__ hook, see:
-https://docs.python.org/3/reference/datamodel.html#object.__contains__
-https://stackoverflow.com/questions/30081275/why-is-1000000000000000-in-range1000000000000001-so-fast-in-python-3?rq=1
---> is it needed? Eg. ``'line1' in tsdb``
-'''
 
 
 class TsDB(object):
@@ -78,12 +72,32 @@ class TsDB(object):
     """
 
     def __init__(self, name=None):
+        self.uuid = uuid4()
         self.name = name
         self.register = OrderedDict()           # dictionary of unique id and time series objects
         self.register_parent = OrderedDict()    # dictionary of unique id and parent name (source/file name)
         self.register_indices = OrderedDict()   # dictionary of unique id and the time series index on parent file
         self.register_keys = []     # register keys in the order the associated time series where loaded
         self._timekeys = dict()  # register of time keys (only relevant for .mat files)
+
+    def __contains__(self, item):
+        if isinstance(item, str):
+            # item interpreted as time series name
+            names = item
+        elif isinstance(item, TimeSeries):
+            names = item.fullname
+        else:
+            raise TypeError(f"Unable to check containment of type '{type(item)}' items. Item must be string or"
+                            f"TimeSeries.")
+
+        match = self.list(names=names, display=False)
+        if len(match) > 0:
+            return True
+        else:
+            return False
+
+    def __eq__(self, other):
+        return isinstance(other, TsDB) and other.uuid == self.uuid
 
     def __iter__(self):
         """
@@ -95,10 +109,22 @@ class TsDB(object):
             time series in database
         """
         for key in self.register_keys:
-            yield self.register[key]
+            item = self.register[key]
+            if item is not None:
+                yield self.register[key]
+
+    def __len__(self):
+        return self.n
 
     def __repr__(self):
-        return '<TsDB "%s">' % self.name
+        return f"<TsDB id='{self.uuid}'>"
+
+    def __str__(self):
+        _ = f"type: TsDB\n" \
+            f"id : {self.uuid}\n" \
+            f"name : {self.name}\n" \
+            f"number of time series : {self.n}\n"
+        return _
 
     @classmethod
     def fromfile(cls, filenames, read=False, verbose=False):
@@ -1337,7 +1363,7 @@ class TsDB(object):
                 names = read_dat_names(thefile)
 
             elif fext == '.mat':
-                # Matlab format for versions < 7.3
+                # SINTEF Ocean test data export format based on Matlab .mat files.
                 _tk, names = read_mat_names(thefile)
                 self._timekeys[thefile] = _tk   # remember the name of the time array
 
@@ -1734,4 +1760,3 @@ class TsDB(object):
             self.register_indices[key] = tsdb.register_indices[key]
 
         return
-
