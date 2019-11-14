@@ -19,6 +19,38 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.6.0] // 14.11.2019
+
+#### Added
+New reader for SINTEF Ocean data exchange format based on Matlab .mat files. It now supports all .mat file format versions <=7.3.
+
+`TsDB` has a new attribute `uuid` with a universally unique identifier.
+
+`TsDB` now supports length, membership and equality operations like:
+ ```python
+ db = TsDB.fromfile('data.csv')
+ db_two = TsDB()
+ len(db)
+ 14
+ 'ts_a_name' in db
+ True
+ db_two == db
+ False
+ ```
+
+#### Changed
+
+The file format previously referred to as Matlab files is now more precisely described as the data exchange format used by SINTEF Ocean. The submodule `qats.readers.matlab` has been renamed to `qats.readers.sintef_mat`. _Note: for backwards compatibilty, the submodule is still available as `qats.readers.matlab` due to aliased import at `qats.readers` level._
+
+The `__repr__` and `__str__` methods on the `TsDB` class are improved to better serve their indented purposes, respectively: unambiguous and readable.
+
+Previously iteration of a `TsDB` instance would return `None` for those time series which data was **not** loaded from file. Now iteration return `TimeSeries` instances for those time series which data has been loaded from file and skip the other.
+
+Updated the package and environment requirements.
+
+#### Fixed
+Prevent error raised when the env. variable `APPDATA` does not exist.
+
 ### [4.5.0] // 05.11.2019
 
 #### Added
@@ -134,7 +166,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.5.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.6.0...HEAD
+[4.6.0]: https://github.com/dnvgl/qats/compare/4.5.0...4.6.0
 [4.5.0]: https://github.com/dnvgl/qats/compare/4.4.0...4.5.0
 [4.4.0]: https://github.com/dnvgl/qats/compare/4.3.0...4.4.0
 [4.3.0]: https://github.com/dnvgl/qats/compare/4.2.0...4.3.0
