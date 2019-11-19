@@ -1323,6 +1323,7 @@ class Qats(QMainWindow):
             item.setCheckState(Qt.Unchecked)
             item.setCheckable(True)
             item.setToolTip(os.path.join(self.db.common, name))
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             self.db_source_model.appendRow(item)
 
         self.set_status()
