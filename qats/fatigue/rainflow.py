@@ -4,6 +4,7 @@
 Rainflow cycle counting algorithm according to ASTM E1049-85 (2011), section 5.4.4.
 """
 from collections import deque, defaultdict
+from itertools import chain
 import numpy as np
 
 # TODO: Evaluate from-to counting which stores the "orientation" of each cycle. Enables reconstruction of a time history
@@ -347,4 +348,66 @@ def rebin(cycles, binby='range', n=None, w=None):
             bin_secondary.append(sum([c * r for r, m, c in zip(ranges, means, counts) if (m > lo) and (m <= hi)]) / n if n > 0. else np.nan)
 
         return list(zip(bin_secondary, bin_primary, bin_n))
+
+
+def _longlist2array(longlist) -> np.ndarray:
+    """
+    Convert long list to numpy array.
+
+    Parameters
+    ----------
+    longlist
+
+    Returns
+    -------
+    np.ndarray
+
+    Notes
+    -----
+    Code is taken from:
+    https://stackoverflow.com/questions/17973507/why-is-converting-a-long-2d-list-to-numpy-array-so-slow
+
+    Using ipython %timeit command, this function performed around 0.7s per loop for a list of length ~4500000
+    (with 3 items in each row).
+
+    The following alternatives performed at around 2.1s per loop:
+    >>> # alternative 1
+    >>> arr = np.array(longlist)
+    >>> # alternative 2
+    >>> arr = np.zeros((len(longlist), len(longlist[0])))
+    >>> arr[:] = longlist
+
+    ... and this alternative performed at around 2.5s per loop:
+    >>> arr = np.array([[for row[i] in longlist] for i in range(len(longlist[0]))])
+
+    """
+    if isinstance(longlist, np.ndarray):
+        # return quickly if input is already a numpy array
+        return longlist
+    flat = np.fromiter(chain.from_iterable(longlist), np.array(longlist[0][0]).dtype, -1)
+    return flat.reshape((len(longlist), -1))
+
+
+def _sort_cycles(arr, copy=False):
+    """
+    Sort cycles array wrt. 1st column then 2nd column.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Array of shape (n, 3).
+    copy : bool, optional
+        If True, return a copy instead of sorting the array inplace.
+
+    Returns
+    -------
+    np.ndarray
+    """
+    if copy:
+        # make a copy
+        arr = np.array(arr)
+    # using numpy.argsort(), ref. https://stackoverflow.com/a/38194077
+    arr = arr[arr[:, 1].argsort()]  # first sort doesn't need to be stable
+    arr = arr[arr[:, 0].argsort(kind='mergesort')]
+    return arr
 
