@@ -94,7 +94,7 @@ def cycles(series, endpoints=False):
 
     """
     points = deque()
-    full, half = [], []
+    full, half = list(), list()
 
     for r in reversals(series, endpoints=endpoints):
         points.append(r)
@@ -144,17 +144,16 @@ def count_cycles(series, endpoints=False):
 
     Returns
     -------
-    list
-        List of tuples with cycle range, mean and count, sorted by increasing range::
-
-            [(range1, mean1, count1), (range2, mean2, count2), ...]
-
+    np.ndarray
+        Array of shape (n, 3) where `n` is number of cycle ranges. Each row consists of three values; the cycle range,
+        mean and count. Counts are either 1.0 (for full cycles) or 0.5 (for half cycles).
+        The array is sorted by increasing cycle range.
 
     Notes
     -----
-    The cycles are extracted from the iterable series using the `rangemean` function.
+    The cycles are extracted from the iterable series using the `cycles()` function.
 
-    Half cycles are counted as 0.5, so the returned counts may not be whole numbers.
+    Since half cycles are counted as 0.5, the returned counts are not necessarily whole numbers.
 
     Examples
     --------
@@ -163,28 +162,42 @@ def count_cycles(series, endpoints=False):
     >>> from qats.fatigue.rainflow import count_cycles
     >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
     >>> count_cycles(series)
-    [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
+    array([[ 3. , -0.5,  0.5],
+           [ 4. , -1. ,  0.5],
+           [ 4. ,  1. ,  1. ],
+           [ 6. ,  1. ,  0.5],
+           [ 8. ,  0. ,  0.5],
+           [ 8. ,  1. ,  0.5],
+           [ 9. ,  0.5,  0.5]])
 
-    The sorted list of cycles may be unpacked into separate lists of cycle range, mean and count as:
+    The array may be unpacked into separate arrays of cycle range, mean and count as:
+
+    >>> r, m, c = count_cycles(series).T
+
+    The following will also work, but is slower than the example above:
 
     >>> r, m, c = zip(*count_cycles(series))
 
     See Also
     --------
-    rainflow.reversals, rainflow.cycles, rainflow.cycle_ranges, rainflow.cycle_means, rainflow.cycle_rangemean
+    rainflow.reversals, rainflow.cycles
 
     """
     full, half = cycles(series, endpoints=endpoints)
 
-    # Count cycles
-    counts = defaultdict(float)
-    for x in full:
-        counts[x] += 1.0
-    for x in half:
-        counts[x] += 0.5
+    # number of cycles (full, half, total)
+    nf = len(full)
+    nh = len(half)
+    n = nf + nh
 
-    # create a list of triplets (range, mean, count) sorted ascending
-    counts = sorted([rm + tuple([c]) for rm, c in counts.items()])
+    # initiate and populate array with cycle counts
+    counts = np.zeros((n, 3))
+    counts[:, :2] = full + half  # full and half are lists
+    counts[:nf, 2] = 1.0  # full cycles count 1.0
+    counts[nf:, 2] = 0.5  # half cycles count 0.5
+
+    # sort by increasing range, then mean
+    counts = _sort_cycles(counts, copy=False)
 
     return counts
 
@@ -350,9 +363,9 @@ def rebin(cycles, binby='range', n=None, w=None):
         return list(zip(bin_secondary, bin_primary, bin_n))
 
 
-def _longlist2array(longlist) -> np.ndarray:
+def _toarray(longlist) -> np.ndarray:
     """
-    Convert long list to numpy array.
+    Convert (potentially long) list to numpy array.
 
     Parameters
     ----------
