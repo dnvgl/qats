@@ -17,9 +17,17 @@ class TestRainflowCounting(unittest.TestCase):
     # raw cycles
     cycles = [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
     # raw cycles if end points are included
+    '''
+    Note: 
+    until qats version 4.6.1, matching cycles where aggregated in the count. For later versions, this is not done by 
+    count_cycles(), hence for the series used here we get two identical entries instead; (2., -1., 0.5) x 2
+    -- old code: --
     # (first and last half cycles match to form a full cycle -> (2, -1.0, 1.0))
     cycles_endpoints = [(2, -1.0, 1.0), (3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5),
                         (8, 1.0, 0.5), (9, 0.5, 0.5)]
+    '''
+    cycles_endpoints = [(2, -1.0, 0.5), (2, -1.0, 0.5), (3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5),
+                        (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
     # cycles grouped in 2 bins
     cycles_n2 = [(2.25, 0.125, 2.0), (6.75, 0.625, 2.0)]
     # cycles grouped in bins of width 2
@@ -46,20 +54,24 @@ class TestRainflowCounting(unittest.TestCase):
         """
         Standard test
         """
-        self.assertEqual(self.cycles, rainflow.count_cycles(self.series))
+        # self.assertEqual(np.array(self.cycles), rainflow.count_cycles(self.series))
+        # np.testing module ensures that the list `self.cycles` may be compared to the array returned from count_cycles
+        np.testing.assert_array_equal(self.cycles, rainflow.count_cycles(self.series))
 
     def test_rainflow_counting_with_endpoints(self):
         """
         Test cycle counting when end points are included.
         """
-        self.assertEqual(self.cycles_endpoints, rainflow.count_cycles(self.series, endpoints=True))
+        # self.assertEqual(self.cycles_endpoints, rainflow.count_cycles(self.series, endpoints=True))
+        np.testing.assert_array_equal(self.cycles_endpoints, rainflow.count_cycles(self.series, endpoints=True))
 
     def test_rainflow_counting_using_reversals(self):
         """
         Test that cycle counting using reversals works if endpoints=True
         """
         reversals = list(rainflow.reversals(self.series))
-        self.assertEqual(self.cycles, rainflow.count_cycles(reversals, endpoints=True))
+        # self.assertEqual(self.cycles, rainflow.count_cycles(reversals, endpoints=True))
+        np.testing.assert_array_equal(self.cycles, rainflow.count_cycles(reversals, endpoints=True))
 
     def test_series_with_zero_derivatives(self):
         """
@@ -67,7 +79,8 @@ class TestRainflowCounting(unittest.TestCase):
         counting.
         """
         series = itertools.chain(*([x, x] for x in self.series))
-        self.assertEqual(self.cycles, rainflow.count_cycles(series))
+        # self.assertEqual(self.cycles, rainflow.count_cycles(series))
+        np.testing.assert_array_equal(self.cycles, rainflow.count_cycles(series))
 
     def test_rainflow_rebinning_binwidth2(self):
         """
