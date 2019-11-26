@@ -1311,7 +1311,11 @@ class Qats(QMainWindow):
             Time series database
         """
         # merge the loaded time series into the database
-        self.db.update(newdb)
+        try:
+            self.db.update(newdb)
+        except KeyError:
+            logging.error(f"The time series are not unique. You have probably loaded this file already.")
+            return
 
         # fill item model with time series by unique id (common path is removed)
         names = self.db.list(names="*", relative=True, display=False)
@@ -1323,6 +1327,7 @@ class Qats(QMainWindow):
             item.setCheckState(Qt.Unchecked)
             item.setCheckable(True)
             item.setToolTip(os.path.join(self.db.common, name))
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             self.db_source_model.appendRow(item)
 
         self.set_status()
