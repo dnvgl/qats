@@ -19,6 +19,13 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.6.1] // 26.11.2019
+
+#### Fixed
+- Catch and log KeyError occuring when trying to load the same time series file twice.
+- Make the displayed time series names uneditable
+
+
 ### [4.6.0] // 14.11.2019
 
 #### Added
@@ -166,7 +173,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.6.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.6.1...HEAD
+[4.6.1]: https://github.com/dnvgl/qats/compare/4.6.0...4.6.1
 [4.6.0]: https://github.com/dnvgl/qats/compare/4.5.0...4.6.0
 [4.5.0]: https://github.com/dnvgl/qats/compare/4.4.0...4.5.0
 [4.4.0]: https://github.com/dnvgl/qats/compare/4.3.0...4.4.0
