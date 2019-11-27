@@ -140,7 +140,8 @@ class TestFatigueSn(unittest.TestCase):
         for h in (0.8, 1.0, 1.1):
             q = _q_calc(life, h, v0, sn)
             self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from minersum_weibull() for bilinear S-N curve and shape={h}")
+                                   msg=f"Wrong fatigue life from minersum_weibull() for bilinear S-N curve and"
+                                   f" shape={h}")
 
     def test_minersum_weibull_singleslope(self):
         """

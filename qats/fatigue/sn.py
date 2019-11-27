@@ -28,7 +28,7 @@ class SNCurve(object):
     loga1 : float, optional
         Log10 of a1. Must be given if `a1` is not specified.
     nswitch : float, optional
-        Number of cycles at transition from `m1` to `m2`.
+        Number of cycles at transition from `m1` to `m2`. Required if `m2` is specified.
     t_exp : float, optional
         Thickness correction exponent. If not specified, thickness may not be specified in later calculations.
     t_ref : float, optional
@@ -62,7 +62,7 @@ class SNCurve(object):
     Notes
     -----
     For linear curves (single slope), the following input parameters are required: m1, a1 (or loga1).
-    For bi-linear curves, the following parameters are required: m1, m2, nswitch, a1 (or loga1), t_exp, t_ref.
+    For bi-linear curves, the following additional parameters are required: m2, nswitch.
 
     If S-N curve is overdefined (e.g. both loga1 and a1 are defined), the S-N curve is established based on the
     parameter order listed above (under "Parameters").
@@ -192,25 +192,26 @@ class SNCurve(object):
 
     def n(self, s, t=None):
         """
-        Predicted number of cycles to failure for specified stress range and thickness.
+        Predicted number of cycles to failure for specified stress range(s) and thickness.
 
         Parameters
         ----------
-        s : float
-            Stress range [MPa].
+        s : float or np.ndarray
+            Stress range(s) [MPa].
         t : float, optional
             Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
             specified, thickness correction is not taken into account.
 
         Returns
         -------
-        float
-            Predicted number of cycles to failure.
+        float or np.ndarray
+            Predicted number of cycles to failure. Output type is same as input type (float or np.ndarray)
 
         Raises
         ------
         ValueError: If thickness is specified, but thickness reference and exponent is not defined.
         """
+        s = np.asarray(s)
         # thickness correction
         if t is not None:
             # thickness correction term
@@ -223,18 +224,25 @@ class SNCurve(object):
             # no thickness correction term implies tk=1.0
             tcorr = 1.0
 
-        # S-N parameters for specified stress range
-        if self.bilinear is False or s >= self.sswitch:
-            m = self.m1
-            loga = self.loga1
+        # calculate fatigue limit `n`, ref. DNV-RP-C203 (2016) eq. 2.4.3
+        # ... using appropriate S-N parameters for specified stress range(s)
+        if self.bilinear is False:
+            # single slope sn curve
+            n = 10 ** (self.loga1 - self.m1 * np.log10(s * tcorr))
+            return n
         else:
-            m = self.m2
-            loga = self.loga2
-
-        # fatigue limit, ref. DNV-RP-C203 (2016) eq. 2.4.3
-        n = 10 ** (loga - m * np.log10(s * tcorr))
-
-        return n
+            # bi-linear curve
+            n = np.zeros(s.shape)
+            ind = s >= self.sswitch
+            # fatigue limits for upper part of curve
+            n[ind] = 10 ** (self.loga1 - self.m1 * np.log10(s[ind] * tcorr))
+            # fatigue limits for lower part of curve
+            n[~ind] = 10 ** (self.loga2 - self.m2 * np.log10(s[~ind] * tcorr))
+            if n.ndim == 0:
+                # float
+                return n.item()
+            else:
+                return n
 
     def thickness_correction(self, t):
         """
@@ -289,9 +297,9 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
 
     Parameters
     ----------
-    srange: list of floats
+    srange: np.ndarray or list of floats
         List of stress ranges in histogram (Note: only one value per bin).
-    count: list of floats
+    count: np.ndarray or list of floats
         Cycle count for each of the stress ranges. May be specified as number of cycles [-] or cycle rate [1/s].
         If cycle rate is specified, specify duration `td` for scaling to number of cycles.
     sn: dict or SNCurve
@@ -313,7 +321,7 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     -------
     float
         Fatigue damage (Palmgren-Miner sum).
-    list (optional)
+    np.ndarray, optional
         Fatigue damage (Palmgren-Miner sum) for each stress range bin. Returned if `retbin=True`.
 
     Raises
@@ -321,8 +329,10 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     ValueError:
         If thickness is given but thickness correction not specified for S-N curve.
     """
-    if not len(srange) == len(count):
-        raise ValueError("`srange` and `count` must be lists of same length")
+    srange = np.asarray(srange)
+    count = np.asarray(count)
+    if not srange.shape == count.shape:
+        raise ValueError("`srange` and `count` must have same shape")
 
     if not isinstance(sn, SNCurve):
         sn = SNCurve("", **sn)
@@ -330,7 +340,7 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     if th is not None and (sn.t_exp is None and sn.t_ref is None):
         raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
 
-    damage_per_bin = [(td * n) / sn.n(s * scf, t=th) for s, n in zip(srange, count)]
+    damage_per_bin = td * count / sn.n(srange * scf, t=th)
     d = sum(damage_per_bin)
 
     if retbins is True:
