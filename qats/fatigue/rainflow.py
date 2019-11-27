@@ -3,7 +3,7 @@
 """
 Rainflow cycle counting algorithm according to ASTM E1049-85 (2011), section 5.4.4.
 """
-from collections import deque, defaultdict
+from collections import deque
 from itertools import chain
 import numpy as np
 
@@ -58,7 +58,7 @@ def reversals(series, endpoints=False):
 
 def cycles(series, endpoints=False):
     """
-    Find full cycles and half-cycles range and mean value from *series* and count the number of occurrences using the
+    Find full cycles and half-cycles range and mean value from `series` and count the number of occurrences using the
     Rainflow algorithm.
 
     Parameters
@@ -72,13 +72,13 @@ def cycles(series, endpoints=False):
     Returns
     -------
     list
-        full cycles
+        full cycles (range and mean).
     list
-        half cycles
+        half cycles (range and mean).
 
     Notes
     -----
-    The cycles are extracted from the iterable *series* according to section 5.4.4 in ASTM E1049 (2011).
+    The cycles are extracted from the iterable `series` according to section 5.4.4 in ASTM E1049 (2011).
 
     Examples
     --------
@@ -191,15 +191,15 @@ def count_cycles(series, endpoints=False):
     n = nf + nh
 
     # initiate and populate array with cycle counts
-    counts = np.zeros((n, 3))
-    counts[:, :2] = full + half  # full and half are lists
-    counts[:nf, 2] = 1.0  # full cycles count 1.0
-    counts[nf:, 2] = 0.5  # half cycles count 0.5
+    cycles_ = np.zeros((n, 3))
+    cycles_[:, :2] = full + half  # full and half are lists
+    cycles_[:nf, 2] = 1.0  # full cycles count 1.0
+    cycles_[nf:, 2] = 0.5  # half cycles count 0.5
 
     # sort by increasing range, then mean
-    counts = _sort_cycles(counts, copy=False)
+    cycles_ = _sort_cycles(cycles_, copy=False)
 
-    return counts
+    return cycles_
 
 
 def mesh(cycles, nr=100, nm=100):
@@ -365,11 +365,12 @@ def rebin(cycles, binby='range', n=None, w=None):
 
 def _toarray(longlist) -> np.ndarray:
     """
-    Convert (potentially long) list to numpy array.
+    Convert (potentially long) list to 2-D numpy array.
 
     Parameters
     ----------
-    longlist
+    longlist : list or np.ndarray
+        List that may be broadcast into 2-D numpy array.
 
     Returns
     -------
@@ -377,7 +378,7 @@ def _toarray(longlist) -> np.ndarray:
 
     Notes
     -----
-    Code is taken from:
+    Code is based on:
     https://stackoverflow.com/questions/17973507/why-is-converting-a-long-2d-list-to-numpy-array-so-slow
 
     Using ipython %timeit command, this function performed around 0.7s per loop for a list of length ~4500000
@@ -408,13 +409,19 @@ def _sort_cycles(arr, copy=False):
     Parameters
     ----------
     arr : np.ndarray
-        Array of shape (n, 3).
+        2-D array of shape (n, 3).
     copy : bool, optional
         If True, return a copy instead of sorting the array inplace.
+        Note that this increases time consumption, in particular for large arrays.
 
     Returns
     -------
     np.ndarray
+
+    Raises
+    ------
+    IndexError
+        If input array is 1-D or if second dimension is less than 2.
     """
     if copy:
         # make a copy
