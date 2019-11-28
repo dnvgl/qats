@@ -12,10 +12,13 @@ from qats.fatigue import rainflow
 class TestRainflowCounting(unittest.TestCase):
     # Load series and corresponding cycle counts from ASTM E1049-85
     series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
+
     # reversals
     reversals = series[1:-1]
+
     # raw cycles
     cycles = [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
+
     # raw cycles if end points are included
     '''
     Note: 
@@ -28,11 +31,19 @@ class TestRainflowCounting(unittest.TestCase):
     '''
     cycles_endpoints = [(2, -1.0, 0.5), (2, -1.0, 0.5), (3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5),
                         (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
+
     # cycles grouped in 2 bins
+    # (not affected by change in behaviour after version 4.6.1)
     cycles_n2 = [(2.25, 0.125, 2.0), (6.75, 0.625, 2.0)]
+
     # cycles grouped in bins of width 2
-    cycles_bw2 = [(1.0, np.nan, 0.0), (3.0, 0.125, 2.0), (5.0, 1.0, 0.5), (7.0, 0.5, 1.0), (9.0, 0.5, 0.5)]
+    # (the following was the solution for version <= 4.6.1):
+    # cycles_bw2 = [(1.0, np.nan, 0.0), (3.0, 0.125, 2.0), (5.0, 1.0, 0.5), (7.0, 0.5, 1.0), (9.0, 0.5, 0.5)]
+    # (solution for version > 4.6.1, placing cycles at bin edges in the upper bin):
+    cycles_bw2 = [(1.0, np.nan, 0.0), (3.0, -0.5, 0.5), (5.0, 0.333333, 1.5), (7.0, 1.0, 0.5), (9.0, 0.5, 1.5)]
+
     # cycles grouped in bins of width 5
+    # (not affected by change in behaviour after version 4.6.1)
     cycles_bw5 = [(2.5, 0.125, 2.0), (7.5, 0.625, 2.0)]
 
     def test_reversals(self):
@@ -86,19 +97,24 @@ class TestRainflowCounting(unittest.TestCase):
         """
         Test that values are correctly gathered to new bins of width 2
         """
-        self.assertEqual(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
+        # self.assertEqual(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
+        # np.testing.assert_array_equal(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
+        np.testing.assert_array_almost_equal(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.),
+                                             decimal=6)
 
     def test_rainflow_rebinning_binwidth5(self):
         """
         Test that values are correctly gathered to new bins of width 5
         """
-        self.assertEqual(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
+        # self.assertEqual(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
+        np.testing.assert_array_equal(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
 
     def test_rainflow_rebinning_nbin2(self):
         """
         Test that values are correctly gathered to 2 bins
         """
-        self.assertEqual(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2))
+        # self.assertEqual(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2))
+        np.testing.assert_array_equal(self.cycles_n2, rainflow.rebin(rainflow.count_cycles(self.series), n=2))
 
     def test_rainflow_rebin_exceptions(self):
         """
