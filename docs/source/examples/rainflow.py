@@ -22,9 +22,11 @@ ts.plot_cycle_rangemean(n=100)
 # ... or as a 3D surface.
 ts.plot_cycle_rangemean3d(nr=25, nm=25)
 
-# you can also collect the cycle range-mean and count numbers (see TimeSeries.rfc and TimeSeries.get for options)
+# you can also collect the cycle range-mean and count numbers (see TimeSeries.rfc() and TimeSeries.get() for options)
 cycles = ts.rfc()
-ranges, means, counts = zip(*cycles)    # unpack to separate lists if you prefer
+
+# unpack cycles to separate 1D arrays if you prefer
+ranges, means, counts = cycles.T
 
 # The TsDB class also has similar methods to ease comparison
 # compare cycle range distribution (range versus count) grouped in 100 bins

@@ -44,7 +44,7 @@ Rainflow algorithm.
 .. literalinclude:: examples/rainflow.py
    :language: python
    :linenos:
-   :lines: 1-27
+   :lines: 1-29
 
 .. figure:: img/ts_cycle_range.png
     :figclass: align-center

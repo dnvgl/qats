@@ -18,11 +18,11 @@ for ts in db.getl(names='tension_*_qs'):
     cycles = ts.rfc(twin=(100., 1e12))
 
     # unpack cycle range and count as separate lists (discard cycle means)
-    ranges, _, counts = zip(*cycles)
+    ranges, _, counts = cycles.T
 
-    # calculate cross section stress cycles (118mm studless chain)
+    # calculate cross section stress cycles (shown here: 118mm studless chain, with unit [kN] for tension cycles)
     area = 2. * pi * (118. / 2.) ** 2.          # mm^2
-    ranges = [r *1e3 / area for r in ranges]    # MPa
+    ranges = [r * 1e3 / area for r in ranges]   # MPa
 
     # calculate fatigue damage from Palmgren-Miner rule (SCF=1, no thickness correction)
     damage = minersum(ranges, counts, sncurve)
