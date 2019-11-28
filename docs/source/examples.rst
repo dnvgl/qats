@@ -38,6 +38,14 @@ a varying time step the the time series are resampled to a constant time step of
 Count cycles using the Rainflow algorithm
 *****************************************
 
+.. note::
+    Some of the syntax shown below is not applicable for ``version <= 4.6.1``, in particular the unpacking of cycles.
+    The changes implemented since 4.6.1 are backwards compatible, however; the syntax suggested below is recommended due
+    to better performance. One may also experience minor changes in rebinned cycles. Finally, the mesh established by
+    :func:`qats.fatigue.rainflow.mesh()` (and used by :meth:`TimeSeries.plot_cycle_rangemean3d`) was not correct for
+    version <= 4.6.1. For more details, please refer to the
+    `CHANGELOG <https://github.com/dnvgl/qats/blob/master/CHANGELOG.md>`_.
+
 Fetch a single time series from the time series database, extract and visualize the cycle distribution using the
 Rainflow algorithm.
 
