@@ -261,106 +261,140 @@ def rebin(cycles, binby='range', n=None, w=None):
 
     Parameters
     ----------
-    cycles : list
-        Cycle ranges, mean values and count.
-    bins : list
-        Bins specified by bin boundaries e.g. first bin ranges from the first to the second value in `bins`, the next
-        bin from the second value to the third, and so on.
+    cycles : array_like
+        Array of shape (n, 3). Columns should be: cycle range, cycle mean, count. See description of output
+        from `rainflow.count_cycles()`.
     binby : str, optional
         'range' - Rebin by cycle range (default)
         'mean'  - Rebin by cycle mean
     n : int, optional
         Number of equidistant bins for cycle ranges and cycle mean values.
     w : float, optional
-        Width of equidistant bins for cycle ranges and cycle mean values. Overrules `n` is specified.
+        Width of equidistant bins for cycle ranges and cycle mean values. Overrides `n` if specified.
 
     Returns
     -------
-    list
-        Rebinned cycles in ascending order (cycle ranges or mean values).
+    np.array
+        Array with shape `(nbins, 3)`, where `nbins` is number of bins. Columns are: cycle range, mean, count.
 
     Notes
     -----
-    Cycles are gathered into a specific bin if the primary measure (range of mean) is within that bin's boundaries. The
+    Cycles are gathered into a specific bin if the primary measure (range or mean) is within that bin's boundaries. The
     primary measure is represented by the bin mid point. The secondary measure (range or mean) is represented by its
     weighted average (weighted by number of occurrences) in the bin.
 
     Note that rebinning may shift a significant amount of the cycles to bins which midpoint differs notably from
-    the original cycle value (range or mean). We advice to rebin for plotting but when calculating e.g. fatigue damage
+    the original cycle value (range or mean). We advice to rebin for plotting, but when calculating e.g. fatigue damage
     we advice to use the raw unbinned values.
+
+    If a cycle is at the edge between two bins, it is placed in the 'highest' bin. E.g. If bin edges are [0, 1, 2, 3],
+    a cycle with value 1 will be counted in the bin [1, 2) - see documentation for np.histogram for details. This
+    behaviour is contrary to version <= 4.6.1, for which the value 1 was counted in bin (0, 1]. The new way is slightly
+    more conservative, since cycle ranges (or means) that end up on an edge is shifted towards a higher value.
+    However; in most cases, there will be no difference at all since very few cycles coincide with bin edges.
+
+    Examples
+    --------
+    Rebinning by range with bin width 1.0. Number of bins is then determined from the max cycle range.
+    The second column (which is here the secondary measure, since we are binning by range) is the weighted average
+    of the mean value for the cycles that fall within each bin:
+    >>> from qats.fatigue.rainflow import count_cycles
+    >>> series = [0, -2, 1, -3, 1, -1, 3, -2, 2, -2, 0, 1, -2, 3, -1, 2, -3, 0, -1, 0]
+    >>> cycles = count_cycles(series)
+    >>> rebin(cycles, binby='range', w=2.0)
+    array([[ 1.  , -0.5 ,  0.5 ],
+           [ 3.  , -0.25,  4.  ],
+           [ 5.  ,  0.  ,  3.5 ]])
 
     See Also
     --------
-    rainflow.create_bins
+    np.histogram
+    rainflow.count_cycles
 
     """
-
-    def create_bins(start, stop, n=None, w=None):
-        """
-        Create equidistant bins.
-
-        Parameters
-        ----------
-        start : float
-            Lowest bin value
-        stop : float
-            Largest bin value
-        n : int, optional
-            Number of equidistant bins
-        w : float, optional
-            Width of equidistant bins. Overrules `n` is specified.
-
-        Returns
-        -------
-        list
-            Bins specified by bin boundaries e.g. first bin ranges from the first to the second value in `bins`, the next
-            bin from the second value to the third, and so on.
-
-        """
-        if (not n) and (not w):
-            raise ValueError('Specify either the number of bins `n` or the bin width `w`.')
-
-        if w is not None:
-            # crate bins with specified w
-            return np.arange(start, stop + w, w)
-
-        else:
-            # create specified number of bins
-            return np.linspace(start, stop, n + 1)
-
     if binby not in ('range', 'mean'):
-        raise ValueError(f"Unable to bin by '{binby}'. Must be either 'range' or 'mean'.")
+        raise ValueError(f"Invalid option for `binby`: '{binby}'. Must be either 'range' or 'mean'")
 
     # unpack
-    ranges, means, counts = zip(*cycles)
+    cycles = _toarray(cycles)  # ensure array, not list
+    ranges, means, counts = cycles.T
 
     # rebin
     if binby == 'range':
-        bins = create_bins(0., max(ranges), n=n, w=w)
-        bin_primary = [0.5 * (lo + hi) for lo, hi in zip(bins[:-1], bins[1:])]  # bin mid points
-        bin_secondary = list()
-        bin_n = list()
-        for lo, hi in zip(bins[:-1], bins[1:]):
-            # number of cycles which range is within bin boundaries
-            n = sum([c for r, c in zip(ranges, counts) if (r > lo) and (r <= hi)])
-            bin_n.append(n)
-            # weighted average of cycle means
-            bin_secondary.append(sum([c * m for r, m, c in zip(ranges, means, counts) if (r > lo) and (r <= hi)]) / n if n > 0. else np.nan)
+        # establish bin edges
+        bins = _create_bins(0., ranges.max(), n=n, w=w)
+        nbins = bins.size - 1
 
-        return list(zip(bin_primary, bin_secondary, bin_n))
+        # establish bin mid points (size -1 compared to array with bin edges)
+        bin_primary = np.fromiter((0.5 * (bins[i] + bins[i + 1]) for i in range(nbins)), dtype=float)
+
+        # calculate sum of counts for each bin using np.histogram(). `range` has no effect since bins are given
+        # explicitly, and is therefore passed as None
+        bin_n, _ = np.histogram(ranges, bins=bins, range=None, weights=counts)
+
+        # weighted average of cycle means is established in a similar way, however; dividing by total count needs to be
+        # done afterwards. For bins with no count, the weighted average is set to nan.
+        weights = counts * means
+        bin_secondary, _ = np.histogram(ranges, bins=bins, range=None, weights=weights)
+        bin_secondary[bin_n > 0] *= 1. / bin_n[bin_n > 0]
+        bin_secondary[bin_n == 0] = np.nan
+
+        return np.array([bin_primary, bin_secondary, bin_n]).T
+
+    else:  # i.e. binby == 'mean'
+        # create bins
+        bins = _create_bins(means.min(), means.max(), n=n, w=w)
+        nbins = bins.size - 1
+
+        # establish bin mid points (size -1 compared to array with bin edges)
+        bin_primary = np.fromiter((0.5 * (bins[i] + bins[i + 1]) for i in range(nbins)),  # bin mid points
+                                  dtype=float)
+
+        # calculate sum of counts for each bin using np.histogram(). `range` has no effect since bins are given
+        # explicitly, and is therefore passed as None
+        bin_n, _ = np.histogram(means, bins=bins, range=None, weights=counts)
+
+        # weighted average of cycle range is established in a similar way, however; dividing by total count needs to be
+        # done afterwards. For bins with no count, the weighted average is set to nan.
+        weights = counts * ranges
+        bin_secondary, _ = np.histogram(means, bins=bins, range=None, weights=weights)
+        bin_secondary[bin_n > 0] *= 1. / bin_n[bin_n > 0]
+        bin_secondary[bin_n == 0] = np.nan
+
+        return np.array([bin_secondary, bin_primary, bin_n]).T
+
+
+def _create_bins(start, stop, n=None, w=None):
+    """
+    Create equidistant bins.
+
+    Parameters
+    ----------
+    start : float
+        Lowest bin value
+    stop : float
+        Largest bin value
+    n : int, optional
+        Number of equidistant bins
+    w : float, optional
+        Width of equidistant bins. Overrules `n` is specified.
+
+    Returns
+    -------
+    np.ndarray
+        Bins specified by bin boundaries e.g. first bin ranges from the first to the second value in `bins`,
+        the next bin from the second value to the third, and so on.
+
+    """
+    if (not n) and (not w):
+        raise ValueError('Specify either the number of bins `n` or the bin width `w`.')
+
+    if w is not None:
+        # crate bins with specified w
+        return np.arange(start, stop + w, w)
     else:
-        bins = create_bins(min(means), max(means), n=n, w=w)
-        bin_primary = [0.5 * (lo + hi) for lo, hi in zip(bins[:-1], bins[1:])]  # bin mid points
-        bin_secondary = list()
-        bin_n = list()
-        for lo, hi in zip(bins[:-1], bins[1:]):
-            # number of cycles which mean is within bin boundaries
-            n = sum([c for m, c in zip(means, counts) if (m > lo) and (m <= hi)])
-            bin_n.append(n)
-            # weighted average of cycle ranges
-            bin_secondary.append(sum([c * r for r, m, c in zip(ranges, means, counts) if (m > lo) and (m <= hi)]) / n if n > 0. else np.nan)
-
-        return list(zip(bin_secondary, bin_primary, bin_n))
+        # create specified number of bins
+        return np.linspace(start, stop, n + 1)
 
 
 def _toarray(longlist) -> np.ndarray:
