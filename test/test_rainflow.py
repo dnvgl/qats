@@ -6,7 +6,9 @@ Module for testing rainflow algorithm
 import itertools
 import unittest
 import numpy as np
+import os
 from qats.fatigue import rainflow
+from qats import TsDB
 
 
 class TestRainflowCounting(unittest.TestCase):
@@ -45,6 +47,14 @@ class TestRainflowCounting(unittest.TestCase):
     # cycles grouped in bins of width 5
     # (not affected by change in behaviour after version 4.6.1)
     cycles_bw5 = [(2.5, 0.125, 2.0), (7.5, 0.625, 2.0)]
+
+    def setUp(self):
+        """
+        Set up for some of the tests.
+        """
+        # load irregular 3-hour time series test rebin and mesh
+        tsfile = os.path.join(os.path.dirname(__file__), '..', 'data', 'simo_p_out.ts')
+        self.irreg_series = TsDB.fromfile(tsfile).get(name='tension_2_qs').x
 
     def test_reversals(self):
         """
@@ -133,6 +143,46 @@ class TestRainflowCounting(unittest.TestCase):
             pass
         else:
             self.fail("Did not raise ValueError when neither `n` nor `w` were specified.")
+
+    def test_rebin_sum_of_counts(self):
+        """
+        Test that rebinning does not alter total number of counts.
+        """
+        cycles = rainflow.count_cycles(self.irreg_series)
+        cycles_rebinned_range = rainflow.rebin(cycles, binby='range', n=50)
+        self.assertEqual(cycles[:, 2].sum(), cycles_rebinned_range[:, 2].sum(),
+                         msg="Total cycle counts changed after rebinning.")
+
+    def test_mesh(self):
+        """
+        Multiple tests to ensure meshgrid returned from mesh() is correct.
+        """
+        # no. of range and mean bins, respectively (should be different to avoid hiding errors caused by transposing)
+        nr, nm = 100, 50
+        # raw cycles
+        cycles = rainflow.count_cycles(self.irreg_series)
+        # rebinned cycles - will be used to verify mesh
+        cycles_rebinned_range = rainflow.rebin(cycles, binby='range', n=nr)
+        cycles_rebinned_mean = rainflow.rebin(cycles, binby='mean', n=nm)
+        # generate mesh
+        rmesh, mmesh, cmesh = rainflow.mesh(cycles, nr=nr, nm=nm)
+
+        # tests
+        # (shape)
+        np.testing.assert_equal(cmesh.shape, (nm, nr), err_msg=f"Shape of mesh is wrong, should be {(nm, nr)}")
+        np.testing.assert_equal(cmesh.shape, rmesh.shape, err_msg="Shapes do not match: 'cmesh' and 'rmesh'")
+        np.testing.assert_equal(cmesh.shape, mmesh.shape, err_msg="Shapes do not match: 'cmesh' and 'mmesh'")
+        # (sum of counts; total and along each axis)
+        np.testing.assert_equal(cycles[:, 2].sum(), cmesh.sum(), err_msg="Sum of counts and mesh not equal")
+        np.testing.assert_array_equal(cycles_rebinned_range[:, 2], cmesh.sum(axis=0),
+                                      err_msg=f"Sum of counts along mean axis (constant ranges) are wrong")
+        np.testing.assert_array_equal(cycles_rebinned_mean[:, 2], cmesh.sum(axis=1),
+                                      err_msg=f"Sum of counts along range axis (constant means) are wrong")
+        # (bins along respective axes should match bins obtained by rebinning by 'range' and 'mean', respectively)
+        np.testing.assert_array_equal(rmesh[0, :], cycles_rebinned_range[:, 0],
+                                      err_msg="Range mesh error (transposed by 'accident'?)")
+        np.testing.assert_array_equal(mmesh[:, 0], cycles_rebinned_mean[:, 1],
+                                      err_msg="Mean mesh error (transposed by 'accident'?)")
 
 
 if __name__ == '__main__':
