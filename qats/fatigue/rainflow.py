@@ -71,9 +71,9 @@ def cycles(series, endpoints=False):
 
     Returns
     -------
-    list
+    full : list
         full cycles (range and mean).
-    list
+    half : list
         half cycles (range and mean).
 
     Notes
@@ -144,9 +144,9 @@ def count_cycles(series, endpoints=False):
 
     Returns
     -------
-    np.ndarray
-        Array of shape (n, 3) where `n` is number of cycle ranges. Each row consists of three values; the cycle range,
-        mean and count. Counts are either 1.0 (for full cycles) or 0.5 (for half cycles).
+    cycles : np.ndarray
+        Array of shape (n, 3) where `n` is number of cycle ranges. Each row consists of three values; the cycle
+        range, mean and count. Counts are either 1.0 (for full cycles) or 0.5 (for half cycles).
         The array is sorted by increasing cycle range.
 
     Notes
@@ -180,7 +180,7 @@ def count_cycles(series, endpoints=False):
 
     See Also
     --------
-    rainflow.reversals, rainflow.cycles
+    reversals, cycles
 
     """
     full, half = cycles(series, endpoints=endpoints)
@@ -208,8 +208,9 @@ def mesh(cycles, nr=100, nm=100):
 
     Parameters
     ----------
-    cycles : list
-        Cycle ranges, mean values and count.
+    cycles : array_like
+        Array of shape (n, 3). Columns should be: cycle range, cycle mean, count. See description of output
+        from :func:`count_cycles`.
     nr : int, optional
         Number of equidistant bins for cycle ranges.
     nm : int, optional
@@ -217,42 +218,92 @@ def mesh(cycles, nr=100, nm=100):
 
     Returns
     -------
-    array
-        Cycle ranges.
-    array
-        Cycle mean value.
-    array
-        Cycle count.
+    rangemesh : np.ndarray
+        Cycle ranges meshgrid, shape: `(nm, nr)`.
+    meanmesh : np.ndarray
+        Cycle mean value meshgrid, shape: `(nm, nr)`.
+    countmesh : np.ndarray
+        Cycle count 2D histogram, shape: `(nm, nr)`.
+
+    See Also
+    --------
+    numpy.histogram2d
+    numpy.meshgrid
+
+    Notes
+    -----
+    .. versionadded :: 4.7.0
+
+    This function has been re-written for version 4.7.0. For versions <= 4.6.1, the mesh established was not correct.
+
+    Shape of the returned arrays is consistent with :func:`numpy.meshgrid`: ``(nm, nr)``, i.e. number of rows is `nm` and
+    number of columns is `nr`. This means that the array is transposed compared the output from
+    :func:`numpy.histogram2d`, which is a 2D histogram of shape ``(nr, nm)``.
+
+    The cycle count mesh is consistent with the cycles returned from :func:`rebin`, such that the sum of the cycle count
+    mesh along each of its axes is equals the counts for cycles rebinned by 'mean' or 'range', respectively:
+
+    >>> cycles = count_cycles(series)
+    >>> _, _, cmesh = mesh(cycles, nr=200, nm=100)
+    >>> cycles_rebinned_range = rebin(cycles, binby='range', n=200)
+    >>> # sum of `cmesh` along cycle mean axis (constant cycle range) vs. counts from rebinned cycles
+    >>> (cmesh.sum(axis=0) == cycles_rebinned_range[:, 2]).all()
+    True
+    >>> cmesh.sum(axis=0).shape
+    (200,)
+    >>> cmesh.sum(axis=1).shape
+    (100,)
+
 
     Examples
     --------
-    Rebin the cycle distribution onto a 10x10 mesh suitable for surface plotting.
+    Rebin the cycle distribution onto a 10 x 15 mesh:
 
-    >>> from qats.fatigue.rainflow import count_cycles
-    >>> series = [0, -2, 1, -3, 5, -1, 3, -4, 4, -2, 0]
+    >>> from qats.fatigue.rainflow import count_cycles, mesh
+    >>> # (obtain some series from e.g. a simulation)
     >>> count_cycles(series)
-    >>> r, m, c = mesh(cycles, nr=10, nm=10)
+    >>> rangemesh, meanmesh, countmesh = mesh(cycles, nr=15, nm=10)
+    >>> countmesh.shape  # (same shape for all three arrays)
+    (10, 15)
+
+    The mesh returned is suitable for plotting with `matplotlib` 3D plots, for instance:
+
+    >>> import matplotlib as mpl
+    >>> import matplotlib.pyplot as plt
+    >>> from mpl_toolkits.mplot3d import Axes3D
+    >>> fig = plt.figure()
+    >>> ax = fig.gca(projection='3d')
+    >>> ax.plot_surface(rangemesh, meanmesh, countmesh, cmap=mpl.cm.coolwarm)
+    >>> ax.set_xlabel('Cycle range')
+    >>> ax.set_ylabel('Cycle mean')
+    >>> ax.set_zlabel('Cycle count')
+    >>> plt.show()
 
     """
+    # unpack
+    cycles = _toarray(cycles)  # ensure array, not list
+    ranges, means, counts = cycles.T
+
     # create mesh
-    maxrange = max([r for r, _, _ in cycles])
-    maxmean = max([m for _, m, _ in cycles])
-    minmean = min([m for _, m, _ in cycles])
-    ri = np.linspace(0., 1.1 * maxrange, nr)
-    mj = np.linspace(0.9 * minmean, 1.1 * maxmean, nm)
-    rij, mij = np.meshgrid(ri, mj)
-    cij = np.zeros(np.shape(mij))
+    maxrange = ranges.max()
+    maxmean = means.max()
+    minmean = means.min()
 
-    # rebin distribution
-    for i in range(nr - 1):
-        for j in range(nm - 1):
-            for r, m, c in cycles:
-                if (ri[i] <= r < ri[i + 1]) and (mj[j] <= m < mj[j + 1]):
-                    cij[i, j] += c
+    # xyrange = ([0., maxrange], [minmean, maxmean])
+    xyrange = ([0., maxrange], [minmean, maxmean])
+    hist2d, r_edges, m_edges = np.histogram2d(ranges, means, bins=[nr, nm], range=xyrange, weights=counts)
 
-    print(f"Number of cycles {sum([c for _, _, c in cycles])} / {cij.sum()}.")
+    # 2D histogram from np.histogram2d must be transposed for consistency with np.meshgrid
+    cmesh = hist2d.T
 
-    return rij, mij, cij
+    # arrays of bin mid points (sizes `nr` and `rm`)
+    rbins = 0.5 * (r_edges[:-1] + r_edges[1:])
+    mbins = 0.5 * (m_edges[:-1] + m_edges[1:])
+
+    # mesh grids
+    rmesh, mmesh = np.meshgrid(rbins, mbins)
+
+    return rmesh, mmesh, cmesh
 
 
 def rebin(cycles, binby='range', n=None, w=None):
@@ -274,7 +325,7 @@ def rebin(cycles, binby='range', n=None, w=None):
 
     Returns
     -------
-    np.array
+    cycles : np.ndarray
         Array with shape `(nbins, 3)`, where `nbins` is number of bins. Columns are: cycle range, mean, count.
 
     Notes
@@ -287,6 +338,8 @@ def rebin(cycles, binby='range', n=None, w=None):
     the original cycle value (range or mean). We advice to rebin for plotting, but when calculating e.g. fatigue damage
     we advice to use the raw unbinned values.
 
+    .. versionadded :: 4.7.0
+
     If a cycle is at the edge between two bins, it is placed in the 'highest' bin. E.g. If bin edges are [0, 1, 2, 3],
     a cycle with value 1 will be counted in the bin [1, 2) - see documentation for np.histogram for details. This
     behaviour is contrary to version <= 4.6.1, for which the value 1 was counted in bin (0, 1]. The new way is slightly
@@ -298,6 +351,7 @@ def rebin(cycles, binby='range', n=None, w=None):
     Rebinning by range with bin width 1.0. Number of bins is then determined from the max cycle range.
     The second column (which is here the secondary measure, since we are binning by range) is the weighted average
     of the mean value for the cycles that fall within each bin:
+
     >>> from qats.fatigue.rainflow import count_cycles
     >>> series = [0, -2, 1, -3, 1, -1, 3, -2, 2, -2, 0, 1, -2, 3, -1, 2, -3, 0, -1, 0]
     >>> cycles = count_cycles(series)
@@ -308,8 +362,8 @@ def rebin(cycles, binby='range', n=None, w=None):
 
     See Also
     --------
-    np.histogram
-    rainflow.count_cycles
+    numpy.histogram
+    count_cycles
 
     """
     if binby not in ('range', 'mean'):
@@ -326,7 +380,7 @@ def rebin(cycles, binby='range', n=None, w=None):
         nbins = bins.size - 1
 
         # establish bin mid points (size -1 compared to array with bin edges)
-        bin_primary = np.fromiter((0.5 * (bins[i] + bins[i + 1]) for i in range(nbins)), dtype=float)
+        bin_primary = 0.5 * (bins[:-1] + bins[1:])
 
         # calculate sum of counts for each bin using np.histogram(). `range` has no effect since bins are given
         # explicitly, and is therefore passed as None
@@ -347,8 +401,7 @@ def rebin(cycles, binby='range', n=None, w=None):
         nbins = bins.size - 1
 
         # establish bin mid points (size -1 compared to array with bin edges)
-        bin_primary = np.fromiter((0.5 * (bins[i] + bins[i + 1]) for i in range(nbins)),  # bin mid points
-                                  dtype=float)
+        bin_primary = 0.5 * (bins[:-1] + bins[1:])
 
         # calculate sum of counts for each bin using np.histogram(). `range` has no effect since bins are given
         # explicitly, and is therefore passed as None
@@ -399,12 +452,12 @@ def _create_bins(start, stop, n=None, w=None):
 
 def _toarray(longlist) -> np.ndarray:
     """
-    Convert (potentially long) list to 2-D numpy array.
+    Convert (potentially long) list to 2D numpy array.
 
     Parameters
     ----------
     longlist : list or np.ndarray
-        List that may be broadcast into 2-D numpy array.
+        List that may be broadcast into 2D numpy array.
 
     Returns
     -------
@@ -443,7 +496,7 @@ def _sort_cycles(arr, copy=False):
     Parameters
     ----------
     arr : np.ndarray
-        2-D array of shape (n, 3).
+        2D array of shape (n, 3).
     copy : bool, optional
         If True, return a copy instead of sorting the array inplace.
         Note that this increases time consumption, in particular for large arrays.
@@ -455,7 +508,7 @@ def _sort_cycles(arr, copy=False):
     Raises
     ------
     IndexError
-        If input array is 1-D or if second dimension is less than 2.
+        If input array is 1D or if second dimension is less than 2.
     """
     if copy:
         # make a copy
