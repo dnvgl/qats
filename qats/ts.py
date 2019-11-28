@@ -572,7 +572,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.resample(), TimeSeries.interpolate(), qats.signal.smooth()
+        resample, interpolate, qats.signal.smooth
 
         """
         assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), \
@@ -695,7 +695,7 @@ class TimeSeries(object):
         bias : bool, optional
             If False (default), then the calculations are corrected for statistical bias.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -718,7 +718,7 @@ class TimeSeries(object):
         Parameters
         ----------
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -754,7 +754,7 @@ class TimeSeries(object):
             If True, (maxima, time_maxima), where `time_maxima` is an array of time instants associated with the
             maxima sample.
         **kwargs : optional
-                Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+                Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -792,7 +792,7 @@ class TimeSeries(object):
         Parameters
         ----------
         **kwargs : optional
-            Keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -815,7 +815,7 @@ class TimeSeries(object):
         Parameters
         ----------
         **kwargs : optional
-            Keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -841,7 +841,7 @@ class TimeSeries(object):
             If True, (maxima, time_maxima), where `time_maxima` is an array of time instants associated with the
             maxima sample.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -884,7 +884,7 @@ class TimeSeries(object):
         Parameters
         ----------
         **kwargs : optional
-            Keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Keyword arguments are passed to :meth:`get()`.
 
         Notes
         -----
@@ -905,7 +905,7 @@ class TimeSeries(object):
         num : int, optional
             Matplotlib figure number. Defaults to 1.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         """
         # dict with numpy arrays: time and data
@@ -934,7 +934,7 @@ class TimeSeries(object):
         num : int, optional
             Matplotlib figure number. Defaults to 1.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.psd()`.
+            Additional keyword arguments are passed to :meth:`psd()`.
 
         """
         # dict with TimeSeries objects
@@ -969,11 +969,11 @@ class TimeSeries(object):
         num : int, optional
             Matplotlib figure number. Defaults to 1.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.rfc()`.
+            Additional keyword arguments are passed to :meth:`rfc()`.
 
         See Also
         --------
-        TimeSeries.rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
+        rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         # rebin cycles
         assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
@@ -1012,7 +1012,7 @@ class TimeSeries(object):
         num : int, optional
             Matplotlib figure number. Defaults to 1.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.rfc()`.
+            Additional keyword arguments are passed to :meth:`rfc()`.
 
         Notes
         -----
@@ -1020,7 +1020,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.rfc, TimeSeries.plot_cyclerange,
+        rfc, plot_cycle_range,
         qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         cycles = self.rfc(**kwargs)
@@ -1060,7 +1060,7 @@ class TimeSeries(object):
         num : int, optional
             Matplotlib figure number. Defaults to 1.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.rfc()`.
+            Additional keyword arguments are passed to :meth:`rfc()`.
 
         """
         # This import registers the 3D projection, but is otherwise unused.
@@ -1072,9 +1072,9 @@ class TimeSeries(object):
 
         fig = plt.figure(num=num)
         ax = fig.gca(projection='3d')
-        ax.plot_surface(means, ranges, counts, cmap=cm.coolwarm)
-        ax.set_xlabel('Cycle mean')
-        ax.set_ylabel('Cycle range')
+        ax.plot_surface(ranges, means, counts, cmap=cm.coolwarm)
+        ax.set_xlabel('Cycle range')
+        ax.set_ylabel('Cycle mean')
         ax.set_zlabel('Cycle count')
         if figurename is not None:
             plt.savefig(figurename)
@@ -1099,7 +1099,7 @@ class TimeSeries(object):
         normalize : bool, optional
             Normalize power spectral density on maxium density.
         kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1127,7 +1127,9 @@ class TimeSeries(object):
 
         See also
         --------
-        qats.signal.psd, scipy.signal.welch, scipy.signal.periodogram
+        qats.signal.psd
+        scipy.signal.welch
+        scipy.signal.periodogram
 
         """
         # get time and data arrays
@@ -1196,7 +1198,7 @@ class TimeSeries(object):
         Parameters
         ----------
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1288,7 +1290,7 @@ class TimeSeries(object):
         include_sample : bool, optional
             Return sample of maxima or minima (minima=True).
         **kwargs
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1397,7 +1399,7 @@ class TimeSeries(object):
         Parameters
         ----------
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1426,7 +1428,7 @@ class TimeSeries(object):
         bias : bool, optional
             If False (default), then the calculations are corrected for statistical bias.
         **kwargs : optional
-            Additional keyword arguments are passed to :meth:`TimeSeries.get()`.
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
