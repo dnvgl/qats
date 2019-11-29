@@ -21,7 +21,7 @@ def goodman_haigh(cycles, uts):
     Returns
     -------
     corrected_ranges: np.ndarray
-        Corrected stress ranges, shape: ´(n,)` (1D array).
+        Corrected stress ranges, shape: `(n,)` (1D array).
 
     Notes
     -----
