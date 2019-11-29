@@ -43,6 +43,22 @@ def goodman_haigh(cycles, uts):
     2. David Roylance. "Fatigue", Archived 2011-06-29 at the Wayback Machine.. 2001
     3. Tapany Udomphol. "Fatigue of metals". 2007.
 
+    Examples
+    --------
+
+    >>> from qats.fatigue.rainflow import count_cycles
+    >>> from qats.fatigue.corrections import goodman_haigh
+    >>> # assuming a series has been established, and that uts is defined
+    >>> cycles = count_cycles(series)
+    >>> corrected_ranges = goodman_haigh(cycles[:, :2], uts)
+
+    The array obtained is then a 1D array of same size as the first dimension of `cycles`:
+
+    >>> cycles.shape
+    (1350, 3)
+    >>> corrected_ranges.shape
+    (1350,)
+
     """
     # ensure array and assert 2d
     cycles = np.asarray(cycles)
