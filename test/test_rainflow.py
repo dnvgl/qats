@@ -54,7 +54,7 @@ class TestRainflowCounting(unittest.TestCase):
         """
         # load irregular 3-hour time series test rebin and mesh
         tsfile = os.path.join(os.path.dirname(__file__), '..', 'data', 'simo_p_out.ts')
-        self.irreg_series = TsDB.fromfile(tsfile).get(name='tension_2_qs').x
+        self.irreg_series = TsDB.fromfile(tsfile).get(name='Tension_2_qs').x
 
     def test_reversals(self):
         """
