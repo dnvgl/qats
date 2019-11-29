@@ -12,15 +12,16 @@ def goodman_haigh(cycles, uts):
 
     Parameters
     ----------
-    cycles : list
-        Pairs of cycle range and mean
+    cycles : np.ndarray or list
+        Array of cycle ranges and mean values, shape `(n, 2)`. First column is cycle ranges, second column is cycle
+        mean values.
     uts : float
-        Material ultimate tensile strength
+        Material ultimate tensile strength, in same unit as cycle ranges and mean values.
 
     Returns
     -------
-    list
-        Corrected stress ranges
+    corrected_ranges: np.ndarray
+        Corrected stress ranges, shape: ´(n,)` (1D array).
 
     Notes
     -----
@@ -43,10 +44,16 @@ def goodman_haigh(cycles, uts):
     3. Tapany Udomphol. "Fatigue of metals". 2007.
 
     """
-    ranges, means = zip(*cycles)
+    # ensure array and assert 2d
+    cycles = np.asarray(cycles)
+    assert cycles.ndim == 2 and cycles.shape[1] == 2, \
+        "Cycles must be specified as 2D array or shape (n, 2) (or: list of 2-tuples)"
+
+    # unpack
+    ranges, means = cycles.T
 
     # calculate effective alternating stress
-    corrected_ranges = np.array(ranges) * (uts / (uts - np.array(means)))
+    corrected_ranges = ranges * (uts / (uts - means))
 
-    return list(corrected_ranges)
+    return corrected_ranges
 
