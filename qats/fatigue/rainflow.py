@@ -377,7 +377,7 @@ def rebin(cycles, binby='range', n=None, w=None):
     if binby == 'range':
         # establish bin edges
         bins = _create_bins(0., ranges.max(), n=n, w=w)
-        nbins = bins.size - 1
+        # nbins = bins.size - 1
 
         # establish bin mid points (size -1 compared to array with bin edges)
         bin_primary = 0.5 * (bins[:-1] + bins[1:])
@@ -398,7 +398,7 @@ def rebin(cycles, binby='range', n=None, w=None):
     else:  # i.e. binby == 'mean'
         # create bins
         bins = _create_bins(means.min(), means.max(), n=n, w=w)
-        nbins = bins.size - 1
+        # nbins = bins.size - 1
 
         # establish bin mid points (size -1 compared to array with bin edges)
         bin_primary = 0.5 * (bins[:-1] + bins[1:])
