@@ -2,11 +2,10 @@
 # encoding: utf8
 """
 Module with functions for signal processing.
-
 """
 import numpy as np
 from scipy.fftpack import fft, ifft, rfft, irfft
-from scipy.signal import welch, butter, filtfilt, sosfiltfilt
+from scipy.signal import welch, butter, filtfilt, sosfiltfilt, csd as spcsd, coherence as spcoherence
 
 
 def extend_signal_ends(x, n):
@@ -585,12 +584,12 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
 
 def psd(x, dt, **kwargs):
     """
-    Estimate power spectral density using Welch’s method.
+    Estimate power spectral density of discrete time signal X using Welch’s method.
 
     Parameters
     ----------
     x : array_like
-        Input data signal.
+        Time series data.
     dt : float
         Time step.
     kwargs : optional
@@ -616,3 +615,149 @@ def psd(x, dt, **kwargs):
     f, p = welch(x, fs=1./dt, **kwargs)
 
     return f, p
+
+
+def csd(x, y, dt, **kwargs):
+    """
+    Estimate cross power spectral density of discrete-time signals X and Y using Welch’s method.
+
+    Parameters
+    ----------
+    x : array_like
+        Time series data.
+    y : array_like
+        Time series data.
+    dt : float
+        Time step.
+    kwargs : optional
+        See `scipy.signal.csd` documentation for available options.
+
+    Returns
+    -------
+    tuple
+        Two arrays: sample frequencies and corresponding cross power spectral density
+
+    Notes
+    -----
+    This function basically wraps `scipy.signal.csd` to control defaults etc.
+
+    See also
+    --------
+    scipy.signal.welch, scipy.signal.csd
+
+    """
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    # estimate csd using welch's definition
+    f, p = spcsd(x, y, fs=1./dt, **kwargs)
+
+    return f, p
+
+
+def coherence(x, y, dt, **kwargs):
+    """
+    Estimate the magnitude squared coherence estimate of discrete-time signals X and Y using Welch’s method.
+
+    Parameters
+    ----------
+    x : array_like
+        Time series data.
+    y : array_like
+        Time series data.
+    dt : float
+        Time step.
+    kwargs : optional
+        See `scipy.signal.coherence` documentation for available options.
+
+    Returns
+    -------
+    tuple
+        Two arrays: sample frequencies and corresponding cross power spectral density
+
+    Notes
+    -----
+    This function basically wraps `scipy.signal.coherence` to control defaults etc.
+
+    See also
+    --------
+    scipy.signal.welch, scipy.signal.coherence
+
+    """
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    # estimate coherence using welch's definition
+    f, c = spcoherence(x, y, fs=1./dt, **kwargs)
+
+    return f, c
+
+
+def tfe(x, y, dt, clim=None, **kwargs):
+    """
+    Estimate the transfer function between two discrete-time signals X and Y using Welch’s method.
+
+    Parameters
+    ----------
+    x : array_like
+        Time series data.
+    y : array_like
+        Time series data.
+    dt : float
+        Time step.
+    clim : float, optional
+        Discard transfer function estimates where the magnitude squared coherence estimate is below this limit.
+    kwargs : optional
+        See `scipy.signal.welch`, `scipy.signal.csd` and `scipy.signal.coherence` documentation for available options.
+
+    Returns
+    -------
+    tuple
+        Two arrays: sample frequencies and corresponding transfer function estimate
+
+    Examples
+    --------
+    Estimate the transfer function between wave elevation and vessel heave motion recorded to a file "somefile.mat".
+    >>>from qats import TsDB
+    >>>from qats.signal import tfe
+    >>>import matplotlib.pyplot as plt
+    >>>
+    >>>db = TsDB.fromfile("somefile.mat")
+    >>>wave = db.get("wave_2")
+    >>>heave = db.get("heave")
+    >>>
+    >>># discard the transient signal
+    >>>t, w = wave.get(twin=(1000, 1e8))
+    >>>_, h = heave.get(twin=(1000, 1e8))
+    >>>dt = t[1] - t[0]
+    >>># discard part of signals with poor coherence and smooth using Welch's method with 1000 values per segment.
+    >>>f, tf = tfe(w, h, dt, clim=0.3, nperseg=1000)
+    >>># plot transfer function against period and limit to periods larger than 2 seconds (0.5Hz)
+    >>>plt.plot(1. / f[(0. < f) & (f <= 0.5)], abs(tf[(0. < f) & (f <= 0.5)]))
+    >>>plt.xlabel("Period (Hz)")
+    >>>plt.ylabel("Transfer function (-)")
+    >>>plt.grid()
+    >>>plt.show()
+
+    Notes
+    -----
+    For single input/single-output systems like this the transfer function is estimated as Pyx / Pxx where Pxx is the
+    power spectral density of x and Pyx is the complex conjugate of the cross power spectral density of x and y.
+
+    See also
+    --------
+    scipy.signal.welch, scipy.signal.coherence
+
+    """
+    x = np.asarray(x)
+    y = np.asarray(y)
+
+    f, pxx = psd(x, dt, **kwargs)
+    _, pyx = csd(x, y, dt, **kwargs)
+    tf = pyx / pxx
+
+    if clim is not None:
+        _, cyx = coherence(x, y, dt, **kwargs)
+        return f[cyx >= clim], tf[cyx >= clim]
+    else:
+        return f, tf
