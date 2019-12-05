@@ -291,7 +291,7 @@ class SNCurve(object):
         return
 
 
-def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
+def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), kwargs={}):
     """
     Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
 
@@ -302,10 +302,15 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     count: np.ndarray or list of floats
         Cycle count for each of the stress ranges. May be specified as number of cycles [-] or cycle rate [1/s].
         If cycle rate is specified, specify duration `td` for scaling to number of cycles.
-    sn: dict or SNCurve
-        Dictionary with S-N curve parameters, alternatively an SNCurve instance.
-        If dict is specified, expected keys are: 'm1' and 'a1' (or 'loga1') for linear S-N curve, and also 'm2' and
-        'nswitch' if bi-linear S-N curve.
+    sn: dict or object or callable
+        Dictionary with S-N curve parameters, or class instance, or callable (function).
+        If **dict**: An :class:`SNCurve` instance is initiated based on parameters defined in dict. Expected keys are
+        'm1' and 'a1' (or 'loga1') for linear S-N curve, and also 'm2' and 'nswitch' if bi-linear S-N curve.
+        If **object**: Assumed to be class instance, and expected to have a callable method `n` which takes stress range
+        array as input (e.g. an instance of the :class:`SNCurve` class.).
+        If **callable**: A function with takes stress range array as input, and returns an array of fatigue capacity
+        (no. of cycles to failure), similar to :meth:`SNCurve.n`. Additional positional and keyword arguments may be
+        passed using parameter `args` and `kwargs`.
     td: float, optional
         Duration [s]. Used to scale the histogram from cycle rate to number of cycles.
         Use 1 (the default) if histogram already represents number of cycles.
@@ -316,6 +321,10 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
         defined for the S-N curve given.
     retbins: bool, optional
         If True, minersum per bin is also returned.
+    args : tuple, optional
+        Tuple of arguments that are passed to the capacity function defined by parameter `sn`.
+    kwargs : dict, optional
+        Dictionary with keyword arguments that are passed to the capacity function defined by parameter `sn`.
 
     Returns
     -------
@@ -328,19 +337,40 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
     ------
     ValueError:
         If thickness is given but thickness correction not specified for S-N curve.
+    AssertionError
+        If parameter `sn` is not a dict, a callable, or a class instance with callable method `n()`.
+
+    Notes
+    -----
+    .. versionadded :: 4.7.0
+
+    Parameter `sn` may now be a callable (function) that calculates the fatigue capacity
+    (number of cycles to failure) for a given stress range. It must accept array input, and return array output.
+    To pass additional arguments to this function, use the
+
     """
     srange = np.asarray(srange)
     count = np.asarray(count)
     if not srange.shape == count.shape:
         raise ValueError("`srange` and `count` must have same shape")
 
-    if not isinstance(sn, SNCurve):
+    if isinstance(sn, dict):
         sn = SNCurve("", **sn)
 
-    if th is not None and (sn.t_exp is None and sn.t_ref is None):
-        raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
+    if isinstance(sn, SNCurve):
+        # handle SNCurve instance as special case, for backwards compatibility
+        if th is not None and (sn.t_exp is None and sn.t_ref is None):
+            raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
+        damage_per_bin = td * count / sn.n(srange * scf, t=th)
+    else:
+        if callable(sn):
+            func = sn
+        else:
+            func = getattr(sn, 'n', None)
+            assert callable(func), "Parameter 'sn' must be dict, callable or class instance with callable method 'n'"
+        damage_per_bin = td * count / func(srange * scf, *args, **kwargs)
 
-    damage_per_bin = td * count / sn.n(srange * scf, t=th)
+    # total damage is sum of damage per stress range bin
     d = sum(damage_per_bin)
 
     if retbins is True:
