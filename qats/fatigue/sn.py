@@ -346,8 +346,7 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
 
     Parameter `sn` may now be a callable (function) that calculates the fatigue capacity
     (number of cycles to failure) for a given stress range. It must accept array input, and return array output.
-    To pass additional arguments to this function, use the
-
+    To pass additional arguments to this function, use the `args` and `kwargs` keywords.
     """
     srange = np.asarray(srange)
     count = np.asarray(count)
