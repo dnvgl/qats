@@ -125,6 +125,16 @@ class SNCurve(object):
         return '<SNCurve "%s" (%s)>' % (self.name, str_type)
 
     @property
+    def a(self):
+        """
+        Intercept parameter of linear (single slope) S-N curve (equal to `a1`).
+        Not available for bi-linear curves.
+        """
+        # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
+        assert self.a2 is None, "For bi-linear curves, use `a1` and `a2` instead of `a`"
+        return self.a1
+
+    @property
     def bilinear(self):
         """
         Returns True if S-N curve is bi-linear, otherwise False.
@@ -133,6 +143,16 @@ class SNCurve(object):
             return False
         else:
             return True
+
+    @property
+    def loga(self):
+        """
+        Logarithm (base 10) of intercept parameter of linear (single slope) S-N curve (equal to `loga1`).
+        Not available for bi-linear curves.
+        """
+        # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
+        assert self.loga2 is None, "For bi-linear curves, use `loga1` and `loga2` instead of `loga`"
+        return self.loga1
 
     @property
     def m(self):
