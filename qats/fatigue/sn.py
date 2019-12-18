@@ -311,7 +311,7 @@ class SNCurve(object):
         return
 
 
-def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), kwargs={}):
+def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), kwds=None):
     """
     Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
 
@@ -343,7 +343,7 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
         If True, minersum per bin is also returned.
     args : tuple, optional
         Tuple of arguments that are passed to the capacity function defined by parameter `sn`.
-    kwargs : dict, optional
+    kwds : dict, optional
         Dictionary with keyword arguments that are passed to the capacity function defined by parameter `sn`.
 
     Returns
@@ -373,6 +373,9 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
     if not srange.shape == count.shape:
         raise ValueError("`srange` and `count` must have same shape")
 
+    if kwds is None:
+        kwds = dict()
+
     if isinstance(sn, dict):
         sn = SNCurve("", **sn)
 
@@ -387,7 +390,7 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
         else:
             func = getattr(sn, 'n', None)
             assert callable(func), "Parameter 'sn' must be dict, callable or class instance with callable method 'n'"
-        damage_per_bin = td * count / func(srange * scf, *args, **kwargs)
+        damage_per_bin = td * count / func(srange * scf, *args, **kwds)
 
     # total damage is sum of damage per stress range bin
     d = sum(damage_per_bin)
