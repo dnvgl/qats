@@ -338,7 +338,9 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
         Stress concentration factor to be applied on stress ranges. Default: 1.
     th: float, optional
         Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
-        defined for the S-N curve given.
+        defined for the S-N curve given. NOTE: This parameter is only accepted if parameter `sn` is given as a `dict`
+        or a :class:`SNCurve` instance. In any other case, used the `args` or `kwds` parameter to pass additional
+        parameters to the capacity function.
     retbins: bool, optional
         If True, minersum per bin is also returned.
     args : tuple, optional
@@ -385,6 +387,8 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
             raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
         damage_per_bin = td * count / sn.n(srange * scf, t=th)
     else:
+        assert th is None, "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. " \
+                           "For other cases, use parameter 'args' or 'kwds'."
         if callable(sn):
             func = sn
         else:
