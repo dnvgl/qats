@@ -194,7 +194,7 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 <!-- Links to be defined below here -->
 
 [Unreleased]: https://github.com/dnvgl/qats/compare/4.7.0...HEAD
-[4.6.1]: https://github.com/dnvgl/qats/compare/4.6.1...4.7.0
+[4.7.0]: https://github.com/dnvgl/qats/compare/4.6.1...4.7.0
 [4.6.1]: https://github.com/dnvgl/qats/compare/4.6.0...4.6.1
 [4.6.0]: https://github.com/dnvgl/qats/compare/4.5.0...4.6.0
 [4.5.0]: https://github.com/dnvgl/qats/compare/4.4.0...4.5.0
