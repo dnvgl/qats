@@ -733,6 +733,7 @@ class Qats(QMainWindow):
                                         "ASCII file with header (*.dat);;"
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"
+                                        "Technical Data Management Streaming files (*.tdms);;"
                                         "All Files (*)", options=options)
 
         # load files into db and update application model and view
