@@ -77,7 +77,6 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
         try:
             timearr = channel_obj.time_track()
         except KeyError:
-            groups = tdms_file.groups()
             channels = tdms_file.group_channels(group=group_name)
             for channel in channels:
                 if channel.channel.lower() == 'time':
