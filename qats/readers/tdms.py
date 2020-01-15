@@ -1,5 +1,6 @@
 from nptdms import TdmsFile as npTdmsFile
 from typing import List, Tuple, Union
+from datetime import datetime
 import numpy as np
 import os
 
@@ -28,8 +29,9 @@ def read_names(path):
     for group in groups:
         channels = tdms_file.group_channels(group=group)
         for channel in channels:
-            if "'time'" not in channel.path.lower():
-                names.append(channel.path.replace("'", ""))
+            if 'time' != channel.channel.lower():
+                names.append(channel.group + '\\' + channel.channel)
+
     return names
 
 
@@ -66,8 +68,8 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
     arrays = []
     tdms_file = npTdmsFile(path)
     for name in names:
-        group_name = name.split('/')[1]
-        channel_name = name.split('/')[2]
+        group_name = name.split('\\')[0]
+        channel_name = name.split('\\')[1]
 
         channel_obj = tdms_file.object(group_name, channel_name)
         data = channel_obj.data
@@ -86,7 +88,15 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
         if type(timearr) is not np.ndarray:
             raise Exception("no time info extracted for dataset '%s'" % name)
 
-        arr = np.array([timearr, data])
+        # verify that time array has correct shape (==> should be same as `data` shape)
+        if not timearr.shape == data.shape:
+            raise Exception("unexpected error: `time` has shape " + str(timearr.shape) + "while data has"
+                            "shape " + str(data.shape) + " (should be equal)")
+
+        if type(timearr[0]) is np.datetime64:
+            arr = [timearr.astype(datetime), data]
+        else:
+            arr = [timearr, data]
         arrays.append(arr)
 
     return arrays
