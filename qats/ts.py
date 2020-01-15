@@ -572,7 +572,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.resample(), TimeSeries.interpolate(), qats.signal.smooth()
+        resample, interpolate, qats.signal.smooth
 
         """
         assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), \
@@ -694,8 +694,8 @@ class TimeSeries(object):
             is used (normal ==> 3.0).
         bias : bool, optional
             If False (default), then the calculations are corrected for statistical bias.
-        kwargs : optional
-            see documentation of get() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -717,8 +717,8 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        kwargs : optional
-            See documentation of :meth:`get()` method for available options.
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -753,8 +753,8 @@ class TimeSeries(object):
         rettime : bool, optional
             If True, (maxima, time_maxima), where `time_maxima` is an array of time instants associated with the
             maxima sample.
-        kwargs : optional
-                See documentation of :meth:`get()` method for available options.
+        **kwargs : optional
+                Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -791,8 +791,8 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        kwargs : optional
-            see documentation of get() method for available options
+        **kwargs : optional
+            Keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -814,8 +814,8 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        kwargs : optional
-            See documentation of get() method for available options.
+        **kwargs : optional
+            Keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -840,8 +840,8 @@ class TimeSeries(object):
         rettime : bool, optional
             If True, (maxima, time_maxima), where `time_maxima` is an array of time instants associated with the
             maxima sample.
-        kwargs : optional
-            See documentation of :meth:`get()` method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -883,8 +883,8 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        kwargs : optional
-            see documentation of get() method for available options
+        **kwargs : optional
+            Keyword arguments are passed to :meth:`get()`.
 
         Notes
         -----
@@ -898,16 +898,14 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        names : str/list/tuple, optional
-            Time series names
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         show : bool, optional
             Show figure? Defaults to False if `figurename` is specified, otherwise True.
         num : int, optional
             Matplotlib figure number. Defaults to 1.
-        kwargs : optional
-            See documentation of TimeSeries.get() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         """
         # dict with numpy arrays: time and data
@@ -935,8 +933,8 @@ class TimeSeries(object):
             Show figure? Defaults to False if `figurename` is specified, otherwise True.
         num : int, optional
             Matplotlib figure number. Defaults to 1.
-        kwargs : optional
-            see documentation of TimeSeries.psd() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`psd()`.
 
         """
         # dict with TimeSeries objects
@@ -959,9 +957,9 @@ class TimeSeries(object):
         Parameters
         ----------
         n : int, optional
-            Group by cycle range in *n* equidistant bins.
+            Group by cycle range in `n` equidistant bins.
         w : float, optional
-            Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+            Group by cycle range in `w` wide equidistant bins. Overrides `n`.
         bw : float, optional
             Bar width, expressed as ratio of bin width.
         figurename : str, optional
@@ -970,22 +968,22 @@ class TimeSeries(object):
             Show figure? Defaults to False if `figurename` is specified, otherwise True.
         num : int, optional
             Matplotlib figure number. Defaults to 1.
-        kwargs : optional
-            see documentation of TimeSeries.rfc() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`rfc()`.
 
         See Also
         --------
-        TimeSeries.rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
+        rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
-        cycles = self.rfc(**kwargs)
-
         # rebin cycles
         assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
                                                    "be different from None"
+
+        cycles = self.rfc(**kwargs)
         cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
-        r, _, c = zip(*cycles)  # unpack cycle range and count, ignore mean value
-        dr = r[1] - r[0]        # bin width, used as basis for bar width
+        r, _, c = cycles.T   # unpack cycle range and count, ignore mean value
+        dr = r[1] - r[0]     # bin width, used as basis for bar width
         plt.figure(num=num)
         plt.bar(r, c, dr * bw, label=self.name)
         plt.xlabel('Cycle range')
@@ -1006,15 +1004,15 @@ class TimeSeries(object):
         n : int, optional
             Group by cycle range in *n* equidistant bins.
         w : float, optional
-            Group by cycle range in *w* wide equidistant bins. Overrides *n*.
+            Group by cycle range in *w* wide equidistant bins. Overrides `n`.
         figurename : str, optional
             Save figure to file 'figurename' instead of displaying on screen.
         show : bool, optional
             Show figure? Defaults to False if `figurename` is specified, otherwise True.
         num : int, optional
             Matplotlib figure number. Defaults to 1.
-        kwargs : optional
-            see documentation of TimeSeries.rfc() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`rfc()`.
 
         Notes
         -----
@@ -1022,7 +1020,7 @@ class TimeSeries(object):
 
         See Also
         --------
-        TimeSeries.rfc, TimeSeries.plot_cyclerange,
+        rfc, plot_cycle_range,
         qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         cycles = self.rfc(**kwargs)
@@ -1031,7 +1029,7 @@ class TimeSeries(object):
         if (n is not None) or (w is not None):
             cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
 
-        ranges, means, counts = zip(*cycles)      # unpack cycle range, mean and count
+        ranges, means, counts = cycles.T  # unpack cycle range, mean and count
 
         # the scatter plot (with double marker size for improved readability)
         plt.figure(num=num)
@@ -1061,8 +1059,8 @@ class TimeSeries(object):
             Show figure? Defaults to False if `figurename` is specified, otherwise True.
         num : int, optional
             Matplotlib figure number. Defaults to 1.
-        kwargs : optional
-            see documentation of TimeSeries.get() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`rfc()`.
 
         """
         # This import registers the 3D projection, but is otherwise unused.
@@ -1074,9 +1072,9 @@ class TimeSeries(object):
 
         fig = plt.figure(num=num)
         ax = fig.gca(projection='3d')
-        ax.plot_surface(means, ranges, counts, cmap=cm.coolwarm)
-        ax.set_xlabel('Cycle mean')
-        ax.set_ylabel('Cycle range')
+        ax.plot_surface(ranges, means, counts, cmap=cm.coolwarm)
+        ax.set_xlabel('Cycle range')
+        ax.set_ylabel('Cycle mean')
         ax.set_zlabel('Cycle count')
         if figurename is not None:
             plt.savefig(figurename)
@@ -1101,7 +1099,7 @@ class TimeSeries(object):
         normalize : bool, optional
             Normalize power spectral density on maxium density.
         kwargs : optional
-            see documentation of get() method for available options
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1129,7 +1127,9 @@ class TimeSeries(object):
 
         See also
         --------
-        qats.signal.psd, scipy.signal.welch, scipy.signal.periodogram
+        qats.signal.psd
+        scipy.signal.welch
+        scipy.signal.periodogram
 
         """
         # get time and data arrays
@@ -1197,26 +1197,24 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        kwargs : optional
-            see documentation of get() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
-        list
+        np.array
             Cycle range, mean and count sorted ascending by cycle range.
 
         Examples
         --------
-        Unpack cycle ranges, means and counts as list
+        Unpack cycle ranges, means and counts as 1D arrays:
 
         >>> cycles = ts.rfc()
-        >>> ranges, means, counts = zip(*cycles)
+        >>> ranges, means, counts = cycles.T
 
         Notes
         -----
         Half cycles are counted as 0.5, so the returned counts may not be whole numbers.
-
-        Rebinning is not applied if specified *n* is larger than the original number of bins.
 
         See Also
         --------
@@ -1291,8 +1289,8 @@ class TimeSeries(object):
             Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
         include_sample : bool, optional
             Return sample of maxima or minima (minima=True).
-        kwargs
-            Optional parameters passed to TimeSeries.get()
+        **kwargs
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1400,8 +1398,8 @@ class TimeSeries(object):
 
         Parameters
         ----------
-        kwargs : optional
-            see documentation of :meth:`get()` method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------
@@ -1429,8 +1427,8 @@ class TimeSeries(object):
         ----------
         bias : bool, optional
             If False (default), then the calculations are corrected for statistical bias.
-        kwargs : optional
-            see documentation of get() method for available options
+        **kwargs : optional
+            Additional keyword arguments are passed to :meth:`get()`.
 
         Returns
         -------

@@ -28,7 +28,7 @@ class SNCurve(object):
     loga1 : float, optional
         Log10 of a1. Must be given if `a1` is not specified.
     nswitch : float, optional
-        Number of cycles at transition from `m1` to `m2`.
+        Number of cycles at transition from `m1` to `m2`. Required if `m2` is specified.
     t_exp : float, optional
         Thickness correction exponent. If not specified, thickness may not be specified in later calculations.
     t_ref : float, optional
@@ -62,7 +62,7 @@ class SNCurve(object):
     Notes
     -----
     For linear curves (single slope), the following input parameters are required: m1, a1 (or loga1).
-    For bi-linear curves, the following parameters are required: m1, m2, nswitch, a1 (or loga1), t_exp, t_ref.
+    For bi-linear curves, the following additional parameters are required: m2, nswitch.
 
     If S-N curve is overdefined (e.g. both loga1 and a1 are defined), the S-N curve is established based on the
     parameter order listed above (under "Parameters").
@@ -125,6 +125,16 @@ class SNCurve(object):
         return '<SNCurve "%s" (%s)>' % (self.name, str_type)
 
     @property
+    def a(self):
+        """
+        Intercept parameter of linear (single slope) S-N curve (equal to `a1`).
+        For bi-linear curves, use `a1` and `a2` instead.
+        """
+        # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
+        assert self.a2 is None, "For bi-linear curves, use `a1` and `a2` instead of `a`"
+        return self.a1
+
+    @property
     def bilinear(self):
         """
         Returns True if S-N curve is bi-linear, otherwise False.
@@ -133,6 +143,16 @@ class SNCurve(object):
             return False
         else:
             return True
+
+    @property
+    def loga(self):
+        """
+        Logarithm (base 10) of intercept parameter of linear (single slope) S-N curve (equal to `loga1`).
+        For bi-linear curves, use `loga1` and `loga2` instead.
+        """
+        # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
+        assert self.loga2 is None, "For bi-linear curves, use `loga1` and `loga2` instead of `loga`"
+        return self.loga1
 
     @property
     def m(self):
@@ -192,25 +212,26 @@ class SNCurve(object):
 
     def n(self, s, t=None):
         """
-        Predicted number of cycles to failure for specified stress range and thickness.
+        Predicted number of cycles to failure for specified stress range(s) and thickness.
 
         Parameters
         ----------
-        s : float
-            Stress range [MPa].
+        s : float or np.ndarray
+            Stress range(s) [MPa].
         t : float, optional
             Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
             specified, thickness correction is not taken into account.
 
         Returns
         -------
-        float
-            Predicted number of cycles to failure.
+        float or np.ndarray
+            Predicted number of cycles to failure. Output type is same as input type (float or np.ndarray)
 
         Raises
         ------
         ValueError: If thickness is specified, but thickness reference and exponent is not defined.
         """
+        s = np.asarray(s)
         # thickness correction
         if t is not None:
             # thickness correction term
@@ -223,18 +244,25 @@ class SNCurve(object):
             # no thickness correction term implies tk=1.0
             tcorr = 1.0
 
-        # S-N parameters for specified stress range
-        if self.bilinear is False or s >= self.sswitch:
-            m = self.m1
-            loga = self.loga1
+        # calculate fatigue limit `n`, ref. DNV-RP-C203 (2016) eq. 2.4.3
+        # ... using appropriate S-N parameters for specified stress range(s)
+        if self.bilinear is False:
+            # single slope sn curve
+            n = 10 ** (self.loga1 - self.m1 * np.log10(s * tcorr))
+            return n
         else:
-            m = self.m2
-            loga = self.loga2
-
-        # fatigue limit, ref. DNV-RP-C203 (2016) eq. 2.4.3
-        n = 10 ** (loga - m * np.log10(s * tcorr))
-
-        return n
+            # bi-linear curve
+            n = np.zeros(s.shape)
+            ind = s >= self.sswitch
+            # fatigue limits for upper part of curve
+            n[ind] = 10 ** (self.loga1 - self.m1 * np.log10(s[ind] * tcorr))
+            # fatigue limits for lower part of curve
+            n[~ind] = 10 ** (self.loga2 - self.m2 * np.log10(s[~ind] * tcorr))
+            if n.ndim == 0:
+                # float
+                return n.item()
+            else:
+                return n
 
     def thickness_correction(self, t):
         """
@@ -283,21 +311,26 @@ class SNCurve(object):
         return
 
 
-def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
+def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), kwds=None):
     """
     Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
 
     Parameters
     ----------
-    srange: list of floats
+    srange: np.ndarray or list of floats
         List of stress ranges in histogram (Note: only one value per bin).
-    count: list of floats
+    count: np.ndarray or list of floats
         Cycle count for each of the stress ranges. May be specified as number of cycles [-] or cycle rate [1/s].
         If cycle rate is specified, specify duration `td` for scaling to number of cycles.
-    sn: dict or SNCurve
-        Dictionary with S-N curve parameters, alternatively an SNCurve instance.
-        If dict is specified, expected keys are: 'm1' and 'a1' (or 'loga1') for linear S-N curve, and also 'm2' and
-        'nswitch' if bi-linear S-N curve.
+    sn: dict or object or callable
+        Dictionary with S-N curve parameters, or class instance, or callable (function).
+        If **dict**: An :class:`SNCurve` instance is initiated based on parameters defined in dict. Expected keys are
+        'm1' and 'a1' (or 'loga1') for linear S-N curve, and also 'm2' and 'nswitch' if bi-linear S-N curve.
+        If **object**: Assumed to be class instance, and expected to have a callable method `n` which takes stress range
+        array as input (e.g. an instance of the :class:`SNCurve` class.).
+        If **callable**: A function with takes stress range array as input, and returns an array of fatigue capacity
+        (no. of cycles to failure), similar to :meth:`SNCurve.n`. Additional positional and keyword arguments may be
+        passed using parameter `args` and `kwargs`.
     td: float, optional
         Duration [s]. Used to scale the histogram from cycle rate to number of cycles.
         Use 1 (the default) if histogram already represents number of cycles.
@@ -305,32 +338,65 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False):
         Stress concentration factor to be applied on stress ranges. Default: 1.
     th: float, optional
         Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
-        defined for the S-N curve given.
+        defined for the S-N curve given. NOTE: This parameter is only accepted if parameter `sn` is given as a `dict`
+        or a :class:`SNCurve` instance. In any other case, used the `args` or `kwds` parameter to pass additional
+        parameters to the capacity function.
     retbins: bool, optional
         If True, minersum per bin is also returned.
+    args : tuple, optional
+        Tuple of arguments that are passed to the capacity function defined by parameter `sn`.
+    kwds : dict, optional
+        Dictionary with keyword arguments that are passed to the capacity function defined by parameter `sn`.
 
     Returns
     -------
     float
         Fatigue damage (Palmgren-Miner sum).
-    list (optional)
+    np.ndarray, optional
         Fatigue damage (Palmgren-Miner sum) for each stress range bin. Returned if `retbin=True`.
 
     Raises
     ------
     ValueError:
         If thickness is given but thickness correction not specified for S-N curve.
-    """
-    if not len(srange) == len(count):
-        raise ValueError("`srange` and `count` must be lists of same length")
+    AssertionError
+        If parameter `sn` is not a dict, a callable, or a class instance with callable method `n()`.
 
-    if not isinstance(sn, SNCurve):
+    Notes
+    -----
+    .. versionadded :: 4.7.0
+
+    Parameter `sn` may now be a callable (function) that calculates the fatigue capacity
+    (number of cycles to failure) for a given stress range. It must accept array input, and return array output.
+    To pass additional arguments to this function, use the `args` and `kwargs` keywords.
+    """
+    srange = np.asarray(srange)
+    count = np.asarray(count)
+    if not srange.shape == count.shape:
+        raise ValueError("`srange` and `count` must have same shape")
+
+    if kwds is None:
+        kwds = dict()
+
+    if isinstance(sn, dict):
         sn = SNCurve("", **sn)
 
-    if th is not None and (sn.t_exp is None and sn.t_ref is None):
-        raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
+    if isinstance(sn, SNCurve):
+        # handle SNCurve instance as special case, for backwards compatibility
+        if th is not None and (sn.t_exp is None and sn.t_ref is None):
+            raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
+        damage_per_bin = td * count / sn.n(srange * scf, t=th)
+    else:
+        assert th is None, "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. " \
+                           "For other cases, use parameter 'args' or 'kwds'."
+        if callable(sn):
+            func = sn
+        else:
+            func = getattr(sn, 'n', None)
+            assert callable(func), "Parameter 'sn' must be dict, callable or class instance with callable method 'n'"
+        damage_per_bin = td * count / func(srange * scf, *args, **kwds)
 
-    damage_per_bin = [(td * n) / sn.n(s * scf, t=th) for s, n in zip(srange, count)]
+    # total damage is sum of damage per stress range bin
     d = sum(damage_per_bin)
 
     if retbins is True:
