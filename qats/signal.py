@@ -718,26 +718,26 @@ def tfe(x, y, dt, clim=None, **kwargs):
     Examples
     --------
     Estimate the transfer function between wave elevation and vessel heave motion recorded to a file "somefile.mat".
-    >>>from qats import TsDB
-    >>>from qats.signal import tfe
-    >>>import matplotlib.pyplot as plt
+    >>> from qats import TsDB
+    >>> from qats.signal import tfe
+    >>> import matplotlib.pyplot as plt
     >>>
-    >>>db = TsDB.fromfile("somefile.mat")
-    >>>wave = db.get("wave_2")
-    >>>heave = db.get("heave")
+    >>> db = TsDB.fromfile("somefile.mat")
+    >>> wave = db.get("wave_2")
+    >>> heave = db.get("heave")
     >>>
-    >>># discard the transient signal
-    >>>t, w = wave.get(twin=(1000, 1e8))
-    >>>_, h = heave.get(twin=(1000, 1e8))
-    >>>dt = t[1] - t[0]
-    >>># discard part of signals with poor coherence and smooth using Welch's method with 1000 values per segment.
-    >>>f, tf = tfe(w, h, dt, clim=0.3, nperseg=1000)
-    >>># plot transfer function against period and limit to periods larger than 2 seconds (0.5Hz)
-    >>>plt.plot(1. / f[(0. < f) & (f <= 0.5)], abs(tf[(0. < f) & (f <= 0.5)]))
-    >>>plt.xlabel("Period (Hz)")
-    >>>plt.ylabel("Transfer function (-)")
-    >>>plt.grid()
-    >>>plt.show()
+    >>> # discard the transient signal
+    >>> t, w = wave.get(twin=(1000, 1e8))
+    >>> _, h = heave.get(twin=(1000, 1e8))
+    >>> dt = t[1] - t[0]
+    >>> # discard part of signals with poor coherence and smooth using Welch's method with 1000 values per segment.
+    >>> f, tf = tfe(w, h, dt, clim=0.3, nperseg=1000)
+    >>> # plot transfer function against period and limit to periods larger than 2 seconds (0.5Hz)
+    >>> plt.plot(1. / f[(0. < f) & (f <= 0.5)], abs(tf[(0. < f) & (f <= 0.5)]))
+    >>> plt.xlabel("Period (Hz)")
+    >>> plt.ylabel("Transfer function (-)")
+    >>> plt.grid()
+    >>> plt.show()
 
     Notes
     -----
