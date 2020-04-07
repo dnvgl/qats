@@ -7,8 +7,7 @@ import os
 
 def read_names(path):
     """
-    Extracts time series names from Technical Data Management Streaming file `.tdms`.
-    ref: http://www.ni.com/product-documentation/3727/en/
+    Read time series names from Technical Data Management Streaming (TDMS) file.
 
     Parameters
     ----------
@@ -19,6 +18,11 @@ def read_names(path):
     -------
     list
         List of time series names (datasets)
+
+    References
+    ----------
+    1. http://www.ni.com/product-documentation/3727/en/
+
     """
     if not os.path.isfile(path):
         raise FileNotFoundError("file not found: %s" % path)
@@ -37,7 +41,7 @@ def read_names(path):
 
 def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
     """
-    Extracts time series data from `.tdms` (or `hdf5`) files exported from LabVIEW (normally).
+    Read time series data from Technical Data Management Streaming (TDMS) files typically exported from LabVIEW.
 
     Parameters
     ----------
