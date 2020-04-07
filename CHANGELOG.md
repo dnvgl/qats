@@ -19,6 +19,35 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.7.0] // 15.01.2020
+
+#### Added
+Three functions have been added to submodule `qats.signal`:
+
+- `qats.signal.csd()`: Estimate cross power spectral density of discrete-time signals X and Y using Welch’s method.
+- `qats.signal.coherence()`: Estimate the magnitude squared coherence estimate of discrete-time signals X and Y using Welch’s method.
+- `qats.signal.tfe()`: Estimate the transfer function between two discrete-time signals X and Y using Welch’s method.
+
+For details, see the [API documentation](https://qats.readthedocs.io/en/latest/api/qats/submodules.html#module-qats.signal). Note that these new functions are all wrappers for relevant functions available from `scipy.signal`.
+
+#### Changed
+There are significant changes to subpackage `qats.fatigue`, and in particular for the `qats.fatigue.rainflow` module. Most changes are related to performance for large cycle distributions, and the output type is changed from `list` to `numpy.ndarray` for several of the functions. This allows for adjusted syntax, however; the changes are backwards compatible in the sense that the old syntax will still work. For function `qats.fatigue.rainflow.mesh()`, the mesh returned deviates from the mesh calculated for version <= 4.6.1 (mesh calculated for these versions was not correct).
+
+Main changes are as follows:
+
+- `qats.fatigue.sn`: `SNCurve.n()` now accepts float or array as input, and returns the same type as the input (float or array). `minersum()` is updated to utilize this, performing array operation instead of time consuming list comprehension (with multiple calls to `SNCurve.n()`).
+
+- `qats.fatigue.sn.minersum()` is now more flexible wrt. the `sn` input parameter. Three different data types are accepted: 1) a dict; in this case the dict is used to initiate an `SNCurve` instance (as before), 2) a class instance; in this case the object is expected to have a callable method `n()` (as before, but more flexible wrt. type of class instance), 3) a callable (a function); the function must accept stress ranges as the first positional argument. Parameters `args` and `kwds` are introduced to enable forwarding of arguments to the callable - this is relevant for alt. 2) (when instance passed is not `SNCurve`) and alt. 3).
+
+- `qats.fatigue.rainflow.count_cycles()` now returns a numpy array with shape `(n, 3)`, whereas previously it return a list of 3-tuples. `n` is here the number of cycles and half cycles. Unpacking may now be done as `r, m, c = count_cycles(series).T`, which is much faster for large `n` than the old syntax `r, m, c = zip(*count_cycles(series)`. The latter may still be used however, hence this change is backwards compatible. A minor change from qats version <= 4.6.1 is that the count is now always either 1.0 (full cycles) or 0.5 (half cycles). Matching cycles (same range and mean) are no longer matched with increased count, but rather included as individual cycles. This is of no importance at all, except that the return array may be longer in some few cases (however; sum of the counts, i.e. the sum of the 3rd column, is unchanged).
+
+- `qats.fatigue.rainflow.rebin()` now returns a numpy array similar to that returned from `count_cycles()`. Rebinning is now done by use of [`np.histogram()`](https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram.html), which significantly increases the speed. A minor change from qats version <= 4.6.1 is that cycles ranges (or means) that end up on the edge of a bin is placed in the highest bin. This is more conservative, and in most cases there will be no difference at all (since very few cycles will normally coincide with bin edges).
+
+- `qats.fatigue.rainflow.mesh()`: mesh established for qats version <= 4.6.1 is not correct. The function is now re-written, using  [`np.histogram2d()`](https://docs.scipy.org/doc/numpy/reference/generated/numpy.histogram2d.html) and  [`np.meshgrid()`](https://docs.scipy.org/doc/numpy/reference/generated/numpy.meshgrid.html). For further details about the properties of the mesh established, see the function docstring or the [API documentation](https://qats.readthedocs.io/en/latest/api/qats/subpackages/fatigue.html#qats.fatigue.rainflow.mesh).
+
+- `qats.fatigue.corrections.goodman_haigh()` now accepts (and returns) np.ndarray, and utilizes this for efficiency. See docstring or [API documentation](https://qats.readthedocs.io/en/latest/api/qats/subpackages/fatigue.html#qats.fatigue.corrections.goodman_haigh) for details and an example.
+
+
 ### [4.6.1] // 26.11.2019
 
 #### Fixed
@@ -173,7 +202,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.6.1...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.7.0...HEAD
+[4.7.0]: https://github.com/dnvgl/qats/compare/4.6.1...4.7.0
 [4.6.1]: https://github.com/dnvgl/qats/compare/4.6.0...4.6.1
 [4.6.0]: https://github.com/dnvgl/qats/compare/4.5.0...4.6.0
 [4.5.0]: https://github.com/dnvgl/qats/compare/4.4.0...4.5.0
