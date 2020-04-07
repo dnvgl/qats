@@ -4,7 +4,6 @@
 Transformations and operations related to motion.
 """
 import numpy as np
-from numpy import sin, cos, radians as rad
 
 
 def transform_motion(motion, newref, rotunit="deg"):
@@ -42,7 +41,7 @@ def transform_motion(motion, newref, rotunit="deg"):
 
     # extract rotations, scale to radians if needed given as degrees
     if rotunit == "deg":
-        rx, ry, rz = rad(motion[-3:, :])
+        rx, ry, rz = np.radians(motion[-3:, :])
     elif rotunit == "rad":
         rx, ry, rz = motion[-3:, :]
     else:
@@ -50,11 +49,11 @@ def transform_motion(motion, newref, rotunit="deg"):
 
     # calculate transformation matrix -> shape (3, 3, nt)
     trans = np.array([
-        [cos(rz) * cos(ry), -sin(rz) * cos(rx) + cos(rz) * sin(ry) * sin(rx),
-         sin(rz) * sin(rx) + cos(rz) * sin(ry) * cos(rx)],
-        [sin(rz) * cos(ry), cos(rz) * cos(rx) + sin(rz) * sin(ry) * sin(rx),
-         -cos(rz) * sin(rx) + sin(rz) * sin(ry) * cos(rx)],
-        [-sin(ry), cos(ry) * sin(rx), cos(ry) * cos(rx)],
+        [np.cos(rz) * np.cos(ry), -np.sin(rz) * np.cos(rx) + np.cos(rz) * np.sin(ry) * np.sin(rx),
+         np.sin(rz) * np.sin(rx) + np.cos(rz) * np.sin(ry) * np.cos(rx)],
+        [np.sin(rz) * np.cos(ry), np.cos(rz) * np.cos(rx) + np.sin(rz) * np.sin(ry) * np.sin(rx),
+         -np.cos(rz) * np.sin(rx) + np.sin(rz) * np.sin(ry) * np.cos(rx)],
+        [-np.sin(ry), np.cos(ry) * np.sin(rx), np.cos(ry) * np.cos(rx)],
     ])
 
     # transform to new reference position for each time step -> shape (3, nt)

@@ -962,10 +962,7 @@ class Qats(QMainWindow):
 
             # flip sample to be able to plot sample on weibull scales
             if is_minima:
-                txt = "minima"
                 x *= -1.
-            else:
-                txt = "maxima"
 
             # normalize maxima/minima sample on weibull scales
             x = np.sort(x)  # sort ascending

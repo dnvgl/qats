@@ -113,9 +113,7 @@ class GumbelMin(object):
         The empirical cdf is also used as plotting positions when plotting the sample
         on probability paper.
         """
-        x = np.array(self.data)
         try:
-            #p = (np.arange(x.size) + 1. - 0.3) / (x.size + 0.4)
             p = empirical_cdf(self.data.size, kind='median')
             return p
         except TypeError:
@@ -372,13 +370,12 @@ class GumbelMin(object):
         These deviations diminish with larger samples. See [1, p. 380].
 
         """
+        # TODO:
+        #  self.location = wa + wb * np.log(n) ** (1. / wc)
+        #  self.scale = 1. / (wc / wb * np.log(n) ** ((wc - 1.) / wc))
+        #  if verbose:
+        #     print "Fitted parameters:\nlocation = %(location)5.3g\nscale = %(scale)5.3g" % self.__dict__
         raise NotImplementedError("Formula for deriving Gumbel minimum distribution parameter is not implemented.")
-        pass
-        # self.location = wa + wb * np.log(n) ** (1. / wc)
-        # self.scale = 1. / (wc / wb * np.log(n) ** ((wc - 1.) / wc))
-
-        # if verbose:
-        #    print "Fitted parameters:\nlocation = %(location)5.3g\nscale = %(scale)5.3g" % self.__dict__
 
     def gp_plot(self, showfig=True, save=None):
         """
