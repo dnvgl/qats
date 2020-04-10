@@ -24,7 +24,7 @@ def read_names(path):
 
     """
     # pandas will infer the format e.g. delimiter.
-    df = pd.read_csv(path, nrows=1, sep=None, engine='python')
+    df = pd.read_csv(path, nrows=1, sep=None, engine='python', encoding='utf-8')
     names = list(df)
     _ = names.pop(0)    # remove time which is assumed to be in the first column
     return names
