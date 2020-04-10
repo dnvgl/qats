@@ -38,6 +38,7 @@ class TestAllReaders(unittest.TestCase):
             ("decay.tda", 6),
             # csv files
             ("example.csv", 6),
+            ("integer.csv", 1),
             # # ascii files
             ("model_test_data.dat", 39),
             # # tdms files

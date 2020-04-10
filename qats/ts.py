@@ -75,32 +75,33 @@ class TimeSeries(object):
     """
 
     def __init__(self, name, t, x, parent=None, dtg_ref=None, kind=None, unit=None):
-        self.name = name
-        self._t = np.array(t).flatten()
-        self.x = np.array(x).flatten()
-        self.parent = parent
-        self._dtg_ref = dtg_ref
-        self._dtg_time = None
-        self.kind = kind
-        self.unit = unit
-        # todo: diagnose t series on initiation. check for nans, infs etc. before storing data on self.
+        # TODO: diagnose t series on initiation. check for nans, infs etc. before storing data on self.
 
         # check input parameters
-        assert self._t.size == self.x.size, "Time and data must be of equal length."
-        assert isinstance(self._dtg_ref, datetime) or self._dtg_ref is None, "Expected 'dtg_ref' datetime object or None"
+        assert t.size == x.size, "Time and data must be of equal length."
+        assert isinstance(dtg_ref, datetime) or dtg_ref is None, "Expected 'dtg_ref' datetime object or None"
+        assert isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64)), \
+            f"Data (x) must be integers or floats not '{type(x[0])}'."
 
-        # handle time given as array of datetime objects
-        _t0 = self._t[0]
-        if isinstance(_t0, (float, np.float32)):
-            pass
-        elif isinstance(_t0, datetime):
-            # set dtg_ref to start value, unless explicitly specified
-            if self._dtg_ref is None:
-                self._dtg_ref = _t0
-            self._dtg_time = self._t  # store specified time array as 'dtg_time'
-            self._t = np.array([(t - self._dtg_ref).total_seconds() for t in self._t])
+        self.name = name
+        self.kind = kind
+        self.unit = unit
+        self.parent = parent
+
+        if isinstance(t[0], datetime):
+            # handle time specified as datetime
+            self._dtg_ref = dtg_ref if dtg_ref is not None else t[0]
+            self._dtg_time = t  # time as datetime
+            self._t = np.array([(_ - self._dtg_ref).total_seconds() for _ in t])    # time as floats
+        elif isinstance(t[0], (int, np.int32, np.int64, float, np.float32, np.float64)):
+            # time as integer and floats
+            self._t = np.array(t).flatten().astype(float)
+            self._dtg_ref = dtg_ref
+            self._dtg_time = None
         else:
-            raise TypeError("time must be given as array of floats or datetime objects, not '%s'" % type(_t0))
+            raise TypeError(f"time must be given as array of floats or datetime objects, not '{type(t[0])}'.")
+
+        self.x = np.array(x).flatten().astype(float)
 
     def __copy__(self):
         """

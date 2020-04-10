@@ -441,11 +441,17 @@ class TsDB(object):
 
         """
         new_container = OrderedDict()
+
+        # force keeping basename if there is only 1 ts in the container. This to avoid totally removing the name
+        if len(container) == 1:
+            keep_basename = True
+
         if keep_basename:
             key_count = defaultdict(int)
         else:
             # common part of all selected keys
             common_key = os.path.commonpath([str(k) for k in container.keys()])
+
         for key, ts in container.items():
             if keep_basename:
                 # shorten key by using only basename
@@ -459,6 +465,10 @@ class TsDB(object):
                 relkey = self._path_relpath(key, common_key)
                 name = self._path_basename(relkey)
                 new_k = "_".join([os.path.splitext(self._path_dirname(relkey))[0].replace(os.path.sep, "_"), name])
+
+                # Remove leading underscores in the name
+                if new_k.startswith("_"):
+                    new_k = new_k[1:]
 
             # put in new container
             new_container[new_k] = ts
