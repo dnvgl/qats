@@ -19,6 +19,23 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+
+### [4.8.0] // 10.04.2020
+
+This release contains the two following pull requests: [#67](https://github.com/dnvgl/qats/pull/67), [#72](https://github.com/dnvgl/qats/pull/72).
+
+#### Added
+
+- New reader for .tdms files (Technical Data Management Streaming - file format used by LabVIEW), based on the `npTDMS` module.
+- New dependency to `npTDMS`; https://pypi.org/project/npTDMS/.
+
+#### Fixed
+
+- Improved compatibility with special characters, such as accents etc. when reading data from CSV files; ref. [#69](https://github.com/dnvgl/qats/issues/69).
+- Improved compatibility for various data types (integer, numpy.int64 etc.) when initiating `TimeSeries` instance; ref. [#71](https://github.com/dnvgl/qats/issues/71).
+- Fixed bug causing time series names to vanish when exporting single time series to file; ref. [#70](https://github.com/dnvgl/qats/issues/70).
+
+
 ### [4.7.0] // 15.01.2020
 
 #### Added
@@ -202,7 +219,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.7.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.8.0...HEAD
+[4.8.0]: https://github.com/dnvgl/qats/compare/4.7.0...4.8.0
 [4.7.0]: https://github.com/dnvgl/qats/compare/4.6.1...4.7.0
 [4.6.1]: https://github.com/dnvgl/qats/compare/4.6.0...4.6.1
 [4.6.0]: https://github.com/dnvgl/qats/compare/4.5.0...4.6.0
