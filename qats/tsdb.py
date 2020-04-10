@@ -38,6 +38,10 @@ from .readers.sintef_mat import (
     read_names as read_mat_names,
     read_data as read_mat_data
 )
+from .readers.tdms import (
+    read_names as read_tdms_names,
+    read_data as read_tdms_data
+)
 from .readers.other import (
     read_dat_names,
     read_dat_data
@@ -564,6 +568,11 @@ class TsDB(object):
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
+            elif fext == '.tdms':
+                data = read_tdms_data(parent, names=names)
+                for i, name in enumerate(names):
+                    timearr, arr = data[i]
+                    tslist[i] = TimeSeries(name, timearr, arr, parent=parent)
             else:
                 raise NotImplementedError("Invalid file type: %s (ext = %s)" % (parent, fext))
 
@@ -1374,6 +1383,10 @@ class TsDB(object):
             elif fext == '.csv':
                 # column wise csv
                 names = read_csv_names(thefile)
+
+            elif fext == '.tdms':
+                # National Instrument structured binary file format
+                names = read_tdms_names(thefile)
 
             else:
                 raise NotImplementedError("Invalid file type: %s" % thefile)

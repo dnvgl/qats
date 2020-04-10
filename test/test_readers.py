@@ -40,6 +40,8 @@ class TestAllReaders(unittest.TestCase):
             ("example.csv", 6),
             # # ascii files
             ("model_test_data.dat", 39),
+            # # tdms files
+            ("data.tdms", 4),
         ]
 
     def test_correct_number_of_timeseries(self):

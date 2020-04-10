@@ -733,6 +733,7 @@ class Qats(QMainWindow):
                                         "ASCII file with header (*.dat);;"
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"
+                                        "Technical Data Management Streaming files (*.tdms);;"
                                         "All Files (*)", options=options)
 
         # load files into db and update application model and view
@@ -961,10 +962,7 @@ class Qats(QMainWindow):
 
             # flip sample to be able to plot sample on weibull scales
             if is_minima:
-                txt = "minima"
                 x *= -1.
-            else:
-                txt = "maxima"
 
             # normalize maxima/minima sample on weibull scales
             x = np.sort(x)  # sort ascending
