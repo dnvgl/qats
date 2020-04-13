@@ -88,6 +88,15 @@ class TimeSeries(object):
         self.unit = unit
         self.parent = parent
 
+        if isinstance(t[0], np.datetime64):
+            # convert from numpy datetime (pandas, nptdms)
+            t = np.array(t).astype(datetime)
+
+        if isinstance(dtg_ref, np.datetime64):
+            # tolist() returns a single date time
+            # https://stackoverflow.com/questions/13703720/converting-between-datetime-timestamp-and-datetime64/13753918#13753918
+            dtg_ref = dtg_ref.tolist()
+
         if isinstance(t[0], datetime):
             # handle time specified as datetime
             self._dtg_ref = dtg_ref if dtg_ref is not None else t[0]
