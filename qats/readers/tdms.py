@@ -1,4 +1,4 @@
-from nptdms import TdmsFile as npTdmsFile
+from nptdms import TdmsFile
 from typing import List, Tuple, Union
 from datetime import datetime
 import numpy as np
@@ -27,14 +27,8 @@ def read_names(path):
     if not os.path.isfile(path):
         raise FileNotFoundError("file not found: %s" % path)
 
-    tdms_file = npTdmsFile(path)
-    names = []
-    groups = tdms_file.groups()
-    for group in groups:
-        channels = tdms_file.group_channels(group=group)
-        for channel in channels:
-            if 'time' != channel.channel.lower():
-                names.append(channel.group + '\\' + channel.channel)
+    f = TdmsFile(path)
+    names = [f"{g.name}\\{c.name}" for g in f.groups() for c in f[g.name].channels() if c.name.lower() != 'time']
 
     return names
 
@@ -70,37 +64,40 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
         raise TypeError("`names` must be str/list/tuple, got: %s" % type(names))
 
     arrays = []
-    tdms_file = npTdmsFile(path)
-    for name in names:
-        group_name = name.split('\\')[0]
-        channel_name = name.split('\\')[1]
+    with TdmsFile.open(path) as f:
+        # memory efficient but maybe slower
 
-        channel_obj = tdms_file.object(group_name, channel_name)
-        data = channel_obj.data
+        for name in names:
+            # assuming an object hierarchy with depth 2 'group-channel'
+            assert len(name.split('\\')) == 2, f"Unable to parse group name and channel name from {name}."
+            group_name, channel_name = name.split('\\')
 
-        timearr = []
+            group = f[group_name]
+            channel = group[channel_name]
+            data = channel[:]
+            time = None
 
-        try:
-            timearr = channel_obj.time_track()
-        except KeyError:
-            channels = tdms_file.group_channels(group=group_name)
-            for channel in channels:
-                if channel.channel.lower() == 'time':
-                    timearr = np.array(channel.data)
-                    break
+            try:
+                # try to fetch time track defined by wf_start_time and wf_start_offset attributes
+                time = channel.time_track()
+            except KeyError:
+                # wf_start_time and wf_start_offset attributes does not exist
+                # check if time is a separate channel
+                for _ in ["time", "Time"]:
+                    try:
+                        time = group[_][:]
+                    except KeyError:
+                        pass
+            finally:
+                if time is None:
+                    raise KeyError(f"Could not find time array for channel {channel_name}.")
+                else:
+                    time = np.array(time)
 
-        if type(timearr) is not np.ndarray:
-            raise Exception("no time info extracted for dataset '%s'" % name)
+            # verify that time and data arrays have the same shape
+            if not time.shape == data.shape:
+                raise ValueError(f"Time {time.shape} and data {data.shape} are not equally shaped.")
 
-        # verify that time array has correct shape (==> should be same as `data` shape)
-        if not timearr.shape == data.shape:
-            raise Exception("unexpected error: `time` has shape " + str(timearr.shape) + "while data has"
-                            "shape " + str(data.shape) + " (should be equal)")
-
-        if type(timearr[0]) is np.datetime64:
-            arr = [timearr.astype(datetime), data]
-        else:
-            arr = [timearr, data]
-        arrays.append(arr)
+            arrays.append([time, data])
 
     return arrays
