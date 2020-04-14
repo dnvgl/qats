@@ -79,7 +79,8 @@ class TimeSeries(object):
 
         # check input parameters
         assert t.size == x.size, "Time and data must be of equal length."
-        assert isinstance(dtg_ref, datetime) or dtg_ref is None, "Expected 'dtg_ref' datetime object or None"
+        assert isinstance(dtg_ref, (datetime, np.datetime64)) or dtg_ref is None, \
+            "Expected 'dtg_ref' datetime object or None"
         assert isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64)), \
             f"Data (x) must be integers or floats not '{type(x[0])}'."
 
