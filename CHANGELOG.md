@@ -19,6 +19,16 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.8.1] // dd.mm.2020
+
+This release contains the following pull requests: [#74](https://github.com/dnvgl/qats/pull/74), [#76](https://github.com/dnvgl/qats/pull/76), [#77](https://github.com/dnvgl/qats/pull/77).
+
+#### Fixed
+
+- `qats.readers.tdms`: Removes dependencies on deprecated features in the `nptdms` library.
+- `qats.TimeSeries`: Now handles time as an array of `numpy.datetime64` objects.
+- `requirements.txt`: Sphinx updated from 2.2.1 to 3.0.4 _(security update, relevant for maintainers only)_.
+
 
 ### [4.8.0] // 10.04.2020
 
@@ -219,7 +229,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.8.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.8.1...HEAD
+[4.8.1]: https://github.com/dnvgl/qats/compare/4.8.0...4.8.1
 [4.8.0]: https://github.com/dnvgl/qats/compare/4.7.0...4.8.0
 [4.7.0]: https://github.com/dnvgl/qats/compare/4.6.1...4.7.0
 [4.6.1]: https://github.com/dnvgl/qats/compare/4.6.0...4.6.1
