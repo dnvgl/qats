@@ -79,7 +79,8 @@ class TimeSeries(object):
 
         # check input parameters
         assert t.size == x.size, "Time and data must be of equal length."
-        assert isinstance(dtg_ref, datetime) or dtg_ref is None, "Expected 'dtg_ref' datetime object or None"
+        assert isinstance(dtg_ref, (datetime, np.datetime64)) or dtg_ref is None, \
+            "Expected 'dtg_ref' datetime object or None"
         assert isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64)), \
             f"Data (x) must be integers or floats not '{type(x[0])}'."
 
@@ -87,6 +88,15 @@ class TimeSeries(object):
         self.kind = kind
         self.unit = unit
         self.parent = parent
+
+        if isinstance(t[0], np.datetime64):
+            # convert from numpy datetime (pandas, nptdms)
+            t = np.array(t).astype(datetime)
+
+        if isinstance(dtg_ref, np.datetime64):
+            # tolist() returns a single date time
+            # https://stackoverflow.com/questions/13703720/converting-between-datetime-timestamp-and-datetime64/13753918#13753918
+            dtg_ref = dtg_ref.tolist()
 
         if isinstance(t[0], datetime):
             # handle time specified as datetime
