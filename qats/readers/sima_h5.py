@@ -142,7 +142,7 @@ def read_data(path, names=None, verbose=False):
                 dt = timeinfo["dt"]
                 t_end = t_start + (nt-1) * dt
                 timearr, step = np.linspace(t_start, t_end, nt, retstep=True)
-                if not dt == step:
+                if not np.isclose(dt, step):  # dt == step:
                     raise Exception("unexpected error: `dt` should be %s but is %s" % (dt, step))
 
             # todo: expand when _get_h5_timearray_info() has been expanded
