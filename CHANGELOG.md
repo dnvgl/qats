@@ -19,12 +19,13 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
-### [4.8.1] // dd.mm.2020
+### [4.8.1] // 08.06.2020
 
 This release contains the following pull requests: [#74](https://github.com/dnvgl/qats/pull/74), [#76](https://github.com/dnvgl/qats/pull/76), [#77](https://github.com/dnvgl/qats/pull/77).
 
 #### Fixed
 
+- `qats.readers.sima_h5`: Time step of generated time array is now checked towards the specified time step with a (very small) tolerance. Previously, the generated time step was required to exactly match the specified one, but in certain cases this failed due to numpy precision.
 - `qats.readers.tdms`: Removes dependencies on deprecated features in the `nptdms` library.
 - `qats.TimeSeries`: Now handles time as an array of `numpy.datetime64` objects.
 - `requirements.txt`: Sphinx updated from 2.2.1 to 3.0.4 _(security update, relevant for maintainers only)_.
