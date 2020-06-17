@@ -15,8 +15,8 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QAction, \
-    QDialogButtonBox
+    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox
+# from qtpy.QtWidgets import QTableWidget, QTableWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -25,7 +25,7 @@ from pkg_resources import resource_filename, get_distribution, DistributionNotFo
 from .logger import QLogger
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
-from .widgets import CustomTabWidget
+from .widgets import CustomTabWidget, CustomTableWidget, CustomTableWidgetItem
 from ..tsdb import TsDB
 from ..stats.empirical import empirical_cdf
 from .funcs import (
@@ -54,7 +54,6 @@ ICON_FILE = resource_filename("qats.app", "qats.ico")
 
 STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
                "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]
-
 STATS_LABELS_TOOLTIPS = {
     "name": ("Name", "Time series name."),
     "min": ("Min.", "Sample minimum."),
@@ -192,7 +191,7 @@ class Qats(QMainWindow):
         self.tabs.addTab(w, "Statistics")
         self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
         self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
-        self.stats_table = QTableWidget()
+        self.stats_table = CustomTableWidget()
         vbox = QVBoxLayout()
         vbox.addWidget(self.stats_table)
         w.setLayout(vbox)
@@ -1150,12 +1149,19 @@ class Qats(QMainWindow):
 
     def reset_stats_table(self):
         """Reset statistics table."""
+        # disable sorting and clear table
+        self.stats_table.setSortingEnabled(False)
+        self.stats_table.clear()
+        # re-create empty table with header
         self.stats_table.setRowCount(0)
         self.stats_table.setColumnCount(len(STATS_ORDER))
         self.stats_table.setAlternatingRowColors(True)
-        self.stats_table.setHorizontalHeaderLabels([STATS_LABELS_TOOLTIPS[k][0] for k in STATS_ORDER])
-        for i, k in enumerate(STATS_ORDER):
-            self.stats_table.horizontalHeaderItem(i).setToolTip(STATS_LABELS_TOOLTIPS[k][1])
+        header_labels = [STATS_LABELS_TOOLTIPS.get(k, [k, None])[0] for k in STATS_ORDER]
+        self.stats_table.setHorizontalHeaderLabels(header_labels)
+        for i, k in enumerate(STATS_ORDER):  # set tooltips for column headers
+            tooltip = STATS_LABELS_TOOLTIPS.get(k, [None, None])[0]
+            if tooltip is not None:
+                self.stats_table.horizontalHeaderItem(i).setToolTip(tooltip)
         header = self.stats_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Interactive)
         self.stats_table.verticalHeader().setVisible(False)
@@ -1289,13 +1295,16 @@ class Qats(QMainWindow):
         for i, (name, data) in enumerate(container.items()):
             for j, key in enumerate(STATS_ORDER):
                 if key == "name":
-                    cell = QTableWidgetItem(name)
+                    cell = CustomTableWidgetItem(name)  # QTableWidgetItem(name)
                     cell.setToolTip(name)
                 else:
                     value = data.get(key, np.nan)
-                    cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
+                    # cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
+                    cell = CustomTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j, cell)
+        # re-enable sorting
+        self.stats_table.setSortingEnabled(True)
 
     def time_window(self):
         """

@@ -5,7 +5,8 @@ Module with custom widgets
 
 @author: perl
 """
-from qtpy.QtWidgets import QTabWidget
+from qtpy.QtCore import Qt
+from qtpy.QtWidgets import QTabWidget, QTableWidget, QTableWidgetItem
 
 
 class CustomTabWidget (QTabWidget):
@@ -24,3 +25,30 @@ class CustomTabWidget (QTabWidget):
         current_widget = self.widget(index)
         current_widget.deleteLater()
         self.removeTab(index)
+
+
+class CustomTableWidget(QTableWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        return
+
+
+class CustomTableWidgetItem(QTableWidgetItem):
+    """ To enable table sorting based on value (not string) """
+    # based on: https://stackoverflow.com/questions/11938459/sorting-in-pyqt-tablewidget
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        return
+
+    def __lt__(self, other):
+        if isinstance(other, QTableWidgetItem):
+            left_var = self.data(Qt.EditRole)
+            right_var = other.data(Qt.EditRole)
+            try:
+                return float(left_var) < float(right_var)
+            except (ValueError, TypeError):
+                return left_var < right_var
+
+        return super(CustomTableWidgetItem, self).__lt__(other)
