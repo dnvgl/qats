@@ -28,6 +28,8 @@ class CustomTabWidget (QTabWidget):
 
 
 class CustomTableWidget(QTableWidget):
+    """ Placeholder for possible future customization of QTableWidget.
+    Currently behaves exactly as its parent. """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 

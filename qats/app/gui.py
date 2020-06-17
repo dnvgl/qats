@@ -192,6 +192,8 @@ class Qats(QMainWindow):
         self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
         self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
         self.stats_table = CustomTableWidget()
+        self.stats_table_initial_sort = None   # variable used to enable resetting of sorting order
+        self.stats_table_initial_order = None  # variable used to enable resetting of sorting order
         vbox = QVBoxLayout()
         vbox.addWidget(self.stats_table)
         w.setLayout(vbox)
@@ -1149,9 +1151,6 @@ class Qats(QMainWindow):
 
     def reset_stats_table(self):
         """Reset statistics table."""
-        # disable sorting and clear table
-        self.stats_table.setSortingEnabled(False)
-        self.stats_table.clear()
         # re-create empty table with header
         self.stats_table.setRowCount(0)
         self.stats_table.setColumnCount(len(STATS_ORDER))
@@ -1291,6 +1290,9 @@ class Qats(QMainWindow):
         container : dict
             Time series statistics
         """
+        # disable sorting
+        self.stats_table.setSortingEnabled(False)
+        # populate table
         self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
             for j, key in enumerate(STATS_ORDER):
@@ -1303,6 +1305,13 @@ class Qats(QMainWindow):
                     cell = CustomTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j, cell)
+        # store original sorting order first time this function is called
+        if self.stats_table_initial_sort is None:
+            self.stats_table_initial_sort = self.stats_table.horizontalHeader().sortIndicatorSection()
+        if self.stats_table_initial_order is None:
+            self.stats_table_initial_order = self.stats_table.horizontalHeader().sortIndicatorOrder()
+        # force original sorting order (in practice; same as in gui key list)
+        self.stats_table.sortItems(self.stats_table_initial_sort, self.stats_table_initial_order)
         # re-enable sorting
         self.stats_table.setSortingEnabled(True)
 
