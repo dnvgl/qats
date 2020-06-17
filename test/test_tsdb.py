@@ -547,6 +547,24 @@ class TestTsDB(unittest.TestCase):
         # check arrays
         np.testing.assert_array_almost_equal(ts1.x, ts2.x, 6, "Export/reload did not yield same arrays")
 
+    def test_stats_dataframe(self):
+        """ Test that stats dataframe is correctly constructed """
+        import pandas as pd
+        fn = os.path.join(self.data_directory, 'mooring.ts')
+        keys = ["Surge", "Sway", "Heave"]
+        db = TsDB.fromfile(fn)
+        stats = db.stats(names=keys)  # type: dict
+        df = db.stats_dataframe(names=keys)  # type: pd.DataFrame
+        # check that statistics for each time series is correctly stored in columns
+        self.assertListEqual(keys, list(df.keys()), "Statistics dataframe does not have time series stats in columns")
+        # check that the values are correctly fetched from dataframe
+        failed = []
+        for k in keys:
+            for kstat, val in stats[k].items():
+                if not df[k][kstat] == val:
+                    failed.append((k, kstat))
+        self.assertFalse(failed, "Statistics dataframe values don't match the statistics dict")
+
 
 if __name__ == '__main__':
     unittest.main()

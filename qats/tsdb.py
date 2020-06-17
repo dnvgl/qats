@@ -10,6 +10,7 @@ import fnmatch
 from uuid import uuid4
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from struct import pack
 from array import array
 from collections import OrderedDict, defaultdict
@@ -1685,15 +1686,15 @@ class TsDB(object):
 
         return
 
-    def stats(self, statsdur=None, names=None, ind=None, store=True, fullkey=False, **kwargs):
+    def stats(self, statsdur=10800., names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
         Get statistics for time series processed according to parameters
 
         Parameters
         ----------
-        statsdur : float
+        statsdur : float, optional
             Duration in seconds for estimation of extreme value distribution (Gumbel) from peak distribution (Weibull).
-            Default is 3 hours (see `TimeSeries.stats()`).
+            Default is 3 hours.
         names : str or list or tuple, optional
             Time series names
         ind : int or list, optional
@@ -1750,6 +1751,53 @@ class TsDB(object):
                                 self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items())
 
         return container
+
+    def stats_dataframe(self, statsdur=10800., names=None, ind=None, store=True, fullkey=False, **kwargs):
+        """
+        Get Pandas Dataframe with time series statistics.
+
+        Parameters
+        ----------
+        statsdur : float, optional
+            Duration in seconds for estimation of extreme value distribution (Gumbel) from peak distribution (Weibull).
+            Default is 3 hours.
+        names : str or list or tuple, optional
+            Time series names
+        ind : int or list, optional
+            Time series indices in database
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        fullkey : bool, optional
+            Use full key in returned container
+        kwargs : optional
+            see documentation of TimeSeries.stats() and TimeSeries.get() methods for available options
+
+        Returns
+        -------
+        Dataframe
+            Statistics for each time series organized in columns.
+
+        Notes
+        -----
+
+        See also
+        --------
+        qats.TsDB.stats, pandas.Dataframe
+
+        Examples
+        --------
+        >>> from qats import TsDB
+        >>> db = TsDB.fromfile('filename')
+        >>> df = db.stats_dataframe()
+        >>> # print first part of dataframe
+        >>> print(df.head())
+
+        >>> # transpose dataframe to get statistics for each time series in rows instead of columns
+        >>> df = df.transpose(copy=True)
+        """
+        df = pd.DataFrame(self.stats(statsdur=statsdur, names=names, ind=ind, store=store, fullkey=fullkey, **kwargs))
+
+        return df
 
     def update(self, tsdb, names=None, shallow=False):
         """
