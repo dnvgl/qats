@@ -33,6 +33,9 @@ class CustomTableWidget(QTableWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def __repr__(self):
+        super().__repr__()
+
 
 class CustomTableWidgetItem(QTableWidgetItem):
     """ To enable table sorting based on value (not string) """
