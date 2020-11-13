@@ -8,6 +8,35 @@ from struct import unpack
 import numpy as np
 
 
+def read_sima_wind_names(path):
+    """
+    Read time seires names from key-files associated with "wind".bin time-series files exported from SIMA/RIFLEF Dynmod.
+
+    Paramaters
+    ----------
+    path: str
+        Keyfile path
+
+    Returns
+    -------
+    list
+        Time series names
+    """
+
+    # open and read
+    with open(path, 'r') as f:
+        lines = f.readlines()
+
+    # Extract storage info lines
+    p = re.compile(r'ignore*')
+    key_lines = [li for li in lines if not li.startswith("'") and not p.search(li.lower())]
+    keys = [lo.split()[1] for lo in key_lines]
+
+    # remove time instance from line
+    keys = keys[1:]
+    return keys
+
+
 def read_names(path):
     """
     Read time series names from key-files associated with .bin and .asc time-series files exported from
