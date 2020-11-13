@@ -6,7 +6,7 @@ Module with custom widgets
 @author: perl
 """
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QTabWidget, QTableWidget, QTableWidgetItem
+from qtpy.QtWidgets import QTabWidget, QTableWidgetItem
 
 
 class CustomTabWidget (QTabWidget):
@@ -25,16 +25,6 @@ class CustomTabWidget (QTabWidget):
         current_widget = self.widget(index)
         current_widget.deleteLater()
         self.removeTab(index)
-
-
-class CustomTableWidget(QTableWidget):
-    """ Placeholder for possible future customization of QTableWidget.
-    Currently behaves exactly as its parent. """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def __repr__(self):
-        super().__repr__()
 
 
 class CustomTableWidgetItem(QTableWidgetItem):

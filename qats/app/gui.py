@@ -15,7 +15,8 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox
+    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox, \
+    QTableWidget
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -24,7 +25,7 @@ from pkg_resources import resource_filename, get_distribution, DistributionNotFo
 from .logger import QLogger
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
-from .widgets import CustomTabWidget, CustomTableWidget, CustomTableWidgetItem
+from .widgets import CustomTabWidget, CustomTableWidgetItem
 from ..tsdb import TsDB
 from ..stats.empirical import empirical_cdf
 from .funcs import (
@@ -190,7 +191,7 @@ class Qats(QMainWindow):
         self.tabs.addTab(w, "Statistics")
         self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
         self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
-        self.stats_table = CustomTableWidget()
+        self.stats_table = QTableWidget()
         self.stats_table_initial_sort = None   # variable used to enable resetting of sorting order
         self.stats_table_initial_order = None  # variable used to enable resetting of sorting order
         vbox = QVBoxLayout()
