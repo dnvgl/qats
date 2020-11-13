@@ -1375,12 +1375,16 @@ class TsDB(object):
                 # simo-riflex, sima ascii
                 names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
 
-            elif thefile.endswith('witurb.bin') is True or thefile.endswith('blresp.bin') is True:
-                names = read_sima_wind_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
-
             elif fext == '.bin':
-                # riflex/simo, sima direct access format
-                names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+                _ = os.path.join(dirname, 'key_' + basename.replace(fext, '.txt'))
+                if thefile.endswith('witurb.bin') or thefile.endswith('blresp.bin'):
+                    # wind turbine data and blade response is stored on .bin files but the corresponding
+                    # key file has a different structure than the ones associated with 'elmfor' and 'noddis'
+                    # .bin files
+                    names = read_sima_wind_names(_)
+                else:
+                    # riflex/simo, sima direct access format
+                    names = read_sima_names(_)
 
             elif fext == '.dat':
                 # plain column wise ascii format

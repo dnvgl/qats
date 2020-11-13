@@ -27,6 +27,8 @@ class TestAllReaders(unittest.TestCase):
             # sima bin files (riflex)
             ("n_elmfor.bin", 27),
             ("n_elmtra.bin", 162),
+            ("wt_blresp.bin", 21),
+            ("wt_witurb.bin", 23),
             # direct access files
             ("mooring.ts", 14),
             ("simo_p.ts", 22),
