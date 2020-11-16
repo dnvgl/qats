@@ -1,7 +1,5 @@
 from nptdms import TdmsFile
 from typing import List, Tuple, Union
-from datetime import datetime
-import numpy as np
 import os
 
 
@@ -64,40 +62,36 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
         raise TypeError("`names` must be str/list/tuple, got: %s" % type(names))
 
     arrays = []
-    with TdmsFile.open(path) as f:
-        # memory efficient but maybe slower
+    f = TdmsFile.open(path)
+    for name in names:
+        # assuming an object hierarchy with depth 2 'group-channel'
+        assert len(name.split("\\")) == 2, f"Unable to parse group name and channel name from {name}."
+        group_name, channel_name = name.split("\\")
+        group = f[group_name]
+        channel = group[channel_name]
+        data = channel[:]
+        time = None
 
-        for name in names:
-            # assuming an object hierarchy with depth 2 'group-channel'
-            assert len(name.split('\\')) == 2, f"Unable to parse group name and channel name from {name}."
-            group_name, channel_name = name.split('\\')
-
-            group = f[group_name]
-            channel = group[channel_name]
-            data = channel[:]
-            time = None
-
-            try:
-                # try to fetch time track defined by wf_start_time and wf_start_offset attributes
-                time = channel.time_track()
-            except KeyError:
-                # wf_start_time and wf_start_offset attributes does not exist
-                # check if time is a separate channel
-                for _ in ["time", "Time"]:
-                    try:
-                        time = group[_][:]
-                    except KeyError:
-                        pass
-            finally:
-                if time is None:
-                    raise KeyError(f"Could not find time array for channel {channel_name}.")
+        try:
+            # try to fetch time track defined by wf_start_time and wf_start_offset attributes
+            time = channel.time_track()
+        except KeyError:
+            # wf_start_time and wf_start_offset attributes does not exist
+            # check if time is a separate channel
+            for _ in ["time", "Time"]:
+                try:
+                    time = group[_][:]
+                except KeyError:
+                    pass
                 else:
-                    time = np.array(time)
-
-            # verify that time and data arrays have the same shape
-            if not time.shape == data.shape:
+                    break
+        finally:
+            if time is None:
+                raise KeyError(f"Could not find time array for channel {channel_name}.")
+            elif not time.shape == data.shape:
+                # verify that time and data arrays have the same shape
                 raise ValueError(f"Time {time.shape} and data {data.shape} are not equally shaped.")
-
-            arrays.append([time, data])
+            else:
+                arrays.append([time, data])
 
     return arrays
