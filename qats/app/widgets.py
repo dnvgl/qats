@@ -6,7 +6,7 @@ Module with custom widgets
 @author: perl
 """
 from qtpy.QtCore import Qt
-from qtpy.QtWidgets import QTabWidget, QTableWidgetItem
+from qtpy.QtWidgets import QTabWidget, QTableWidgetItem, QTableWidget
 
 
 class CustomTabWidget (QTabWidget):
@@ -27,11 +27,15 @@ class CustomTabWidget (QTabWidget):
         self.removeTab(index)
 
 
+class CustomTableWidget(QTableWidget):
+    """ Placeholder for possible future customization of QTableWidget.
+    Currently behaves exactly as its parent. """
+    pass
+
+
 class CustomTableWidgetItem(QTableWidgetItem):
     """ To enable table sorting based on value (not string) """
     # based on: https://stackoverflow.com/questions/11938459/sorting-in-pyqt-tablewidget
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def __lt__(self, other):
         if isinstance(other, QTableWidgetItem):
