@@ -12,7 +12,7 @@ def read_sima_wind_names(path):
     """
     Read time seires names from key-files associated with "wind".bin time-series files exported from SIMA/RIFLEF Dynmod.
 
-    Paramaters
+    Parameters
     ----------
     path: str
         Keyfile path
