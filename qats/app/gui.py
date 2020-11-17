@@ -135,6 +135,9 @@ class Qats(QMainWindow):
         self.settings_file = SETTINGS_FILE
         self.settings = dict()
 
+        # load settings from previous sessions
+        self.load_settings()
+
         # clipboard
         self.clip = QGuiApplication.clipboard()
 
@@ -279,16 +282,19 @@ class Qats(QMainWindow):
         # time window selection
         time_group = QGroupBox("Set data processing time window")
         time_group.setToolTip("Calculations performed only for data within specified time window")
+        ndecimals = self.twin_ndec()
         self.from_time = QDoubleSpinBox()  # time window
         self.to_time = QDoubleSpinBox()
         self.from_time.setRange(0, 1e12)
         self.to_time.setRange(0, 1e12)
         self.from_time.setEnabled(True)
         self.to_time.setEnabled(True)
-        self.from_time.setSingleStep(0.01)
-        self.to_time.setSingleStep(0.01)
-        self.from_time.setSuffix("s")
-        self.to_time.setSuffix("s")
+        self.from_time.setSingleStep(10**(-ndecimals))
+        self.to_time.setSingleStep(10**(-ndecimals))
+        self.from_time.setSuffix(" s")
+        self.to_time.setSuffix(" s")
+        self.to_time.setDecimals(ndecimals)
+        self.from_time.setDecimals(ndecimals)
         spins_hbox = QHBoxLayout()
         spins_hbox.addWidget(QLabel('from'))
         spins_hbox.addWidget(self.from_time)
@@ -299,7 +305,7 @@ class Qats(QMainWindow):
 
         # set initial value of time window spin boxes
         self.from_time.setValue(0)
-        self.to_time.setValue(1000000000)
+        self.to_time.setValue(1_000_000_000)  # 1_000_000
 
         # mutual exclusive peaks/troughs radio buttons
         minmax_group = QGroupBox("Select statistical quantity")
@@ -380,7 +386,7 @@ class Qats(QMainWindow):
                   self.bandblock_hf]:
             w.setRange(0.0, 50.)
             w.setDecimals(3)
-            w.setSuffix("Hz")
+            w.setSuffix(" Hz")
 
         # make filter selection radio buttons checkable
         for w in [self.no_filter, self.lowpass, self.hipass, self.bandpass, self.bandblock]:
@@ -464,6 +470,7 @@ class Qats(QMainWindow):
         clear_log_action.triggered.connect(self.logger.clear)
 
         settings_action = QAction("Settings", self)
+        settings_action.setShortcut("Ctrl+Shift+S")
         settings_action.setStatusTip("Configure application settings")
         settings_action.triggered.connect(self.on_open_settings)
 
@@ -498,9 +505,6 @@ class Qats(QMainWindow):
                 self.load_files([files_on_init])
             elif isinstance(files_on_init, tuple) or isinstance(files_on_init, list):
                 self.load_files(files_on_init)
-
-        # load settings from previous sessions.
-        self.load_settings()
 
         # refresh
         self.reset_axes()
@@ -850,14 +854,15 @@ class Qats(QMainWindow):
         Configure the application settings.
         """
         # load settings dialog with current settings
-        defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins())
-        psdnorm, nperseg, nbins, ok = SettingsDialog.settings(defaults, parent=self)
+        defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins(), self.twin_ndec())
+        psdnorm, nperseg, nbins, twindec, ok = SettingsDialog.settings(defaults, parent=self)
 
         # update settings
         if ok:
             self.settings["psd_normalized"] = psdnorm
             self.settings["psd_nperseg"] = nperseg
             self.settings["rfc_nbins"] = nbins
+            self.settings["twin_ndec"] = twindec
 
     def on_unselect_all(self):
         """
@@ -1125,6 +1130,10 @@ class Qats(QMainWindow):
         """int: Number of bins in cycle distribution."""
         return self.settings.get("rfc_nbins", 256)
 
+    def twin_ndec(self):
+        """int: Number of decimals in time window for data processing."""
+        return self.settings.get("twin_ndec", 2)
+
     def reset_axes(self):
         """
         Clear and reset plot axes
@@ -1365,23 +1374,32 @@ class SettingsDialog(QDialog):
         Default number of points in segment when estimating PSD.
     nbins : int
         Default number of bins in cycle distribution.
+    twindec : int
+        Default number of decimals in time window for data processing.
     parent : QWidget, optional
         Parent widget.
     """
-    def __init__(self, psdnorm, nperseg, nbins, parent=None):
+    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle("Configure application settings")
         self.setWindowIcon(QIcon(ICON_FILE))
         layout = QVBoxLayout()
 
-        self.psdnormcheckbox = QCheckBox("Plot normalized power spectral density")
+        # settings checkbox: normalized psd?
+        self.psdnormcheckbox = QCheckBox()  # "Plot normalized power spectral density")
         self.psdnormcheckbox.setToolTip("Normalize power spectral density on maximum value to ease comparison of\n"
                                         "signals of different order of magnitude.")
         self.psdnormcheckbox.setChecked(False)
         if psdnorm:
             self.psdnormcheckbox.setChecked(True)
-        layout.addWidget(self.psdnormcheckbox)
+        # layout.addWidget(self.psdnormcheckbox)
+        psdnormlayout = QHBoxLayout()
+        psdnormlayout.addWidget(QLabel("Plot normalized power spectral density"))
+        psdnormlayout.addStretch(1)
+        psdnormlayout.addWidget(self.psdnormcheckbox)
+        layout.addLayout(psdnormlayout)
 
+        # settings spinbox: psd nperseg
         self.psdnpersegspinbox = QSpinBox()
         self.psdnpersegspinbox.setRange(100, 100000)
         self.psdnpersegspinbox.setSingleStep(10)
@@ -1397,6 +1415,7 @@ class SettingsDialog(QDialog):
         psdlayout.addWidget(self.psdnpersegspinbox)
         layout.addLayout(psdlayout)
 
+        # settings spinbox: rfc nbins
         self.rfcnbinsspinbox = QSpinBox()
         self.rfcnbinsspinbox.setRange(10, 1000)
         self.rfcnbinsspinbox.setSingleStep(1)
@@ -1410,16 +1429,38 @@ class SettingsDialog(QDialog):
         rfclayout.addWidget(self.rfcnbinsspinbox)
         layout.addLayout(rfclayout)
 
+        # settings spinbox: time window number of decimals
+        self.twindecspinbox = QSpinBox()
+        self.twindecspinbox.setRange(1, 10)
+        self.twindecspinbox.setSingleStep(1)
+        self.twindecspinbox.setEnabled(True)
+        self.twindecspinbox.setValue(twindec)
+        self.twindecspinbox.setToolTip("Number of decimals in the data processing time window from/to boxes.")
+        twindeclayout = QHBoxLayout()
+        twindeclayout.addWidget(QLabel("Number of decimals in data processing time window *"))
+        twindeclayout.addStretch(1)
+        twindeclayout.addWidget(self.twindecspinbox)
+        layout.addLayout(twindeclayout)
+
+        # help text
+        helptext = QHBoxLayout()
+        helptext.addWidget(QLabel("* Close and re-open application for this setting to have effect"))
+        helptext.addStretch(1)
+        layout.addLayout(helptext)
+
+        # buttons (OK, Cancel)
         self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
+        # conclude layout
         self.setLayout(layout)
 
     def get_settings(self):
         """Collect settings."""
-        return self.psdnormcheckbox.isChecked(), self.psdnpersegspinbox.value(), self.rfcnbinsspinbox.value()
+        return self.psdnormcheckbox.isChecked(), self.psdnpersegspinbox.value(), self.rfcnbinsspinbox.value(), \
+               self.twindecspinbox.value()
 
     @staticmethod
     def settings(defaults, parent=None):
@@ -1440,11 +1481,19 @@ class SettingsDialog(QDialog):
             Number of points in segment when estimating PSD using Welch's method.
         nbins : int
             Number of bins in cycle distributions.
+        twindec : int
+            Number of decimals in time window for data processing.
         """
-        dnorm, dnperseg, dnbins = defaults
-        dialog = SettingsDialog(dnorm, dnperseg, dnbins, parent=parent)
+        dnorm, dnperseg, dnbins, dtwindec = defaults
+        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent)
         result = dialog.exec_()
-        norm, nperseg, nbins = dialog.get_settings()
-        return norm, nperseg, nbins, result == QDialog.Accepted
+        norm, nperseg, nbins, twindec = dialog.get_settings()
+        # --- settings dialogue box debugging
+        logging.debug(f"settings saved: norm = {norm}")
+        logging.debug(f"settings saved: nperseg = {nperseg}")
+        logging.debug(f"settings saved: nbins = {nbins}")
+        logging.debug(f"settings saved: twindec = {twindec}")
+        # ---
+        return norm, nperseg, nbins, twindec, result == QDialog.Accepted
 
 
