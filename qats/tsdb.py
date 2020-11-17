@@ -19,7 +19,8 @@ from .fatigue.rainflow import rebin as rebin_cycles
 from .readers.sima import (
     read_names as read_sima_names,
     read_ascii_data as read_sima_ascii_data,
-    read_bin_data as read_sima_bin_data
+    read_bin_data as read_sima_bin_data,
+    read_sima_wind_names
 )
 from .readers.sima_h5 import (
     read_names as read_sima_h5_names,
@@ -1375,8 +1376,15 @@ class TsDB(object):
                 names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
 
             elif fext == '.bin':
-                # riflex/simo, sima direct access format
-                names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+                _ = os.path.join(dirname, 'key_' + basename.replace(fext, '.txt'))
+                if thefile.endswith('witurb.bin') or thefile.endswith('blresp.bin'):
+                    # wind turbine data and blade response is stored on .bin files but the corresponding
+                    # key file has a different structure than the ones associated with 'elmfor' and 'noddis'
+                    # .bin files
+                    names = read_sima_wind_names(_)
+                else:
+                    # riflex/simo, sima direct access format
+                    names = read_sima_names(_)
 
             elif fext == '.dat':
                 # plain column wise ascii format

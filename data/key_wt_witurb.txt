@@ -1,0 +1,39 @@
+' 
+'   R I F L E X  -  KEY FILE
+'   ------------------------
+' 
+' 
+'   This key-file describes the contents of : wt_witurb.bin
+'   The format of wt_witurb.bin is BINARY
+'   with numbers stored as real single precision (4 bytes)
+'   The file swach_witurb.bin contains time series of wind-turbine-results
+'   The-wind-turbine results are stored in columns on wt_witurb.bin
+'
+'  column   contents     unit      contents
+'    no    abbrivated              descriptive text
+       1  FORTRAN specific data - IGNORE
+       2   Time          s         Time                                                    
+       3   RotorSpeed    deg/s     Rotor speed                                             
+       4   GenSpeed_LP   rpm       Generator speed (LP-filtered)                           
+       5   GenTorq       kNm       Mechanical generator torque on LSS                      
+       6   GenPwr        kW        Electrical generator output                             
+       7   Azimuth       deg       Azimuth angle blade 1                                   
+       8   WiVel_x       m/s       Incoming wind speed X-dir in shaft system               
+       9   WiVel_y       m/s       Incoming wind speed Y-dir in shaft system               
+      10   WiVel_z       m/s       Incoming wind speed Z-dir in shaft system               
+      11   Fx            kN        Aero force X-dir in shaft system                        
+      12   Fy            kN        Aero force Y-dir in shaft system                        
+      13   Fz            kN        Aero force Z-dir in shaft system                        
+      14   Mx            kNm       Aero moment around X-axis in shaft system               
+      15   My            kNm       Aero moment around Y-axis in shaft system               
+      16   Mz            kNm       Aero moment around Z-axis in shaft system               
+      17   BlPitch1      deg       Pitch angle blade 1, Line: bl1foil                      
+      18   BlPitch2      deg       Pitch angle blade 2, Line: bl2foil                      
+      19   BlPitch3      deg       Pitch angle blade 3, Line: bl3foil                      
+      20   BlDefl_IP1    m         Tip In-Plane deflection     blade 1, Line: bl1foil      
+      21   BlDefl_OoP1   m         Tip Out-of-Plane deflection blade 1, Line: bl1foil      
+      22   BlDefl_IP2    m         Tip In-Plane deflection     blade 2, Line: bl2foil      
+      23   BlDefl_OoP2   m         Tip Out-of-Plane deflection blade 2, Line: bl2foil      
+      24   BlDefl_IP3    m         Tip In-Plane deflection     blade 3, Line: bl3foil      
+      25   BlDefl_OoP3   m         Tip Out-of-Plane deflection blade 3, Line: bl3foil      
+      26  FORTRAN specific data - IGNORE

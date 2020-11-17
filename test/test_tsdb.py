@@ -549,12 +549,11 @@ class TestTsDB(unittest.TestCase):
 
     def test_stats_dataframe(self):
         """ Test that stats dataframe is correctly constructed """
-        import pandas as pd
         fn = os.path.join(self.data_directory, 'mooring.ts')
         keys = ["Surge", "Sway", "Heave"]
         db = TsDB.fromfile(fn)
         stats = db.stats(names=keys)  # type: dict
-        df = db.stats_dataframe(names=keys)  # type: pd.DataFrame
+        df = db.stats_dataframe(names=keys)
         # check that statistics for each time series is correctly stored in columns
         self.assertListEqual(keys, list(df.keys()), "Statistics dataframe does not have time series stats in columns")
         # check that the values are correctly fetched from dataframe

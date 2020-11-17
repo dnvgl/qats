@@ -16,7 +16,6 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
     QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox
-# from qtpy.QtWidgets import QTableWidget, QTableWidgetItem
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -25,7 +24,7 @@ from pkg_resources import resource_filename, get_distribution, DistributionNotFo
 from .logger import QLogger
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
-from .widgets import CustomTabWidget, CustomTableWidget, CustomTableWidgetItem
+from .widgets import CustomTabWidget, CustomTableWidgetItem, CustomTableWidget
 from ..tsdb import TsDB
 from ..stats.empirical import empirical_cdf
 from .funcs import (
@@ -1310,7 +1309,6 @@ class Qats(QMainWindow):
                     cell.setToolTip(name)
                 else:
                     value = data.get(key, np.nan)
-                    # cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                     cell = CustomTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j, cell)
