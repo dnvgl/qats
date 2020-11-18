@@ -15,8 +15,7 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
     QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QTableWidget, QTableWidgetItem, QHeaderView, QDialog, QAction, \
-    QDialogButtonBox
+    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -25,7 +24,7 @@ from pkg_resources import resource_filename, get_distribution, DistributionNotFo
 from .logger import QLogger
 from .threading import Worker
 from .models import CustomSortFilterProxyModel
-from .widgets import CustomTabWidget
+from .widgets import CustomTabWidget, CustomTableWidgetItem, CustomTableWidget
 from ..tsdb import TsDB
 from ..stats.empirical import empirical_cdf
 from .funcs import (
@@ -51,6 +50,40 @@ if sys.platform == "win32":
 else:
     SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
+
+STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
+               "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]
+STATS_LABELS_TOOLTIPS = {
+    "name": ("Name", "Time series name."),
+    "min": ("Min.", "Sample minimum."),
+    "max": ("Max.", "Sample maximum."),
+    "mean": ("Mean", "Mean/average."),
+    "std": ("Std.", "Unbiased standard deviation."),
+    "skew": ("Skew.", "Skewness."),
+    "kurt": ("Kurt.", "Kurtosis, Pearson’s definition (3.0 --> normal)."),
+    "tz": ("Tz", "Average mean crossing period (s)."),
+    "wloc": ("Wloc", "Weibull location parameter in distribution fitted to\n"
+                     "sample maxima or -1 multiplied with the sample minima."),
+    "wscale": ("Wscale", "Weibull scale parameter in distribution fitted to\n"
+                         "sample maxima or -1 multiplied with the sample minima."),
+    "wshape": ("Wshape", "Weibull shape parameter in distribution fitted to\n"
+                         "sample maxima or -1 multiplied with the sample minima."),
+    "gloc": ("Gloc", "Gumbel location parameter in sample extreme distribution,\n"
+                     "derived from sample maxima/minima distribution."),
+    "gscale": ("Gscale", "Gumbel location parameter in sample extreme distribution,\n"
+                         "derived from sample maxima/minima distribution."),
+    "p_37.00": ("P .37", "Most probable largest maximum (MPM). 37 percentile in\n"
+                         "the extreme maxima/minima distribution. The generic\n"
+                         "Gumbel (extreme value) distribution is derived from the Weibull\n"
+                         "distribution fitted to sample maxima/minima."),
+    "p_57.00": ("P .57", "Expected largest maximum. 57 percentile in\n"
+                         "the extreme maxima/minima distribution. The generic\n"
+                         "Gumbel (extreme value) distribution is derived from the Weibull\n"
+                         "distribution fitted to sample maxima/minima."),
+    "p_90.00": ("P .90", "90 percentile in the extreme maxima/minima distribution.\n"
+                         "The generic Gumbel (extreme value) distribution is derived from the\n"
+                         "Weibull distribution fitted to sample maxima/minima."),
+}
 
 # TODO: New method that generalize threading
 # TODO: Explore how to create consecutive threads without handshake in main loop
@@ -100,6 +133,9 @@ class Qats(QMainWindow):
         # dictionary to hold settings
         self.settings_file = SETTINGS_FILE
         self.settings = dict()
+
+        # load settings from previous sessions
+        self.load_settings()
 
         # clipboard
         self.clip = QGuiApplication.clipboard()
@@ -157,7 +193,9 @@ class Qats(QMainWindow):
         self.tabs.addTab(w, "Statistics")
         self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
         self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
-        self.stats_table = QTableWidget()
+        self.stats_table = CustomTableWidget()
+        self.stats_table_initial_sort = None   # variable used to enable resetting of sorting order
+        self.stats_table_initial_order = None  # variable used to enable resetting of sorting order
         vbox = QVBoxLayout()
         vbox.addWidget(self.stats_table)
         w.setLayout(vbox)
@@ -243,16 +281,19 @@ class Qats(QMainWindow):
         # time window selection
         time_group = QGroupBox("Set data processing time window")
         time_group.setToolTip("Calculations performed only for data within specified time window")
+        ndecimals = self.twin_ndec()
         self.from_time = QDoubleSpinBox()  # time window
         self.to_time = QDoubleSpinBox()
         self.from_time.setRange(0, 1e12)
         self.to_time.setRange(0, 1e12)
         self.from_time.setEnabled(True)
         self.to_time.setEnabled(True)
-        self.from_time.setSingleStep(0.01)
-        self.to_time.setSingleStep(0.01)
-        self.from_time.setSuffix("s")
-        self.to_time.setSuffix("s")
+        self.from_time.setSingleStep(10**(-ndecimals))
+        self.to_time.setSingleStep(10**(-ndecimals))
+        self.from_time.setSuffix(" s")
+        self.to_time.setSuffix(" s")
+        self.to_time.setDecimals(ndecimals)
+        self.from_time.setDecimals(ndecimals)
         spins_hbox = QHBoxLayout()
         spins_hbox.addWidget(QLabel('from'))
         spins_hbox.addWidget(self.from_time)
@@ -263,7 +304,7 @@ class Qats(QMainWindow):
 
         # set initial value of time window spin boxes
         self.from_time.setValue(0)
-        self.to_time.setValue(1000000000)
+        self.to_time.setValue(1_000_000_000)  # 1_000_000
 
         # mutual exclusive peaks/troughs radio buttons
         minmax_group = QGroupBox("Select statistical quantity")
@@ -344,7 +385,7 @@ class Qats(QMainWindow):
                   self.bandblock_hf]:
             w.setRange(0.0, 50.)
             w.setDecimals(3)
-            w.setSuffix("Hz")
+            w.setSuffix(" Hz")
 
         # make filter selection radio buttons checkable
         for w in [self.no_filter, self.lowpass, self.hipass, self.bandpass, self.bandblock]:
@@ -428,6 +469,7 @@ class Qats(QMainWindow):
         clear_log_action.triggered.connect(self.logger.clear)
 
         settings_action = QAction("Settings", self)
+        settings_action.setShortcut("Ctrl+Shift+S")
         settings_action.setStatusTip("Configure application settings")
         settings_action.triggered.connect(self.on_open_settings)
 
@@ -462,9 +504,6 @@ class Qats(QMainWindow):
                 self.load_files([files_on_init])
             elif isinstance(files_on_init, tuple) or isinstance(files_on_init, list):
                 self.load_files(files_on_init)
-
-        # load settings from previous sessions.
-        self.load_settings()
 
         # refresh
         self.reset_axes()
@@ -814,14 +853,15 @@ class Qats(QMainWindow):
         Configure the application settings.
         """
         # load settings dialog with current settings
-        defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins())
-        psdnorm, nperseg, nbins, ok = SettingsDialog.settings(defaults, parent=self)
+        defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins(), self.twin_ndec())
+        psdnorm, nperseg, nbins, twindec, ok = SettingsDialog.settings(defaults, parent=self)
 
         # update settings
         if ok:
             self.settings["psd_normalized"] = psdnorm
             self.settings["psd_nperseg"] = nperseg
             self.settings["rfc_nbins"] = nbins
+            self.settings["twin_ndec"] = twindec
 
     def on_unselect_all(self):
         """
@@ -1089,6 +1129,10 @@ class Qats(QMainWindow):
         """int: Number of bins in cycle distribution."""
         return self.settings.get("rfc_nbins", 256)
 
+    def twin_ndec(self):
+        """int: Number of decimals in time window for data processing."""
+        return self.settings.get("twin_ndec", 2)
+
     def reset_axes(self):
         """
         Clear and reset plot axes
@@ -1115,41 +1159,16 @@ class Qats(QMainWindow):
 
     def reset_stats_table(self):
         """Reset statistics table."""
+        # re-create empty table with header
         self.stats_table.setRowCount(0)
-        self.stats_table.setColumnCount(16)
+        self.stats_table.setColumnCount(len(STATS_ORDER))
         self.stats_table.setAlternatingRowColors(True)
-        self.stats_table.setHorizontalHeaderLabels(["Name", "Min.", "Max.", "Mean", "Std.", "Skew.", "Kurt.", "Tz",
-                                                    "Wloc", "Wscale", "Wshape", "Gloc", "Gscale", "P .37", "P .57",
-                                                    "P .90"])
-        self.stats_table.horizontalHeaderItem(0).setToolTip('Time series name.')
-        self.stats_table.horizontalHeaderItem(1).setToolTip('Sample minimum.')
-        self.stats_table.horizontalHeaderItem(2).setToolTip('Sample maximum.')
-        self.stats_table.horizontalHeaderItem(3).setToolTip('Mean/average.')
-        self.stats_table.horizontalHeaderItem(4).setToolTip('Unbiased standard deviation.')
-        self.stats_table.horizontalHeaderItem(5).setToolTip('Skewness.')
-        self.stats_table.horizontalHeaderItem(6).setToolTip('Kurtosis, Pearson’s definition (3.0 --> normal).')
-        self.stats_table.horizontalHeaderItem(7).setToolTip('Average mean crossing period (s).')
-        self.stats_table.horizontalHeaderItem(8).setToolTip('Weibull location parameter in distribution fitted to\n'
-                                                            'sample maxima or -1 multiplied with the sample minima.')
-        self.stats_table.horizontalHeaderItem(9).setToolTip('Weibull scale parameter in distribution fitted to\n'
-                                                            'sample maxima or -1 multiplied with the sample minima.')
-        self.stats_table.horizontalHeaderItem(10).setToolTip('Weibull shape parameter in distribution fitted to\n'
-                                                             'sample maxima or -1 multiplied with the sample minima.')
-        self.stats_table.horizontalHeaderItem(11).setToolTip('Gumbel location parameter in sample extreme distribution'
-                                                             'derived from sample maxima/minima distribution.')
-        self.stats_table.horizontalHeaderItem(12).setToolTip('Gumbel location parameter in sample extreme distribution'
-                                                             'derived from sample maxima/minima distribution.')
-        self.stats_table.horizontalHeaderItem(13).setToolTip('Most probable largest maximum (MPM). 37 percentile in\n'
-                                                             'the extreme maxima/minima distribution. The generic\n'
-                                                             'Gumbel distribution is derived from the Weibull\n'
-                                                             'distribution fitted to sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(14).setToolTip('Expected largest maximum. 57 percentile in\n'
-                                                             'the extreme maxima/minima distribution. The generic\n'
-                                                             'Gumbel distribution is derived from the Weibull\n'
-                                                             'distribution fitted to sample maxima/minima.')
-        self.stats_table.horizontalHeaderItem(15).setToolTip('90 percentile in the extreme maxima/minima distribution.\n'
-                                                             'The generic Gumbel distribution is derived from the\n'
-                                                             'Weibull distribution fitted to sample maxima/minima.')
+        header_labels = [STATS_LABELS_TOOLTIPS.get(k, [k, None])[0] for k in STATS_ORDER]
+        self.stats_table.setHorizontalHeaderLabels(header_labels)
+        for i, k in enumerate(STATS_ORDER):  # set tooltips for column headers
+            tooltip = STATS_LABELS_TOOLTIPS.get(k, [None, None])[0]
+            if tooltip is not None:
+                self.stats_table.horizontalHeaderItem(i).setToolTip(tooltip)
         header = self.stats_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Interactive)
         self.stats_table.verticalHeader().setVisible(False)
@@ -1279,19 +1298,29 @@ class Qats(QMainWindow):
         container : dict
             Time series statistics
         """
+        # disable sorting
+        self.stats_table.setSortingEnabled(False)
+        # populate table
         self.stats_table.setRowCount(max(len(container), 50))
         for i, (name, data) in enumerate(container.items()):
-            cell = QTableWidgetItem(name)
-            cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            cell.setToolTip(name)
-            self.stats_table.setItem(i, 0, cell)
-
-            for j, key in enumerate(["min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
-                                     "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]):
-                value = data.get(key, np.nan)
-                cell = QTableWidgetItem(f"{value:12.5g}")   # works also with nan values
+            for j, key in enumerate(STATS_ORDER):
+                if key == "name":
+                    cell = CustomTableWidgetItem(name)  # QTableWidgetItem(name)
+                    cell.setToolTip(name)
+                else:
+                    value = data.get(key, np.nan)
+                    cell = CustomTableWidgetItem(f"{value:12.5g}")   # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-                self.stats_table.setItem(i, j + 1, cell)
+                self.stats_table.setItem(i, j, cell)
+        # store original sorting order first time this function is called
+        if self.stats_table_initial_sort is None:
+            self.stats_table_initial_sort = self.stats_table.horizontalHeader().sortIndicatorSection()
+        if self.stats_table_initial_order is None:
+            self.stats_table_initial_order = self.stats_table.horizontalHeader().sortIndicatorOrder()
+        # force original sorting order (in practice; same as in gui key list)
+        self.stats_table.sortItems(self.stats_table_initial_sort, self.stats_table_initial_order)
+        # re-enable sorting
+        self.stats_table.setSortingEnabled(True)
 
     def time_window(self):
         """
@@ -1343,23 +1372,32 @@ class SettingsDialog(QDialog):
         Default number of points in segment when estimating PSD.
     nbins : int
         Default number of bins in cycle distribution.
+    twindec : int
+        Default number of decimals in time window for data processing.
     parent : QWidget, optional
         Parent widget.
     """
-    def __init__(self, psdnorm, nperseg, nbins, parent=None):
+    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle("Configure application settings")
         self.setWindowIcon(QIcon(ICON_FILE))
         layout = QVBoxLayout()
 
-        self.psdnormcheckbox = QCheckBox("Plot normalized power spectral density")
+        # settings checkbox: normalized psd?
+        self.psdnormcheckbox = QCheckBox()  # "Plot normalized power spectral density")
         self.psdnormcheckbox.setToolTip("Normalize power spectral density on maximum value to ease comparison of\n"
                                         "signals of different order of magnitude.")
         self.psdnormcheckbox.setChecked(False)
         if psdnorm:
             self.psdnormcheckbox.setChecked(True)
-        layout.addWidget(self.psdnormcheckbox)
+        # layout.addWidget(self.psdnormcheckbox)
+        psdnormlayout = QHBoxLayout()
+        psdnormlayout.addWidget(QLabel("Plot normalized power spectral density"))
+        psdnormlayout.addStretch(1)
+        psdnormlayout.addWidget(self.psdnormcheckbox)
+        layout.addLayout(psdnormlayout)
 
+        # settings spinbox: psd nperseg
         self.psdnpersegspinbox = QSpinBox()
         self.psdnpersegspinbox.setRange(100, 100000)
         self.psdnpersegspinbox.setSingleStep(10)
@@ -1375,6 +1413,7 @@ class SettingsDialog(QDialog):
         psdlayout.addWidget(self.psdnpersegspinbox)
         layout.addLayout(psdlayout)
 
+        # settings spinbox: rfc nbins
         self.rfcnbinsspinbox = QSpinBox()
         self.rfcnbinsspinbox.setRange(10, 1000)
         self.rfcnbinsspinbox.setSingleStep(1)
@@ -1388,16 +1427,38 @@ class SettingsDialog(QDialog):
         rfclayout.addWidget(self.rfcnbinsspinbox)
         layout.addLayout(rfclayout)
 
+        # settings spinbox: time window number of decimals
+        self.twindecspinbox = QSpinBox()
+        self.twindecspinbox.setRange(1, 10)
+        self.twindecspinbox.setSingleStep(1)
+        self.twindecspinbox.setEnabled(True)
+        self.twindecspinbox.setValue(twindec)
+        self.twindecspinbox.setToolTip("Number of decimals in the data processing time window from/to boxes.")
+        twindeclayout = QHBoxLayout()
+        twindeclayout.addWidget(QLabel("Number of decimals in data processing time window *"))
+        twindeclayout.addStretch(1)
+        twindeclayout.addWidget(self.twindecspinbox)
+        layout.addLayout(twindeclayout)
+
+        # help text
+        helptext = QHBoxLayout()
+        helptext.addWidget(QLabel("* Close and re-open application for this setting to have effect"))
+        helptext.addStretch(1)
+        layout.addLayout(helptext)
+
+        # buttons (OK, Cancel)
         self.buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
         self.buttons.accepted.connect(self.accept)
         self.buttons.rejected.connect(self.reject)
         layout.addWidget(self.buttons)
 
+        # conclude layout
         self.setLayout(layout)
 
     def get_settings(self):
         """Collect settings."""
-        return self.psdnormcheckbox.isChecked(), self.psdnpersegspinbox.value(), self.rfcnbinsspinbox.value()
+        return self.psdnormcheckbox.isChecked(), self.psdnpersegspinbox.value(), self.rfcnbinsspinbox.value(), \
+               self.twindecspinbox.value()
 
     @staticmethod
     def settings(defaults, parent=None):
@@ -1418,11 +1479,19 @@ class SettingsDialog(QDialog):
             Number of points in segment when estimating PSD using Welch's method.
         nbins : int
             Number of bins in cycle distributions.
+        twindec : int
+            Number of decimals in time window for data processing.
         """
-        dnorm, dnperseg, dnbins = defaults
-        dialog = SettingsDialog(dnorm, dnperseg, dnbins, parent=parent)
+        dnorm, dnperseg, dnbins, dtwindec = defaults
+        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent)
         result = dialog.exec_()
-        norm, nperseg, nbins = dialog.get_settings()
-        return norm, nperseg, nbins, result == QDialog.Accepted
+        norm, nperseg, nbins, twindec = dialog.get_settings()
+        # --- settings dialogue box debugging
+        logging.debug(f"settings saved: norm = {norm}")
+        logging.debug(f"settings saved: nperseg = {nperseg}")
+        logging.debug(f"settings saved: nbins = {nbins}")
+        logging.debug(f"settings saved: twindec = {twindec}")
+        # ---
+        return norm, nperseg, nbins, twindec, result == QDialog.Accepted
 
 

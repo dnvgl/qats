@@ -152,8 +152,7 @@ def read_data(path, names=None, verbose=False):
                 raise Exception("unexpected error: `time` has shape " + str(timearr.shape) + "while data has"
                                 "shape " + str(data.shape) + " (should be equal)")
             # make 2-dimensional array with time and data, and append to output
-            arr = np.array([timearr, data])
-            arrays.append(arr)
+            arrays.append([timearr, data])
 
     return arrays
 

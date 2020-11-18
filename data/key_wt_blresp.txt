@@ -1,0 +1,37 @@
+' 
+'R I F L E X  -  KEY FILE
+'------------------------
+'This key-file describes the contents of : wt_blresp.bin
+'The format of wt_blresp.bin is BINARY
+'with numbers stored as real single precision (4 bytes)
+'The file wt_blresp.bin contains time series of wind-turbine-results
+'The-wind-turbine results are stored in columns on wt_blresp.bin
+'
+'Column no.           1 contains FORTRAN specific data (please ignore)
+'
+'  column  contents       line        local       local    unit        contents
+'    no     abbr           ID        segment     element               descriptive text
+       2   Time                                                        Time
+       3   f_lift_a      bl2foil          1          1     kN/m        Lift force intensity in foil system
+       4   f_drag_a      bl2foil          1          1     kN/m        Drag force intensity in foil system
+       5   f_mom_a       bl2foil          1          1     kN/m        Moment intensity in foil system
+       6   magVrel_a     bl2foil          1          1     m/s         Relative wind velocity in foil system
+       7   aoa_a         bl2foil          1          1     deg         Angle of attack in foil system
+       8   C_lift_a      bl2foil          1          1     -           Lift force coefficient in foil system
+       9   C_drag_a      bl2foil          1          1     -           Drag force coefficient in foil system
+      10   C_mom_a       bl2foil          1          1     -           Moment coefficient in foil system
+      11   Vi_x_a        bl2foil          1          1     m/s         Induced wind speed x-dir in foil system
+      12   Vi_y_a        bl2foil          1          1     m/s         Induced wind speed y-dir in foil system
+      13   Vi_z_a        bl2foil          1          1     m/s         Induced wind speed z-dir in foil system
+      14   V0_x_a        bl2foil          1          1     m/s         Incoming wind speed x-dir in foil system
+      15   V0_y_a        bl2foil          1          1     m/s         Incoming wind speed y-dir in foil system
+      16   V0_z_a        bl2foil          1          1     m/s         Incoming wind speed z-dir in foil system
+      17   chord_sep_pt  bl2foil          1          1     -           Separation point, fraction of chord
+      18   axind_r       bl2foil          1          1     -           Axial induction factor in rotor system
+      19   tanind_r      bl2foil          1          1     -           Tangential induction factor in rotor system
+      20   Viax_ann_r    bl2foil          1          1     m/s         Annulus average axial induced wind in rotor system
+      21   Vitg_ann_r    bl2foil          1          1     m/s         Annulus average tangential induced wind in rotor system
+      22   ax_F_r        bl2foil          1          1     kN          Annulus average axial force in rotor system
+      23   tan_F_r       bl2foil          1          1     kN          Annulus average tangential force in rotor system
+'
+'Column no.          24 contains FORTRAN specific data (please ignore)
