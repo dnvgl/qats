@@ -19,6 +19,22 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.9.0] // 18.11.2020
+
+This release contains pull request [#79](https://github.com/dnvgl/qats/pull/79).
+
+#### Added
+
+- [GUI] Statistics table may is now sorted in ascending/descending order when column header is clicked. The sorting order is reset when 'Display' is invoked.
+- [GUI] Added setting that controls number of decimals in time window for data processing.
+- `TsDB.stats_dataframe()`: new method that returns statistics in a Pandas dataframe with same structure and behaviour as the dict returned from `TsDB.stats()`.
+- `qats.readers.sima`: Added support for wind turbine output from SIMA/RIFLEX, i.e. reading of `<prefix>_witurb.bin` and `<prefix>_blresp.bin`.
+
+#### Fixes
+- `TsDB.stats()`: default value of parameter `statsdur` is set to 10800 [s] instead of `None`. Previously failed if this parameter was not passed, since the underlying function `TimeSeries.stats()` did not accept/handle `None`. 
+- `qats.readers.tdms`: Changed how tdms-files are opened and avoid number of obsolete iterations when inferring the time array to improve the performance of the tdms-reader.
+
+
 ### [4.8.1] // 08.06.2020
 
 This release contains the following pull requests: [#74](https://github.com/dnvgl/qats/pull/74), [#76](https://github.com/dnvgl/qats/pull/76), [#77](https://github.com/dnvgl/qats/pull/77).
@@ -230,7 +246,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.8.1...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.9.0...HEAD
+[4.9.0]: https://github.com/dnvgl/qats/compare/4.8.1...4.9.0
 [4.8.1]: https://github.com/dnvgl/qats/compare/4.8.0...4.8.1
 [4.8.0]: https://github.com/dnvgl/qats/compare/4.7.0...4.8.0
 [4.7.0]: https://github.com/dnvgl/qats/compare/4.6.1...4.7.0
