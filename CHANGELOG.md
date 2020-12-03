@@ -19,6 +19,10 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### [4.9.2] // 03.12.2020
+
+Corrected `npTDMS` version requirement in `setup.py`.
+
 ### [4.9.1] // 03.12.2020
 
 Updated `setup.py` and `requirements.txt` to latest versions of dependencies.
@@ -251,7 +255,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.9.1...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.9.2...HEAD
+[4.9.2]: https://github.com/dnvgl/qats/compare/4.9.1...4.9.2
 [4.9.1]: https://github.com/dnvgl/qats/compare/4.9.0...4.9.1
 [4.9.0]: https://github.com/dnvgl/qats/compare/4.8.1...4.9.0
 [4.8.1]: https://github.com/dnvgl/qats/compare/4.8.0...4.8.1
