@@ -37,13 +37,13 @@ perfect for inspecting, comparing and reporting:
 Run the below command in a Python environment to install the latest QATS release:
 
 ```console
-pip install qats
+python -m pip install qats
 ```
 
 To upgrade from a previous version, the command is:
 
 ```console
-pip install --upgrade qats
+python -m pip install --upgrade qats
 ```
 
 You may now import qats in your own scripts:
@@ -54,16 +54,18 @@ from qats import TsDB, TimeSeries
 
 ... or use the GUI to inspect time series. Note that as of version 4.2.0 you are quite free to choose which 
 [Qt](https://www.qt.io) binding you would like to use for the GUI: [PyQt5](https://pypi.org/project/PyQt5/) or 
-[Pyside2](https://pypi.org/project/PySide2/), or even [PyQt4](https://pypi.org/project/PyQt4/) / 
-[Pyside](https://pypi.org/project/PySide/).
+[PySide2](https://pypi.org/project/PySide2/), or even [PyQt4](https://pypi.org/project/PyQt4/) / 
+[PySide](https://pypi.org/project/PySide/).
 
 Install the chosen binding (here PyQt5 as an example):
 
 ```console
-pip install pyqt5
+python -m pip install pyqt5
 ```
 
-... and launch the GUI:
+If multiple Qt bindinds are installed, the one to use may be controlled by setting the environmental variable `QT_API` to the desired package. Accepted values include `pyqt5` (to use PyQt5) and `pyside2` (PySide2). For more details, see [README file for qtpy](https://github.com/spyder-ide/qtpy/blob/master/README.md).
+
+The GUI may now be launched by:
 
 ```console
 qats app
@@ -116,7 +118,7 @@ python -m venv /path/to/new/virtual/environment
 ... install the dev dependencies in [requirements.txt](requirements.txt),
 
 ```console
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 .. and install the package in development mode.
@@ -161,10 +163,16 @@ convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{plat
 
 ### Building the documentation
 
-The html documentation is build using [Sphinx](http://www.sphinx-doc.org/en/master)
+The html documentation is built using [Sphinx](http://www.sphinx-doc.org/en/master)
 
 ```console
 sphinx-build -b html docs\source docs\_build
+```
+
+To force a build to read/write all files (always read all files and don't use a saved environment), include the `-a` and `-E` options:
+
+```console
+sphinx-build -a -E -b html docs\source docs\_build
 ```
 
 ### Deployment
