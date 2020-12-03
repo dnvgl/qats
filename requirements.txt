@@ -1,7 +1,7 @@
 h5py==3.1.0
 pymatreader==0.0.24
 matplotlib==3.3.3
-npTDMS==1.1.0  # 0.24.0
+npTDMS==1.1.0
 numpy==1.19.4
 openpyxl==3.0.5
 pandas==1.1.4
