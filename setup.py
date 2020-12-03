@@ -26,7 +26,7 @@ setup(
         "numpy>=1,<2",
         "scipy>=1,<2",
         "matplotlib>=3,<4",
-        "npTDMS>=0.24,<1",
+        "npTDMS>=1,<2",
         "h5py>=2.7,<4",
         "QtPy>=1,<2",
         "pandas>=1,<2",
