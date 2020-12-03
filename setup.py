@@ -27,9 +27,9 @@ setup(
         "scipy>=1,<2",
         "matplotlib>=3,<4",
         "npTDMS>=0.24,<1",
-        "h5py>=2.7,<3",
+        "h5py>=2.7,<4",
         "QtPy>=1,<2",
-        "pandas>=0.24,<1",
+        "pandas>=1,<2",
         "pymatreader>=0.0.20,<1",
         "pywin32; platform_system == 'Windows'"
     ],
