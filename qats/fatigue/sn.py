@@ -1,270 +1,179 @@
 #!/usr/bin/env python
 # coding: utf-8
 """
-Classes and functions for fatigue calculations:
-    - SNCurve (class)
-    - Fatigue damage calculation (functions)
+Classes and functions for fatigue capacity and fatigue damage calculations
 """
 import numpy as np
 from scipy.special import gamma as gammafunc, gammainc, gammaincc
-
-# todo: Update SNCurve docstring to include description of class and attributes
+from typing import Optional, Tuple, Union
 
 
 class SNCurve(object):
     """
-    S-N curve representing fatigue capacity versus cyclic stresses.
-
-    Parameters
-    ----------
-    name : str
-        S-N curve name
-    m1 : float
-        Negative inverse slope parameter (for bilinear curves: used for N < `nswitch`).
-    m2 : float, optional
-        Negative inverse slope parameter for N > `nswitch`
-    a1 : float, optional
-        Intercept parameter for N <= `nswitch`.
-    loga1 : float, optional
-        Log10 of a1. Must be given if `a1` is not specified.
-    nswitch : float, optional
-        Number of cycles at transition from `m1` to `m2`. Required if `m2` is specified.
-    t_exp : float, optional
-        Thickness correction exponent. If not specified, thickness may not be specified in later calculations.
-    t_ref : float, optional
-        Reference thickness [mm]. If not specified, thickness may not be specified in later calculations.
+    S-N data model
 
     Attributes
     ----------
-    a1 : float
-        Intercept parameter for N <= `nswitch`.
-    a2 : float
-        Intercept parameter for N > `nswitch`. Equals `a1` for linear curves.
-    loga1 : float
-        Common logarithm with base 10 of `a1`.
-    loga2 : float
-        Common logarithm with base 10 of `a2`.
-    m1 : float
-        Negative inverse slope parameter (for bilinear curves: used for N < `nswitch`).
-    m2 : float
-        Negative inverse slope parameter for N > `nswitch`. Equals `m1` for linear curves.
-    name : str
-        S-N curve name.
-    nswitch : float
-        Number of cycles at transition from `m1` to `m2`. Applies only to bilinear curves.
-    sswitch : float
-        Stress range at transition from `m1` to `m2`. Applies only to bilinear curves.
-    t_exp : float
-        Thickness correction exponent.
-    t_ref : float, optional
-        Reference thickness [mm] for thickness correction.
+    m : float
+        Slope of first leg of the curve
+    b0: float
+        Constant coefficient in equation to calculate the intercept parameter
+    name : Optional[str]
+        Name/identifier
+    description : Optional[str]
+        Description of the curve
+    unit: Optional[str]
+        Unit of measure for the stress ranges e.g. MPa
+    b1: Optional[float]
+        Mean stress coefficient in equation to calculate the intercept parameter
+    b2: Optional[float]
+        Corrosion grade coefficient in equation to calculate the intercept parameter
+    default_g1: Optional[float]
+        Default value of g1(s_m) function, where s_m is the mean load
+    default_g2: Optional[float]
+        Default value of g2(c) function, where c is the corrosion grade
+    m2: Optional[float]
+        Slope of second leg of the curve, applies only to bi-linear curves
+    n_switch: Optional[float]
+        Point (in terms of number of cycles to failure) where the slope changes, applies only to bi-linear curves
+    fatigue_limit: Optional[float]
+        Fatigue limit in terms of stress range
+    t_ref: Optional[float]
+        Reference thickness for thickness correction
+    t_exp: Optional[float]
+        Exponent for thickness correction
 
     Notes
     -----
-    For linear curves (single slope), the following input parameters are required: m1, a1 (or loga1).
-    For bi-linear curves, the following additional parameters are required: m2, nswitch.
+    The dependency to mean load and corrosion is included by expressing the intercept parameter as a
+    function of these parameters:
 
-    If S-N curve is overdefined (e.g. both loga1 and a1 are defined), the S-N curve is established based on the
-    parameter order listed above (under "Parameters").
+        logA(s_m, c) = b0 + b1 * g1(s_m) + b2 * g2(c)
+
+    where b0, b1 and b2 are constant coefficients and g1 and g2 are functions of mean load (s_m) and
+    corrosion grade (c) respectively. These functions are generally nonlinear.
+
+    References
+    ----------
+    1. Lone et.al. (2021), Fatigue assessment of mooring chain considering the effects of mean load and corrosion,
+       OMAE2021-62775
+
     """
-
-    def __init__(self, name, m1, **kwargs):
+    def __init__(self, m: float, b0: float, name: str = None, description: str = None, unit: str = None,
+                 b1: float = None, b2: float = None, default_g1: float = None, default_g2: float = None,
+                 m2: float = None, n_switch: float = None, fatigue_limit: float = None, t_ref: float = None,
+                 t_exp: float = None):
         self.name = name
+        self.description = description
+        self.unit = unit
+        self.m = m
+        self.b0 = b0
+        self.b1 = b1
+        self.b2 = b2
+        self.default_g1 = default_g1
+        self.default_g2 = default_g2
+        self.m2 = m2
+        self.n_switch = n_switch
+        self.fatigue_limit = fatigue_limit
+        self.t_ref = t_ref
+        self.t_exp = t_exp
 
-        self.m1 = m1
-        self.m2 = m2 = kwargs.get("m2", None)
+    def is_bilinear(self) -> bool:
+        """Is it a bi-linear curve."""
+        return self.m2 is not None and self.n_switch is not None
 
-        self.t_exp = t_exp = kwargs.get("t_exp", None)
-        self.t_ref = t_ref = kwargs.get("t_ref", None)
+    def is_mean_load_and_corrosion_grade_dependent(self) -> bool:
+        """Is it a curve which depends on mean load and corrosion grade."""
+        return self.b1 is not None and self.b2 is not None and \
+            self.default_g1 is not None and self.default_g2 is not None
 
-        # check parameters
-        if m1 is None:
-            raise ValueError("parameter `m1` must be given")
-
-        if t_exp is None and t_ref is None:
-            # thickness correction not specified
-            pass
-        elif t_exp is None or t_ref is None:
-            raise ValueError("if thickness correction is specified, both parameters `t_exp` and `t_ref` "
-                             "must be specified")
-
-        # check and deduct intercept parameter(s), etc.
-        a1 = kwargs.get("a1", None)
-        loga1 = kwargs.get("loga1", None)
-        if a1 is not None:
-            loga1 = np.log10(a1)
-        elif loga1 is not None:
-            a1 = 10 ** loga1
-        else:
-            raise ValueError("either `a1` or `loga1` must be specified")
-
-        # handle bi-linear curves (
-        if self.bilinear is True:
-            nswitch = kwargs.get("nswitch", None)
-            if nswitch is None:
-                raise ValueError("`nswitch` must be specified for bi-linear curves")
-            loga2 = m2 / m1 * loga1 + (1 - m2/m1) * np.log10(nswitch)
-            a2 = 10 ** loga2
-            sswitch = 10 ** ((loga1 - np.log10(nswitch)) / m1)
-        else:
-            a2 = None
-            loga2 = None
-            nswitch = None
-            sswitch = None
-
-        # store all parameters
-        self.a1 = a1
-        self.a2 = a2
-        self.loga1 = loga1
-        self.loga2 = loga2
-        self.nswitch = nswitch
-        self.sswitch = sswitch
-
-    def __repr__(self):
-        str_type = "bi-linear" if self.bilinear is True else "linear"
-        return '<SNCurve "%s" (%s)>' % (self.name, str_type)
-
-    @property
-    def a(self):
+    def loga(self, g1: Union[float, np.ndarray] = None, g2: Union[float, np.ndarray] = None) -> Union[float, np.ndarray]:
         """
-        Intercept parameter of linear (single slope) S-N curve (equal to `a1`).
-        For bi-linear curves, use `a1` and `a2` instead.
-        """
-        # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
-        assert self.a2 is None, "For bi-linear curves, use `a1` and `a2` instead of `a`"
-        return self.a1
-
-    @property
-    def bilinear(self):
-        """
-        Returns True if S-N curve is bi-linear, otherwise False.
-        """
-        if self.m2 is None:
-            return False
-        else:
-            return True
-
-    @property
-    def loga(self):
-        """
-        Logarithm (base 10) of intercept parameter of linear (single slope) S-N curve (equal to `loga1`).
-        For bi-linear curves, use `loga1` and `loga2` instead.
-        """
-        # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
-        assert self.loga2 is None, "For bi-linear curves, use `loga1` and `loga2` instead of `loga`"
-        return self.loga1
-
-    @property
-    def m(self):
-        """
-        Slope parameter of linear (single slope) S-N curve (equal to `m1`).
-        Not available for bi-linear curves.
-        """
-        # should only be available for linear S-N curves - otherwise, m1 and m2 should be used!
-        assert self.m2 is None, "For bi-linear curves, use `m1` and `m2` instead of `m`"
-        return self.m1
-
-    def fatigue_strength(self, n, t=None):
-        """
-        Magnitude of stress range leading to a particular fatigue life (in terms of number of cycles.
+        Logarithm of intercept parameter
 
         Parameters
         ----------
-        n : float
-            Number of cycles (fatigue life) [-].
-        t : float, optional
-            Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
-            specified, thickness correction is not taken into account.
-
-        Returns
-        -------
-        float
-            Fatigue strength, i.e. magnitude of stress range leading to specified fatigue life (no. of cycles).
-
-        Raises
-        ------
-        ValueError: If thickness is specified, but thickness reference and exponent is not defined.
-        """
-        # thickness correction
-        if t is not None:
-            # thickness correction term
-            try:
-                tcorr = self.thickness_correction(t)
-            except ValueError:
-                raise
-        else:
-            # todo: consider to raise error if t_exp and t_ref is specified, but t not given (unless suppressed)
-            # no thickness correction term implies tk=1.0
-            tcorr = 1.0
-
-        # S-N parameters for specified stress range
-        if self.bilinear is False or n <= self.nswitch:
-            m = self.m1
-            loga = self.loga1
-        else:
-            m = self.m2
-            loga = self.loga2
-
-        # fatigue strength, ref. DNV-RP-C203 (2016) eq. 2.4.3
-        s = 1 / tcorr * 10 ** ((loga - np.log10(n)) / m)
-
-        return s
-
-    def n(self, s, t=None):
-        """
-        Predicted number of cycles to failure for specified stress range(s) and thickness.
-
-        Parameters
-        ----------
-        s : float or np.ndarray
-            Stress range(s) [MPa].
-        t : float, optional
-            Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
-            specified, thickness correction is not taken into account.
+        g1 : float or np.ndarray, optional
+            value of g1(s_m), where s_m is the mean load
+        g2 : float or np.ndarray, optional
+            value of g1(c), where c is the corrosion grade
 
         Returns
         -------
         float or np.ndarray
-            Predicted number of cycles to failure. Output type is same as input type (float or np.ndarray)
+            Logarithm of intercept parameter
 
-        Raises
-        ------
-        ValueError: If thickness is specified, but thickness reference and exponent is not defined.
+        Notes
+        -----
+        The specified mean load (g1) and corrosion grade (g2) must be consistent with the parameter
+        definitions applied with the actual S-N curve.
+
+        For curves that are mean load and corrosion grade dependent, the curves
+        reference values are applied by default if not provided.
         """
-        s = np.asarray(s)
-        # thickness correction
-        if t is not None:
-            # thickness correction term
-            try:
-                tcorr = self.thickness_correction(t)
-            except ValueError:
-                raise
-        else:
-            # todo: consider to raise error if t_exp and t_ref is specified, but t not given (unless suppressed)
-            # no thickness correction term implies tk=1.0
-            tcorr = 1.0
+        if self.is_mean_load_and_corrosion_grade_dependent():
+            if g1 is None:
+                g1 = self.default_g1
 
-        # calculate fatigue limit `n`, ref. DNV-RP-C203 (2016) eq. 2.4.3
-        # ... using appropriate S-N parameters for specified stress range(s)
-        if self.bilinear is False:
-            # single slope sn curve
-            n = 10 ** (self.loga1 - self.m1 * np.log10(s * tcorr))
-            return n
-        else:
-            # bi-linear curve
-            n = np.zeros(s.shape)
-            ind = s >= self.sswitch
-            # fatigue limits for upper part of curve
-            n[ind] = 10 ** (self.loga1 - self.m1 * np.log10(s[ind] * tcorr))
-            # fatigue limits for lower part of curve
-            n[~ind] = 10 ** (self.loga2 - self.m2 * np.log10(s[~ind] * tcorr))
-            if n.ndim == 0:
-                # float
-                return n.item()
-            else:
-                return n
+            if g2 is None:
+                g2 = self.default_g2
 
-    def thickness_correction(self, t):
+            return self.b0 + self.b1 * g1 + self.b2 * g2
+
+        else:
+            return self.b0
+
+    def a(self, g1: Union[float, np.ndarray] = None, g2: Union[float, np.ndarray] = None) -> Union[float, np.ndarray]:
+        """
+        Intercept parameter
+
+        Parameters
+        ----------
+        g1 : float or np.ndarray, optional
+            value of g1(s_m), where s_m is the mean load
+        g2 : float or np.ndarray, optional
+            value of g1(c), where c is the corrosion grade
+
+        Returns
+        -------
+        float or np.ndarray
+            Intercept parameter
+
+        Notes
+        -----
+        The specified mean load (g1) and corrosion grade (g2) must be consistent with the parameter
+        definitions applied with the actual S-N curve.
+
+        For curves that are mean load and corrosion grade dependent, the curves
+        reference values are applied by default if not provided.
+        """
+        return 10. ** self.loga(g1=g1, g2=g2)
+
+    def loga2(self) -> float:
+        """
+        Logarithm of intercept parameter for the second leg.
+
+        Applies only to bi-linear curves.
+        """
+        assert self.is_bilinear(), "The second intercept parameter applies only to bi-linear S-N curves. " \
+                                   "Make sure that both `m2` and `n_switch` are specified."
+        return self.m2 / self.m * self.loga() + (1 - self.m2/self.m) * np.log10(self.n_switch)
+
+    def a2(self) -> float:
+        """
+        Intercept parameter for the second leg.
+
+        Applies only to bi-linear curves.
+        """
+        return 10. ** self.loga2()
+
+    def s_switch(self) -> float:
+        """The stress range where the slope changes, applies only to bi-linear curves"""
+        assert self.is_bilinear(), "The second intercept parameter applies only to bi-linear S-N curves. " \
+                                   "Make sure that both `m2` and `n_switch` are specified."
+        return 10 ** ((self.loga() - np.log10(self.n_switch)) / self.m)
+
+    def thickness_correction(self, t: float) -> float:
         """
         Thickness correction for specified thickness.
 
@@ -272,7 +181,6 @@ class SNCurve(object):
         ----------
         t : float
             Thickness [mm]
-
         Returns
         -------
         float
@@ -283,196 +191,232 @@ class SNCurve(object):
         ValueError
             If thickness correction is not defined, i.e. `t_exp` and `t_ref` are not defined.
         """
-        try:
-            if t < self.t_ref:  # t = tref is used for thickness less than tref, ref. DNV-RP-C203 eq. 2.4.3
-                t = self.t_ref
-            tcorr = (t / self.t_ref) ** self.t_exp
-        except TypeError:
-            raise ValueError("thickness correction is not defined, i.e. `t_exp` and `t_ref` are not specified")
-        return tcorr
+        assert self.t_ref is not None and self.t_exp is not None, "Thickness correction parameters " \
+                                                                  "`t_ref` and `t_exp` are not defined."
 
-    def print_parameters(self):
-        s = "%(name)s\n" \
-            "----------------------------------\n" \
-            "m1      : %(m1).1f\n" \
-            "a1      : %(a1).2e\n" \
-            "log(a1) : %(loga1).3f\n" % self.__dict__
-        if self.bilinear is True:
-            s += "nswitch : %(nswitch).1e\n" \
-                 "m2      : %(m2).1f\n" \
-                 "a2      : %(a2).2e\n" \
-                 "log(a2) : %(loga2).3f\n" \
-                 "sswitch : %(sswitch).3f\n" % self.__dict__
+        if t < self.t_ref:  # t = tref is used for thickness less than tref, ref. DNV-RP-C203 eq. 2.4.3
+            t = self.t_ref
 
-        s += "t_exp : %(t_exp)s\n" \
-             "t_ref   : %(t_ref)s\n" % self.__dict__
+        return (t / self.t_ref) ** self.t_exp
 
-        print(s)
-        return
+    def strength(self, n: Union[float, np.ndarray], g1: Union[float, np.ndarray] = None,
+                 g2: Union[float, np.ndarray] = None, t: float = None) -> Union[float, np.ndarray]:
+        """
+        Magnitude of stress range leading to a particular fatigue life (in terms of number of cycles.
 
+        Parameters
+        ----------
+        n : float or numpy.ndarray
+            Number of cycles (fatigue life) [-].
+        g1 : float or numpy.ndarray, optional
+            value of g1(s_m), where s_m is the mean load
+        g2 : float or numpy.ndarray, optional
+            value of g1(c), where c is the corrosion grade
+        t : float, optional
+            Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
+            specified, thickness correction is not taken into account.
 
-def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), kwds=None):
-    """
-    Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
+        Returns
+        -------
+        float or numpy.ndarray
+            Magnitude of stress range leading to specified fatigue life (no. of cycles).
 
-    Parameters
-    ----------
-    srange: np.ndarray or list of floats
-        List of stress ranges in histogram (Note: only one value per bin).
-    count: np.ndarray or list of floats
-        Cycle count for each of the stress ranges. May be specified as number of cycles [-] or cycle rate [1/s].
-        If cycle rate is specified, specify duration `td` for scaling to number of cycles.
-    sn: dict or object or callable
-        Dictionary with S-N curve parameters, or class instance, or callable (function).
-        If **dict**: An :class:`SNCurve` instance is initiated based on parameters defined in dict. Expected keys are
-        'm1' and 'a1' (or 'loga1') for linear S-N curve, and also 'm2' and 'nswitch' if bi-linear S-N curve.
-        If **object**: Assumed to be class instance, and expected to have a callable method `n` which takes stress range
-        array as input (e.g. an instance of the :class:`SNCurve` class.).
-        If **callable**: A function with takes stress range array as input, and returns an array of fatigue capacity
-        (no. of cycles to failure), similar to :meth:`SNCurve.n`. Additional positional and keyword arguments may be
-        passed using parameter `args` and `kwargs`.
-    td: float, optional
-        Duration [s]. Used to scale the histogram from cycle rate to number of cycles.
-        Use 1 (the default) if histogram already represents number of cycles.
-    scf: float, optional
-        Stress concentration factor to be applied on stress ranges. Default: 1.
-    th: float, optional
-        Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
-        defined for the S-N curve given. NOTE: This parameter is only accepted if parameter `sn` is given as a `dict`
-        or a :class:`SNCurve` instance. In any other case, used the `args` or `kwds` parameter to pass additional
-        parameters to the capacity function.
-    retbins: bool, optional
-        If True, minersum per bin is also returned.
-    args : tuple, optional
-        Tuple of arguments that are passed to the capacity function defined by parameter `sn`.
-    kwds : dict, optional
-        Dictionary with keyword arguments that are passed to the capacity function defined by parameter `sn`.
+        Notes
+        -----
+        The specified mean load (g1) and corrosion grade (g2) must be consistent with the parameter
+        definitions applied with the actual S-N curve.
 
-    Returns
-    -------
-    float
-        Fatigue damage (Palmgren-Miner sum).
-    np.ndarray, optional
-        Fatigue damage (Palmgren-Miner sum) for each stress range bin. Returned if `retbin=True`.
+        For curves that are mean load and corrosion grade dependent, the curves
+        reference values are applied by default if not provided.
 
-    Raises
-    ------
-    ValueError:
-        If thickness is given but thickness correction not specified for S-N curve.
-    AssertionError
-        If parameter `sn` is not a dict, a callable, or a class instance with callable method `n()`.
+        """
+        # TODO: Handle cases where a fatigue limit is specified, np.nan for n > onset of the fatigue limit?
+        n = np.asarray(n)
+        g1 = np.asarray(g1)
+        g2 = np.asarray(g2)
 
-    Notes
-    -----
-    .. versionadded :: 4.7.0
-
-    Parameter `sn` may now be a callable (function) that calculates the fatigue capacity
-    (number of cycles to failure) for a given stress range. It must accept array input, and return array output.
-    To pass additional arguments to this function, use the `args` and `kwargs` keywords.
-    """
-    srange = np.asarray(srange)
-    count = np.asarray(count)
-    if not srange.shape == count.shape:
-        raise ValueError("`srange` and `count` must have same shape")
-
-    if kwds is None:
-        kwds = dict()
-
-    if isinstance(sn, dict):
-        sn = SNCurve("", **sn)
-
-    if isinstance(sn, SNCurve):
-        # handle SNCurve instance as special case, for backwards compatibility
-        if th is not None and (sn.t_exp is None and sn.t_ref is None):
-            raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
-        damage_per_bin = td * count / sn.n(srange * scf, t=th)
-    else:
-        assert th is None, "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. " \
-                           "For other cases, use parameter 'args' or 'kwds'."
-        if callable(sn):
-            func = sn
+        # thickness correction
+        if t is not None:
+            t_correction = self.thickness_correction(t)
         else:
-            func = getattr(sn, 'n', None)
-            assert callable(func), "Parameter 'sn' must be dict, callable or class instance with callable method 'n'"
-        damage_per_bin = td * count / func(srange * scf, *args, **kwds)
+            t_correction = 1.0
 
-    # total damage is sum of damage per stress range bin
-    d = sum(damage_per_bin)
+        # S-N parameters for specified stress range
+        if not self.is_bilinear() or n <= self.n_switch:
+            m = self.m
+            loga = self.loga(g1=g1, g2=g2)
+        else:
+            m = self.m2
+            loga = self.loga2()
 
-    if retbins is True:
-        return d, damage_per_bin
-    else:
+        # fatigue strength, ref. DNV-RP-C203 (2016) eq. 2.4.3
+        s = 1. / t_correction * 10 ** ((loga - np.log10(n)) / m)
+
+        # return float if input `n` was a float
+        if s.ndim == 0:
+            # float
+            return s.item()
+        else:
+            return s
+
+    def n(self, s: Union[float, np.ndarray], g1: Union[float, np.ndarray] = None, g2: Union[float, np.ndarray] = None,
+          t: float = None) -> Union[float, np.ndarray]:
+        """
+        Predicted number of cycles to failure for specified stress range(s).
+
+        Parameters
+        ----------
+        s : float or numpy.ndarray
+            Stress range(s).
+        g1 : float or numpy.ndarray, optional
+            value of g1(s_m), where s_m is the mean load
+        g2 : float or numpy.ndarray, optional
+            value of g1(c), where c is the corrosion grade
+        t : float, optional
+            Thickness [mm]. If specified, thickness reference and exponent must be defined for the S-N curve. If not
+            specified, thickness correction is not taken into account.
+
+        Returns
+        -------
+        float or numpy.ndarray
+            Predicted number of cycles to failure. Output type is same as input type (float or np.ndarray)
+
+        """
+        # TODO: Handle cases where a fatigue limit is specified, np.inf for s < fatigue limit?
+        s = np.asarray(s)
+        g1 = np.asarray(g1)
+        g2 = np.asarray(g2)
+        # thickness correction
+        if t is not None:
+            t_correction = self.thickness_correction(t)
+        else:
+            t_correction = 1.0
+
+        # calculate number of cycles to failure `n`, ref. DNV-RP-C203 (2016) eq. 2.4.3
+        # ... using appropriate S-N parameters for specified stress range(s)
+        if not self.is_bilinear():
+            # single slope sn curve
+            return 10 ** (self.loga(g1=g1, g2=g2) - self.m * np.log10(s * t_correction))
+        else:
+            # bi-linear curve
+            n = np.zeros(s.shape)
+
+            # find stress ranges above the point where the slope changes
+            ind = s >= self.s_switch()
+            # fatigue limits for upper part of curve
+            n[ind] = 10 ** (self.loga(g1=g1, g2=g2) - self.m * np.log10(s[ind] * t_correction))
+
+            # fatigue limits for lower part of curve
+            n[~ind] = 10 ** (self.loga2() - self.m2 * np.log10(s[~ind] * t_correction))
+
+            # return float if input `s` was a float
+            if n.ndim == 0:
+                # float
+                return n.item()
+            else:
+                return n
+
+    def minersum(self, ranges: np.ndarray, count: np.ndarray, g1: Union[float, np.ndarray] = None,
+                 g2: Union[float, np.ndarray] = None, df: float = 1., scf: float = 1., th: float = None
+                 ) -> Tuple[float, np.ndarray]:
+        """
+        Fatigue damage calculation (Miner-Palmgren sum) based on stress cycle histogram
+
+        Parameters
+        ----------
+        ranges : np.ndarray
+            Stress cycle ranges
+        count : np.ndarray
+            Stress cycle counts
+        g1 : float or numpy.ndarray, optional
+            value of g1(s_m), where s_m is the mean load
+        g2 : float or numpy.ndarray, optional
+            value of g1(c), where c is the corrosion grade
+        df: float, optional
+            Factor scaling reference duration. Can be used to scale the histogram from cycle rate to number of cycles or
+            to scale from one reference duration say. 100 seconds to a different reference duration say 10800 seconds.
+            Use 1 (the default) if histogram already represents number of cycles during the same period of time.
+        scf: float, optional
+            Stress concentration factor to be applied on stress ranges. Default: 1.
+        th: float, optional
+            Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
+            defined for the S-N curve given.
+
+        Returns
+        -------
+        float
+            Total fatigue damage (Palmgren-Miner sum).
+        np.ndarray
+            Fatigue damage (Palmgren-Miner sum) per bin in the cycle distribution
+
+        """
+        # calculate fatigue damage per bin (combination of range and count) of the cycle distribution
+        #  apply mean load and corrosion grade dependency if relevant (kwargs)
+        #  scale stresses with stress concentration factor
+        #  scale to the correct reference duration
+        #  apply thickness correction if any
+        damage_per_bin = df * count / self.n(s=ranges * scf, g1=g1, g2=g2, t=th)
+        return float(np.sum(damage_per_bin)), damage_per_bin
+
+    def minersum_weibull(self, q: float, h: float, v0: float, duration: float = 31556952., scf: float = 1.,
+                         th: float = None):
+        """
+        Fatigue damage (Palmgren-Miner sum) calculation based on (2-parameter) Weibull stress cycle distribution and
+        S-N curve. Ref. DNV-RP-C03 (2016) eq. F.12-1.
+    
+        Parameters
+        ----------
+        q: float
+            Weibull scale parameter (in 2-parameter distribution).
+        h: float
+            Weibull shape parameter (in 2-parameter distribution).
+        v0: float,
+            Cycle rate [1/s].
+        duration: float, optional
+            Duration [s] (or design life, in seconds). Default is 31536000 (no. of seconds in a year, or 365 days).
+        scf: float, optional
+            Stress concentration factor to be applied on stress ranges.
+        th: float, optional
+            Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
+            defined for the S-N curve given.
+    
+        Returns
+        -------
+        float
+            Fatigue damage (Palmgren-Miner sum).
+    
+        Raises
+        ------
+        ValueError:
+            If thickness is given but thickness correction not specified for S-N curve.
+        """
+        def cigf(a, x):
+            """ Complementary incomplete gamma function """
+            return gammaincc(a, x) * gammafunc(a)
+
+        def igf(a, x):
+            """ Incomplete gamma function """
+            return gammainc(a, x) * gammafunc(a)
+
+        if th is not None:
+            try:
+                # include thickness correction in SCF
+                scf *= self.thickness_correction(th)
+            except ValueError:
+                raise
+
+        # todo: verify implementation of thickness correction
+        # scale Weibull scale parameter by SCF (incl. thickness correction if specified)
+        q *= scf
+
+        if self.is_bilinear():
+            # gamma functions
+            g1 = cigf(1 + self.m / h, (self.s_switch() / q) ** h)  # complementary incomplete gamma function
+            g2 = igf(1 + self.m2 / h, (self.s_switch() / q) ** h)   # incomplete gamma function
+            # fatigue damage (for specified duration)
+            d = v0 * duration * (q ** self.m / self.a() * g1 + q ** self.m2 / self.a2() * g2)
+        else:
+            # single slope S-N curve, fatigue damage for specified duration
+            d = v0 * duration * (q ** self.m / self.a()) * gammafunc(1 + self.m / h)
+
         return d
-
-
-def minersum_weibull(q, h, sn, v0, td=None, scf=1., th=None):
-    """
-    Fatigue damage (Palmgren-Miner sum) calculation based on (2-parameter) Weibull stress cycle distribution and
-    S-N curve. Ref. DNV-RP-C03 (2016) eq. F.12-1.
-
-    Parameters
-    ----------
-    q: float
-        Weibull scale parameter (in 2-parameter distribution).
-    h: float
-        Weibull shape parameter (in 2-parameter distribution).
-    sn: dict or SNCurve
-        Dictionary with S-N curve parameters, alternatively an SNCurve instance.
-        If dict, expected attributes are: 'm1', 'm2', 'a1' (or 'loga1'), 'nswitch'.
-    v0: float,
-        Cycle rate [1/s].
-    td: float, optional
-        Duration [s] (or design life, in seconds). Default is 31536000 (no. of seconds in a year, or 365 days).
-    scf: float, optional
-        Stress concentration factor to be applied on stress ranges.
-    th: float, optional
-        Thickness [mm] for thickness correction. If specified, reference thickness and thickness exponent must be
-        defined for the S-N curve given.
-
-    Returns
-    -------
-    float
-        Fatigue damage (Palmgren-Miner sum).
-
-    Raises
-    ------
-    ValueError:
-        If thickness is given but thickness correction not specified for S-N curve.
-    """
-    def cigf(a, x):
-        """ Complementary incomplete gamma function """
-        return gammaincc(a, x) * gammafunc(a)
-
-    def igf(a, x):
-        """ Incomplete gamma function """
-        return gammainc(a, x) * gammafunc(a)
-
-    if not isinstance(sn, SNCurve):
-        sn = SNCurve("", **sn)
-
-    if td is None:
-        td = 3600. * 24 * 365
-
-    if th is not None:
-        try:
-            # include thickness correction in SCF
-            scf *= sn.thickness_correction(th)
-        except ValueError:
-            raise
-
-    # todo: verify implementation of thickness correction
-    # scale Weibull scale parameter by SCF (incl. thickness correction if specified)
-    q *= scf
-
-    if sn.bilinear is True:
-        # gamma functions
-        g1 = cigf(1 + sn.m1 / h, (sn.sswitch / q) ** h)  # complementary incomplete gamma function
-        g2 = igf(1 + sn.m2 / h, (sn.sswitch / q) ** h)   # incomplete gamma function
-        # fatigue damage (for specified duration)
-        d = v0 * td * (q ** sn.m1 / sn.a1 * g1 + q ** sn.m2 / sn.a2 * g2)
-    else:
-        # single slope S-N curve, fatigue damage for specified duration
-        d = v0 * td * (q ** sn.m1 / sn.a1) * gammafunc(1 + sn.m1 / h)
-
-    return d
-
