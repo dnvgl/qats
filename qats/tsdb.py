@@ -22,7 +22,8 @@ from .io.sima import (
 )
 from .io.sima_h5 import (
     read_names as read_sima_h5_names,
-    read_data as read_sima_h5_data
+    read_data as read_sima_h5_data,
+    write_data as write_sima_h5_data
 )
 from .io.csv import (
     read_names as read_csv_names,
@@ -825,6 +826,9 @@ class TsDB(object):
 
         elif ext == ".dat":     # write ascii file
             write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
+
+        elif ext == ".h5":
+            write_sima_h5_data(filename, common_time_array, container)
 
         else:
             raise NotImplementedError("File format/type '%s' is not yet implemented." % ext)

@@ -157,6 +157,33 @@ def read_data(path, names=None, verbose=False):
     return arrays
 
 
+def write_data(path, time: np.ndarray, data: dict):
+    """
+    Write time series to SIMA HDF5 file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    time : array
+        Time
+    data : dict
+        Time series data name vs. values
+    """
+    # todo: figure out how to best pass complete time series info (units etc.) if this is stored on TimeSeries object
+    with h5py.File(path, "w") as f:
+        for name, tx in data.items():
+            t, x = tx
+            start = t[0]
+            delta = t[1] - t[0]
+            dset = f.create_dataset(name, data=x)
+            dset.attrs["name"] = os.path.basename(name)
+            dset.attrs["start"] = start
+            dset.attrs["delta"] = delta
+            dset.attrs["xunit"] = ""
+            dset.attrs["yunit"] = ""
+
+
 def _timearray_info(dset):
     """
     Extracts time array from h5-dataset.
