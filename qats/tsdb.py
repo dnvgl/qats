@@ -865,31 +865,7 @@ class TsDB(object):
                 fts.close()
 
         elif ext == ".dat":     # write ascii file
-            with open(filename, "w") as f:
-                # write keys + time to ascii-file header
-                if not skip_header:
-                    header = ["%15s%s" % (k, delim) for k, _ in container.items()]
-                    header.insert(0, "%15s%s" % ("time", delim))
-                    header += "\n"
-                    f.write("".join(header))
-
-                # write data to ascii file
-                out = ""
-                for i in range(len(common_time_array)):
-                    # write time value
-                    out += "%15.7g%s" % (common_time_array[i], delim)
-
-                    # write data values column wise (position 1 refers to time series data,
-                    # index i refers to time step #)
-                    for _, arr in container.items():
-                        out += "%15.7g%s" % (arr[1][i], delim)
-
-                    out += "\n"
-
-                    # flush to file every 500th time step (for efficiency) and at the end
-                    if ((i != 0) and (i % 500 == 0)) or (i == len(common_time_array) - 1):
-                        f.write(out)
-                        out = ""
+            write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
 
         else:
             raise NotImplementedError("File format/type '%s' is not yet implemented." % ext)

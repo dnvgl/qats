@@ -83,3 +83,46 @@ def read_dat_data(path, ind=None):
 
     return data
 
+
+def write_dat_data(path, time: np.ndarray, data: dict, delim: str = "\t", skip_header: bool = False):
+    """
+    Write time series arranged column wise on ascii formatted file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    time : array
+        Time
+    data : dict
+        Time series data name vs. values
+    delim : str, optional
+        Column delimiter
+    skip_header : bool, optional
+        Skip header on file
+    """
+    with open(path, "w") as f:
+        # write keys + time to ascii-file header
+        if not skip_header:
+            header = ["%15s%s" % (k, delim) for k, _ in data.items()]
+            header.insert(0, "%15s%s" % ("time", delim))
+            header += "\n"
+            f.write("".join(header))
+
+        # write data to ascii file
+        out = ""
+        for i in range(len(time)):
+            # write time value
+            out += "%15.7g%s" % (time[i], delim)
+
+            # write data values column wise (position 1 refers to time series data,
+            # index i refers to time step #)
+            for _, arr in data.items():
+                out += "%15.7g%s" % (arr[1][i], delim)
+
+            out += "\n"
+
+            # flush to file every 500th time step (for efficiency) and at the end
+            if ((i != 0) and (i % 500 == 0)) or (i == len(time) - 1):
+                f.write(out)
+                out = ""
