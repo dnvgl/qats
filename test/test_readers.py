@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for testing readers.
+Module for testing io.
 The module utilizes TsDB.fromfile and .get() to read at least one time series from the file, to check that this does not
 generate any exceptions.
 """

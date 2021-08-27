@@ -16,37 +16,38 @@ from array import array
 from collections import OrderedDict, defaultdict
 from .ts import TimeSeries
 from .fatigue.rainflow import rebin as rebin_cycles
-from .readers.sima import (
+from .io.sima import (
     read_names as read_sima_names,
     read_ascii_data as read_sima_ascii_data,
     read_bin_data as read_sima_bin_data,
     read_sima_wind_names
 )
-from .readers.sima_h5 import (
+from .io.sima_h5 import (
     read_names as read_sima_h5_names,
     read_data as read_sima_h5_data
 )
-from .readers.csv import (
+from .io.csv import (
     read_names as read_csv_names,
     read_data as read_csv_data
 )
-from .readers.direct_access import (
+from .io.direct_access import (
     read_ts_names,
     read_tda_names,
     read_ts_data,
     read_tda_data,
 )
-from .readers.sintef_mat import (
+from .io.sintef_mat import (
     read_names as read_mat_names,
     read_data as read_mat_data
 )
-from .readers.tdms import (
+from .io.tdms import (
     read_names as read_tdms_names,
     read_data as read_tdms_data
 )
-from .readers.other import (
+from .io.other import (
     read_dat_names,
-    read_dat_data
+    read_dat_data,
+    write_dat_data
 )
 
 # todo: cross spectrum(scipy.signal.csd)
