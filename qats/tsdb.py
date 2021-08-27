@@ -11,8 +11,6 @@ from uuid import uuid4
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from struct import pack
-from array import array
 from collections import OrderedDict, defaultdict
 from .ts import TimeSeries
 from .fatigue.rainflow import rebin as rebin_cycles
@@ -35,6 +33,7 @@ from .io.direct_access import (
     read_tda_names,
     read_ts_data,
     read_tda_data,
+    write_ts_data
 )
 from .io.sintef_mat import (
     read_names as read_mat_names,
@@ -822,47 +821,7 @@ class TsDB(object):
         _, ext = os.path.splitext(filename)
 
         if ext == ".ts":    # write direct access file
-            # deduct name of key file
-            base, _ = os.path.splitext(filename)
-            keyfilename = base + ".key"
-
-            # open key file (ascii) and .ts file (binary)
-            # todo: check if 'w' or 'wb' should be used, seems like fts.write(array(....)) expects a bytearray
-            fts = open(filename, "wb")
-            fkey = open(keyfilename, "w")
-            try:
-                # number of data points in a single time series
-                ndat = common_time_array.size
-
-                # number of records (number of time series + header + time vector)
-                nrec = len(container) + 2
-
-                # write meta info to first record
-                fts.write(pack("ii", ndat, nrec))
-
-                # zero pad the first record
-                fts.write(array("i", [0]*(ndat-2)))
-
-                # time array
-                fkey.write("time\n")
-                fts.write(array("f", common_time_array))
-
-                # time series
-                for key, arr in container.items():
-                    # write key to key file
-                    fkey.write("%s\n" % key)
-
-                    # write time series array to ts file (position 1 refers to time series data)
-                    fts.write(array("f", arr[1]))
-
-            except Exception:
-                raise RuntimeError("Exception encountered when writing data to file '%s'." % filename)
-
-            finally:
-                # end key file and close file pointers
-                fkey.write("END\n")
-                fkey.close()
-                fts.close()
+            write_ts_data(filename, common_time_array, container)
 
         elif ext == ".dat":     # write ascii file
             write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
