@@ -170,7 +170,7 @@ def write_data(path, time: np.ndarray, data: dict):
     data : dict
         Time series data name vs. values
     """
-    # todo: figure out how to best pass complete time series info (units etc.) if this is stored on TimeSeries object
+    # todo: Pass complete time series info (yunit etc.) if this is stored on TimeSeries object
     with h5py.File(path, "w") as f:
         for name, tx in data.items():
             t, x = tx
@@ -180,7 +180,7 @@ def write_data(path, time: np.ndarray, data: dict):
             dset.attrs["name"] = os.path.basename(name)
             dset.attrs["start"] = start
             dset.attrs["delta"] = delta
-            dset.attrs["xunit"] = ""
+            dset.attrs["xunit"] = "s"
             dset.attrs["yunit"] = ""
 
 
