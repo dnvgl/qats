@@ -828,7 +828,7 @@ class TsDB(object):
             write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
 
         elif ext == ".h5":
-            write_sima_h5_data(filename, common_time_array, container)
+            write_sima_h5_data(filename, container)
 
         else:
             raise NotImplementedError("File format/type '%s' is not yet implemented." % ext)

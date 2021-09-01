@@ -157,7 +157,7 @@ def read_data(path, names=None, verbose=False):
     return arrays
 
 
-def write_data(path, time: np.ndarray, data: dict):
+def write_data(path, data: dict):
     """
     Write time series to SIMA HDF5 file.
 
@@ -165,10 +165,8 @@ def write_data(path, time: np.ndarray, data: dict):
     ----------
     path : str
         File path
-    time : array
-        Time
     data : dict
-        Time series data name vs. values
+        Time series data name vs. time and values
     """
     # todo: Pass complete time series info (yunit etc.) if this is stored on TimeSeries object
     with h5py.File(path, "w") as f:
