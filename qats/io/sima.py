@@ -4,8 +4,9 @@ Readers for ASCII and direct access formatted time series files exported from SI
 import fnmatch
 import os
 import re
-from struct import unpack
 import numpy as np
+from struct import unpack
+from scipy.interpolate import interp1d
 
 
 def read_sima_wind_names(path):
@@ -232,6 +233,39 @@ def read_ascii_data(path, ind=None, verbose=False):
         print('ndat (no. of time steps)    : %d' % ndat)
 
     return data
+
+
+def write_simo_file(path, time: np.ndarray, data: np.ndarray, dt: float = 0.2, description: str = None):
+    """
+    Write time series on simo input format
+
+    Parameters
+    ----------
+    path : str
+        File path
+    time : array
+        Time (s)
+    data : array
+        Time series data
+    dt : float, optional
+        Time step on file, default 0.2 seconds
+    description : str, optional
+        Description printed to file
+    """
+    # resample to constant dt
+    duration = time[-1] - time[0]
+    f = interp1d(time, data)
+    trs = np.arange(0., duration, dt)
+    drs = f(trs)
+    n = np.size(drs)  # reset
+
+    with open(path, "w") as f:
+        f.write(f"{n}" + "\n")
+        f.write(f"{dt}" + "\n")
+        f.write(f"{description}" + "\n" if description is not None else "\n")
+        f.write("\n")
+        for i in range(n):
+            f.write(f"{drs[i]}" + "\n")
 
 
 def _name_suffices(txt):
