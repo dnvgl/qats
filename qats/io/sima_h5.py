@@ -122,11 +122,13 @@ def read_data(path, names=None, verbose=False):
             data = dset[:]  # dset.value
             # todo: consider if check of data type is really neccessary -- if not, dset.ndim, dset.size etc. may be used
             if not isinstance(data, np.ndarray):
-                raise NotImplemented("only value of type np.ndarray is implemented, got: %s (for name '%s')" %
-                                     (type(data), name))
+                raise NotImplementedError(
+                    f"only value of type np.ndarray is implemented, got: {type(data)} (for name '{name}')"
+                )
             if data.ndim != 1:
-                raise NotImplemented("only 1-dimensional arrays implemented, got ndim=%d (for name '%s')" %
-                                     (data.ndim, name))
+                raise NotImplementedError(
+                    f"only 1-dimensional arrays implemented, got ndim={data.ndim} (for name '{name}')"
+                )
             data = data.flatten()   # flatten data array
             nt = data.size          # number of time steps
 
