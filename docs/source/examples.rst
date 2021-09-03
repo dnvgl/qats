@@ -96,10 +96,30 @@ Compare the cycle range and range-mean distribution from several time series usi
 Calculate fatigue damage in mooring lines
 *****************************************
 
+Using a traditional S-N curve with constant slope and intercept.
+
 .. literalinclude:: examples/mooring_fatigue.py
    :language: python
    :linenos:
    :lines: 1-
+
+Using a novel S-N curve with mean load and corrosion dependent intercept parameter as described in OMAE2021-62775.
+
+.. literalinclude:: examples/mooring_fatigue_mean_load.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+.. figure:: img/damage-contribution-single.png
+    :figclass: align-center
+    :target: _images/damage-contribution-single.png
+
+Note that this figure is based on cycles from a single time series. The figure below illustrates more clearly how this
+can look like when using cycles aggregated from years of history.
+
+.. figure:: img/damage-contribution-aggregated.png
+    :figclass: align-center
+    :target: _images/damage-contribution-aggregated.png
 
 
 Apply low-pass and high-pass filters to time series
