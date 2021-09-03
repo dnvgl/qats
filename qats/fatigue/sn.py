@@ -25,7 +25,7 @@ class SNCurve(object):
     unit: str, optional
         Unit of measure for the stress ranges e.g. MPa
     b1: str, optional
-        Mean stress coefficient in equation to calculate the intercept parameter
+        Mean load coefficient in equation to calculate the intercept parameter
     b2: float, optional
         Corrosion grade coefficient in equation to calculate the intercept parameter
     default_g1: float, optional
