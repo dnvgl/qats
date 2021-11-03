@@ -187,7 +187,12 @@ class TsDB(object):
             k = self.register_keys[0]
             return self._path_dirname(k)
         else:
-            return os.path.commonpath(self.register_keys)
+            try:
+                return os.path.commonpath(self.register_keys)
+            except ValueError:
+                # if paths contain both absolute and relative paths, the paths are on the different
+                # drives or if paths is empty.
+                return ""
 
     @property
     def n(self):
