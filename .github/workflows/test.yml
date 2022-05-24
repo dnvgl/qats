@@ -27,9 +27,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python setup.py install
         python -m pip install --upgrade pip
         python -m pip install flake8 wheel pyside2
+        python setup.py install
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
