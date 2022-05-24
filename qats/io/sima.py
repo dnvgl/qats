@@ -253,7 +253,10 @@ def write_simo_file(path, time: np.ndarray, data: np.ndarray, dt: float = 0.2, d
         Description printed to file
     """
     # resample to constant dt
-    duration = time[-1] - time[0]
+    if time[0] < 0:
+        duration = time[-1]  # Ignoring everything before 0
+    else:
+        duration = time[-1] - time[0]
     f = interp1d(time, data)
     trs = np.arange(0., duration, dt)
     drs = f(trs)
