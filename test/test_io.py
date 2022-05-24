@@ -22,7 +22,7 @@ class TestTsDB(unittest.TestCase):
 
     def test_write_simo_file(self):
         self.db.load(os.path.join(self.data_directory, 'integer.csv'))
-        name = "Random"
+        name = "random"
         ts = self.db.get(name=name, store=False)
 
         fnout = os.path.join(self.data_directory, '_test_export.asc')
@@ -46,7 +46,7 @@ class TestTsDB(unittest.TestCase):
 
     def test_write_simo_file_negative_time(self):
         self.db.load(os.path.join(self.data_directory, 'negative_time.csv'))
-        name = "Random"
+        name = "random"
         ts = self.db.get(name=name, store=False)
 
         fnout = os.path.join(self.data_directory, '_test_export.asc')
