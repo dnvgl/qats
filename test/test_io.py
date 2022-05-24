@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Module for testing TsDB class
+Module for testing io operations directly
 """
 from qats import TsDB
-from qats.io import sima, sima_h5
+from qats.io import sima
 import unittest
 import os
 import sys
-
-
-# todo: add tests for listing subset(s) based on specifying parameter `names` (with and wo param. `keys`)
-# todo: add test for getm() with fullkey=False (similar to test_get_many_correct_key, but with shorter key)
 
 
 class TestTsDB(unittest.TestCase):
