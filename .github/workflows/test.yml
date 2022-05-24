@@ -27,6 +27,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
+        python setup.py install
         python -m pip install --upgrade pip
         python -m pip install flake8 wheel pyside2
     - name: Lint with flake8
@@ -40,7 +41,6 @@ jobs:
         QT_API: pyside2
       run: |
         python -m unittest discover
-        python setup.py install
         qats -h
         qats app -h
         qats config -h
