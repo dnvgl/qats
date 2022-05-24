@@ -11,5 +11,5 @@ PyQt5==5.15.2
 scipy==1.5.3
 setuptools-scm==4.1.2
 wheel==0.36.0
-Sphinx>=3.3.1
-sphinx_bootstrap_theme==0.7.1
+Sphinx>=4.1.2
+sphinx_bootstrap_theme==0.8.1
