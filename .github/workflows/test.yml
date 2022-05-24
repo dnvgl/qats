@@ -12,7 +12,7 @@ on:
 jobs:
   build:
     
-    name: Test with ${{ matrix.python }} ${{ matrix.python-version }} on Ubuntu
+    name: Test with Python ${{ matrix.python-version }} on Ubuntu
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
