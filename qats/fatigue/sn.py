@@ -5,7 +5,7 @@ Classes and functions for fatigue capacity and fatigue damage calculations
 """
 import numpy as np
 from scipy.special import gamma as gammafunc, gammainc, gammaincc
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 
 
 class SNCurve(object):
@@ -18,29 +18,29 @@ class SNCurve(object):
         Slope of first leg of the curve
     b0: float
         Constant coefficient in equation to calculate the intercept parameter
-    name : str, optional
+    name : Optional[str]
         Name/identifier
-    description : str, optional
+    description : Optional[str]
         Description of the curve
-    unit: str, optional
+    unit: Optional[str]
         Unit of measure for the stress ranges e.g. MPa
-    b1: str, optional
+    b1: Optional[float]
         Mean load coefficient in equation to calculate the intercept parameter
-    b2: float, optional
+    b2: Optional[float]
         Corrosion grade coefficient in equation to calculate the intercept parameter
-    default_g1: float, optional
+    default_g1: Optional[float]
         Default value of g1(s_m) function, where s_m is the mean load
-    default_g2: float, optional
+    default_g2: Optional[float]
         Default value of g2(c) function, where c is the corrosion grade
-    m2: float, optional
+    m2: Optional[float]
         Slope of second leg of the curve, applies only to bi-linear curves
-    n_switch: float, optional
+    n_switch: Optional[float]
         Point (in terms of number of cycles to failure) where the slope changes, applies only to bi-linear curves
-    fatigue_limit: float, optional
+    fatigue_limit: Optional[float]
         Fatigue limit in terms of stress range
-    t_ref: float, optional
+    t_ref: Optional[float]
         Reference thickness for thickness correction
-    t_exp: float, optional
+    t_exp: Optional[float]
         Exponent for thickness correction
 
     Notes
