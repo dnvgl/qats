@@ -1,90 +1,90 @@
 
-:mod:`qats.readers`
+:mod:`qats.io`
 ===================
 
-.. automodule:: qats.readers
+.. automodule:: qats.io
 
 
 
-:mod:`qats.readers.csv`
+:mod:`qats.io.csv`
 -----------------------
 
-.. automodule:: qats.readers.csv
+.. automodule:: qats.io.csv
     :members:
 
     .. rubric:: Functions overview
 
-    .. autoautosummary:: qats.readers.csv
+    .. autoautosummary:: qats.io.csv
         :functions:
 
     .. rubric:: API
 
 
-:mod:`qats.readers.direct_access`
+:mod:`qats.io.direct_access`
 ---------------------------------
 
-.. automodule:: qats.readers.direct_access
+.. automodule:: qats.io.direct_access
     :members:
 
     .. rubric:: Functions overview
 
-    .. autoautosummary:: qats.readers.direct_access
+    .. autoautosummary:: qats.io.direct_access
         :functions:
 
     .. rubric:: API
 
 
-:mod:`qats.readers.matlab`
+:mod:`qats.io.sintef_mat`
 --------------------------
 
-.. automodule:: qats.readers.matlab
+.. automodule:: qats.io.sintef_mat
     :members:
 
     .. rubric:: Functions overview
 
-    .. autoautosummary:: qats.readers.matlab
+    .. autoautosummary:: qats.io.sintef_mat
         :functions:
 
     .. rubric:: API
 
 
-:mod:`qats.readers.other`
+:mod:`qats.io.other`
 -------------------------
 
-.. automodule:: qats.readers.other
+.. automodule:: qats.io.other
     :members:
 
     .. rubric:: Functions overview
 
-    .. autoautosummary:: qats.readers.other
+    .. autoautosummary:: qats.io.other
         :functions:
 
     .. rubric:: API
 
 
-:mod:`qats.readers.sima`
+:mod:`qats.io.sima`
 ------------------------
 
-.. automodule:: qats.readers.sima
+.. automodule:: qats.io.sima
     :members:
 
     .. rubric:: Functions overview
 
-    .. autoautosummary:: qats.readers.sima
+    .. autoautosummary:: qats.io.sima
         :functions:
 
     .. rubric:: API
 
 
-:mod:`qats.readers.sima_h5`
+:mod:`qats.io.sima_h5`
 ---------------------------
 
-.. automodule:: qats.readers.sima_h5
+.. automodule:: qats.io.sima_h5
     :members:
 
     .. rubric:: Functions overview
 
-    .. autoautosummary:: qats.readers.sima_h5
+    .. autoautosummary:: qats.io.sima_h5
         :functions:
 
     .. rubric:: API
