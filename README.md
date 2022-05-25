@@ -142,13 +142,11 @@ qats -h
 
 ### Running the tests
 
-The automated tests are run using [Tox](https://tox.readthedocs.io/en/latest/).
+The automated tests are run using [unittest](https://docs.python.org/3/library/unittest.html/).
 
 ```console
-tox
+python -m unittest discover 
 ```
-
-The test automation is configured in the file `tox.ini`.
 
 ### Building the package
 

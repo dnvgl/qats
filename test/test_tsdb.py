@@ -547,6 +547,24 @@ class TestTsDB(unittest.TestCase):
         # check arrays
         np.testing.assert_array_almost_equal(ts1.x, ts2.x, 6, "Export/reload did not yield same arrays")
 
+    def test_export_h5(self):
+        self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))
+        names = "WaveC[m]", "Wave-S[m]", "Surge[m]"
+        fnout = os.path.join(self.data_directory, '_test_export.h5')
+        try:
+            # route screen dump from export to null
+            was_stdout = sys.stdout
+            f = open(os.devnull, 'w')
+            sys.stdout = f
+            # export, should not raise errors
+            self.db.export(fnout, names=names, verbose=False)
+        finally:
+            # clean exported files and route screen dump back
+            os.remove(fnout)
+            sys.stdout = was_stdout
+            f.close()
+        # should not raise errors
+
     def test_stats_dataframe(self):
         """ Test that stats dataframe is correctly constructed """
         fn = os.path.join(self.data_directory, 'mooring.ts')

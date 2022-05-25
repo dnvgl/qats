@@ -1,9 +1,11 @@
 """
 Readers for various direct access formatted time series files
 """
-from struct import unpack
 import os
 import numpy as np
+from struct import unpack
+from struct import pack
+from array import array
 
 
 def read_ts_names(path):
@@ -324,5 +326,61 @@ def _read_data(path, ifmt, ind=None, verbose=False):
         raise
 
     return arr
+
+
+def write_ts_data(path, time: np.ndarray, data: dict):
+    """
+    Write time series direct access formatted file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    time : array
+        Time
+    data : dict
+        Time series data name vs. values
+    """
+    # deduct name of key file
+    base, _ = os.path.splitext(path)
+    keyfilename = base + ".key"
+
+    # open key file (ascii) and .ts file (binary)
+    # todo: check if 'w' or 'wb' should be used, seems like fts.write(array(....)) expects a bytearray
+    fts = open(path, "wb")
+    fkey = open(keyfilename, "w")
+    try:
+        # number of data points in a single time series
+        ndat = time.size
+
+        # number of records (number of time series + header + time vector)
+        nrec = len(data) + 2
+
+        # write meta info to first record
+        fts.write(pack("ii", ndat, nrec))
+
+        # zero pad the first record
+        fts.write(array("i", [0] * (ndat - 2)))
+
+        # time array
+        fkey.write("time\n")
+        fts.write(array("f", time))
+
+        # time series
+        for key, arr in data.items():
+            # write key to key file
+            fkey.write("%s\n" % key)
+
+            # write time series array to ts file (position 1 refers to time series data)
+            fts.write(array("f", arr[1]))
+
+    except Exception:
+        raise RuntimeError("Exception encountered when writing data to file '%s'." % filename)
+
+    finally:
+        # end key file and close file pointers
+        fkey.write("END\n")
+        fkey.close()
+        fts.close()
 
 

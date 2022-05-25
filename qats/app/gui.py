@@ -731,6 +731,7 @@ class Qats(QMainWindow):
         name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
                                       "Direct access file (*.ts);;"
                                       "ASCII file with header (*.dat);;"
+                                      "SIMA H5 file (*.h5);;"
                                       "All Files (*)", options=options)
 
         # get list of selected time series

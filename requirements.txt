@@ -2,7 +2,7 @@ h5py==3.1.0
 pymatreader==0.0.24
 matplotlib==3.3.3
 npTDMS==1.1.0
-numpy==1.19.4
+numpy==1.21.6
 openpyxl==3.0.5
 pandas==1.1.4
 QtPy==1.9.0
@@ -11,6 +11,5 @@ PyQt5==5.15.2
 scipy==1.5.3
 setuptools-scm==4.1.2
 wheel==0.36.0
-Sphinx>=3.3.1
-sphinx_bootstrap_theme==0.7.1
-tox==3.20.1
+Sphinx>=4.1.2
+sphinx_bootstrap_theme==0.8.1

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Module for testing readers.
+Module for testing io.
 The module utilizes TsDB.fromfile and .get() to read at least one time series from the file, to check that this does not
 generate any exceptions.
 """
@@ -41,6 +41,7 @@ class TestAllReaders(unittest.TestCase):
             # csv files
             ("example.csv", 6),
             ("integer.csv", 1),
+            ("negative_time.csv", 1),
             # # ascii files
             ("model_test_data.dat", 39),
             # # tdms files

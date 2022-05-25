@@ -11,42 +11,43 @@ from uuid import uuid4
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from struct import pack
-from array import array
 from collections import OrderedDict, defaultdict
 from .ts import TimeSeries
 from .fatigue.rainflow import rebin as rebin_cycles
-from .readers.sima import (
+from .io.sima import (
     read_names as read_sima_names,
     read_ascii_data as read_sima_ascii_data,
     read_bin_data as read_sima_bin_data,
     read_sima_wind_names
 )
-from .readers.sima_h5 import (
+from .io.sima_h5 import (
     read_names as read_sima_h5_names,
-    read_data as read_sima_h5_data
+    read_data as read_sima_h5_data,
+    write_data as write_sima_h5_data
 )
-from .readers.csv import (
+from .io.csv import (
     read_names as read_csv_names,
     read_data as read_csv_data
 )
-from .readers.direct_access import (
+from .io.direct_access import (
     read_ts_names,
     read_tda_names,
     read_ts_data,
     read_tda_data,
+    write_ts_data
 )
-from .readers.sintef_mat import (
+from .io.sintef_mat import (
     read_names as read_mat_names,
     read_data as read_mat_data
 )
-from .readers.tdms import (
+from .io.tdms import (
     read_names as read_tdms_names,
     read_data as read_tdms_data
 )
-from .readers.other import (
+from .io.other import (
     read_dat_names,
-    read_dat_data
+    read_dat_data,
+    write_dat_data
 )
 
 # todo: cross spectrum(scipy.signal.csd)
@@ -186,7 +187,12 @@ class TsDB(object):
             k = self.register_keys[0]
             return self._path_dirname(k)
         else:
-            return os.path.commonpath(self.register_keys)
+            try:
+                return os.path.commonpath(self.register_keys)
+            except ValueError:
+                # if paths contain both absolute and relative paths, the paths are on the different
+                # drives or if paths is empty.
+                return ""
 
     @property
     def n(self):
@@ -821,74 +827,13 @@ class TsDB(object):
         _, ext = os.path.splitext(filename)
 
         if ext == ".ts":    # write direct access file
-            # deduct name of key file
-            base, _ = os.path.splitext(filename)
-            keyfilename = base + ".key"
-
-            # open key file (ascii) and .ts file (binary)
-            # todo: check if 'w' or 'wb' should be used, seems like fts.write(array(....)) expects a bytearray
-            fts = open(filename, "wb")
-            fkey = open(keyfilename, "w")
-            try:
-                # number of data points in a single time series
-                ndat = common_time_array.size
-
-                # number of records (number of time series + header + time vector)
-                nrec = len(container) + 2
-
-                # write meta info to first record
-                fts.write(pack("ii", ndat, nrec))
-
-                # zero pad the first record
-                fts.write(array("i", [0]*(ndat-2)))
-
-                # time array
-                fkey.write("time\n")
-                fts.write(array("f", common_time_array))
-
-                # time series
-                for key, arr in container.items():
-                    # write key to key file
-                    fkey.write("%s\n" % key)
-
-                    # write time series array to ts file (position 1 refers to time series data)
-                    fts.write(array("f", arr[1]))
-
-            except Exception:
-                raise RuntimeError("Exception encountered when writing data to file '%s'." % filename)
-
-            finally:
-                # end key file and close file pointers
-                fkey.write("END\n")
-                fkey.close()
-                fts.close()
+            write_ts_data(filename, common_time_array, container)
 
         elif ext == ".dat":     # write ascii file
-            with open(filename, "w") as f:
-                # write keys + time to ascii-file header
-                if not skip_header:
-                    header = ["%15s%s" % (k, delim) for k, _ in container.items()]
-                    header.insert(0, "%15s%s" % ("time", delim))
-                    header += "\n"
-                    f.write("".join(header))
+            write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
 
-                # write data to ascii file
-                out = ""
-                for i in range(len(common_time_array)):
-                    # write time value
-                    out += "%15.7g%s" % (common_time_array[i], delim)
-
-                    # write data values column wise (position 1 refers to time series data,
-                    # index i refers to time step #)
-                    for _, arr in container.items():
-                        out += "%15.7g%s" % (arr[1][i], delim)
-
-                    out += "\n"
-
-                    # flush to file every 500th time step (for efficiency) and at the end
-                    if ((i != 0) and (i % 500 == 0)) or (i == len(common_time_array) - 1):
-                        f.write(out)
-                        out = ""
+        elif ext == ".h5":
+            write_sima_h5_data(filename, container)
 
         else:
             raise NotImplementedError("File format/type '%s' is not yet implemented." % ext)

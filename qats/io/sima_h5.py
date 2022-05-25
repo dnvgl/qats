@@ -122,11 +122,13 @@ def read_data(path, names=None, verbose=False):
             data = dset[:]  # dset.value
             # todo: consider if check of data type is really neccessary -- if not, dset.ndim, dset.size etc. may be used
             if not isinstance(data, np.ndarray):
-                raise NotImplemented("only value of type np.ndarray is implemented, got: %s (for name '%s')" %
-                                     (type(data), name))
+                raise NotImplementedError(
+                    f"only value of type np.ndarray is implemented, got: {type(data)} (for name '{name}')"
+                )
             if data.ndim != 1:
-                raise NotImplemented("only 1-dimensional arrays implemented, got ndim=%d (for name '%s')" %
-                                     (data.ndim, name))
+                raise NotImplementedError(
+                    f"only 1-dimensional arrays implemented, got ndim={data.ndim} (for name '{name}')"
+                )
             data = data.flatten()   # flatten data array
             nt = data.size          # number of time steps
 
@@ -155,6 +157,31 @@ def read_data(path, names=None, verbose=False):
             arrays.append([timearr, data])
 
     return arrays
+
+
+def write_data(path, data: dict):
+    """
+    Write time series to SIMA HDF5 file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    data : dict
+        Time series data name vs. time and values
+    """
+    # todo: Pass complete time series info (yunit etc.) if this is stored on TimeSeries object
+    with h5py.File(path, "w") as f:
+        for name, tx in data.items():
+            t, x = tx
+            start = t[0]
+            delta = t[1] - t[0]
+            dset = f.create_dataset(name, data=x)
+            dset.attrs["name"] = os.path.basename(name)
+            dset.attrs["start"] = start
+            dset.attrs["delta"] = delta
+            dset.attrs["xunit"] = "s"
+            dset.attrs["yunit"] = ""
 
 
 def _timearray_info(dset):

@@ -96,6 +96,8 @@ Compare the cycle range and range-mean distribution from several time series usi
 Calculate fatigue damage in mooring lines
 *****************************************
 
+Using a traditional S-N curve with constant slope and intercept.
+
 .. literalinclude:: examples/mooring_fatigue.py
    :language: python
    :linenos:

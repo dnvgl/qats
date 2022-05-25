@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Sub-package with readers for various file formats.
+Sub-package with io for various file formats.
 """
 from . import csv
 from . import direct_access
