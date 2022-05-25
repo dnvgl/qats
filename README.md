@@ -148,8 +148,6 @@ The automated tests are run using [unittest](https://docs.python.org/3/library/u
 python -m unittest discover 
 ```
 
-The test automation is configured in the file `tox.ini`.
-
 ### Building the package
 
 Build tarball and wheel distributions by:
