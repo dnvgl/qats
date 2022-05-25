@@ -31,6 +31,6 @@ Subpackages
     :maxdepth: 4
 
     qats/subpackages/fatigue
-    qats/subpackages/readers
+    qats/subpackages/io
     qats/subpackages/stats
 
