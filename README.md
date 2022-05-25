@@ -2,9 +2,9 @@
 
 Python library and GUI for efficient processing and visualization of time series.
 
-[![Build Status](https://travis-ci.com/dnvgl/qats.svg?branch=master)](https://travis-ci.com/dnvgl/qats)
+[![Build Status](https://github.com/dnvgl/qats/actions/workflows/test.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/test.yml)
+[![PyPi Deployment Status](https://github.com/dnvgl/qats/actions/workflows/publish.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/publish.yml)
 [![Documentation Status](https://readthedocs.org/projects/qats/badge/?version=latest)](https://qats.readthedocs.io/en/latest/?badge=latest)
-
 
 ## General
 
