@@ -89,3 +89,17 @@
 
     .. rubric:: API
 
+
+:mod:`qats.io.tdms`
+---------------------------
+
+.. automodule:: qats.io.tdms
+    :members:
+
+    .. rubric:: Functions overview
+
+    .. autoautosummary:: qats.io.tdms
+        :functions:
+
+    .. rubric:: API
+
