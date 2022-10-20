@@ -386,7 +386,7 @@ class Weibull(object):
         Note that the example above is equivalent to:
 
         >>> from qats.signal import find_maxima
-        >>> sample = find_maxima(x, local=False, threshold=None, up=True, retind=False)
+        >>> sample, _ = find_maxima(x, local=False, threshold=None, up=True)
         >>> weib = Weibull.fit(sample, method='msm')
         """
         sample = find_maxima(x, local=False, threshold=None, up=True, retind=False)
