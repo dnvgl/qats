@@ -14,8 +14,8 @@ ts = db.get(name="mooring line 4")
 # fetch peak sample
 x = ts.maxima()
 
-# fit distribution to the largest 1% values
-a, b, c = lse(x, threshold=0.99*max(x))
+# fit distribution to the values exceeding the 0.87-quantile of the empirical cumulative distribution function
+a, b, c = lse(x, threshold=0.87)
 
 # plot sample and fitted distribution on Weibull scales
 plot_fit(x, (a, b, c))

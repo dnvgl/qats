@@ -673,7 +673,9 @@ def lse(x, threshold: float = None):
     x : array_like
         sample data
     threshold : float, optional
-        Fit distribution to data points above this threshold
+        Fit distribution to data points above this threshold. The threshold is defined as value <0, 1> in the
+        empirical CDF. So with threshold=0.87 the distribution is fitted to the values exceeding the 0.87-quantile of
+        the empirical cumulative distribution function.
 
     Returns
     -------
@@ -684,13 +686,12 @@ def lse(x, threshold: float = None):
     -----
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
     """
-    x = np.sort(x)
-    weights = np.ones(np.shape(x))    # by default include all data points
+    x = np.sort(x)                          # sorted dataset
+    f = empirical_cdf(x.size, kind='mean')  # mean rank empirical cdf according to Weibull [1]
+    weights = np.ones(np.shape(x))          # by default include all data points
     if threshold is not None:
         # exclude data points below threshold (fit only to the tail)
-        weights[x < threshold] = 0.
-
-    f = empirical_cdf(x.size, kind='mean')  # mean rank empirical cdf according to Weibull [1]
+        weights[f < threshold] = 0.
 
     # define error function
     # v: distribution parameters
