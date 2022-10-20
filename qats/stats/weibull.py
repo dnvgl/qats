@@ -664,7 +664,7 @@ def bootstrap(loc, scale, shape, size, repetitions, method='pwm'):
     return m, cv
 
 
-def lse(x):
+def lse(x, threshold: float = None):
     """
     Fit Weibull distribution parameters to sample by method of least square fit to empirical cdf.
 
@@ -672,6 +672,8 @@ def lse(x):
     ----------
     x : array_like
         sample data
+    threshold : float, optional
+        Fit distribution to data points above this threshold
 
     Returns
     -------
@@ -683,13 +685,24 @@ def lse(x):
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
     """
     x = np.sort(x)
+    weights = np.ones(np.shape(x))    # by default include all data points
+    if threshold is not None:
+        # exclude data points below threshold (fit only to the tail)
+        weights[x < threshold] = 0.
+
     f = empirical_cdf(x.size, kind='mean')  # mean rank empirical cdf according to Weibull [1]
+
+    # define error function
+    # v: distribution parameters
+    # z: data points
+    # y: empirical cdf defined at data points x (z)
+    # w: weights to exclude data points below threshold if tail fitting is requested
     fp = lambda v, z: 1. - np.exp(-((z - v[0]) / v[1]) ** v[2])  # parametric weibull function
-    e = lambda v, z, y: (fp(v, z) - y)  # error function to be minimized
+    e = lambda v, z, y, w: w * (fp(v, z) - y)  # error function to be minimized
     a0, b0, c0 = msm(x)  # initial guess based on method of moments
 
-    # least square fit
-    p, cov, info, msg, ier = leastsq(e, np.asarray([a0, b0, c0]), args=(x, f), full_output=True)
+    # least square fit (x corresponds to z in lambdas, f corresponds to y and w corresponds to weights)
+    p, cov, info, msg, ier = leastsq(e, np.asarray([a0, b0, c0]), args=(x, f, weights), full_output=True)
 
     return p[0], p[1], p[2]
 
