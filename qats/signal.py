@@ -8,7 +8,7 @@ from scipy.fftpack import fft, ifft, rfft, irfft
 from scipy.signal import welch, butter, filtfilt, sosfiltfilt, csd as spcsd, coherence as spcoherence
 
 
-def extend_signal_ends(x, n):
+def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
     """Extend the signal ends with `n` values to mitigate the edge effect.
 
     Parameters
@@ -31,7 +31,7 @@ def extend_signal_ends(x, n):
     return np.concatenate((start, x, end))
 
 
-def smooth(x, window_len=11, window='rectangular', mode='same'):
+def smooth(x: np.ndarray, window_len: int = 11, window: str = 'rectangular', mode: str = 'same') -> np.ndarray:
     """
     Smooth time serie based on convolution of a window function and the time serie.
 
@@ -117,7 +117,7 @@ def smooth(x, window_len=11, window='rectangular', mode='same'):
     return y
 
 
-def taper(x, window='tukey', alpha=0.001):
+def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> (np.ndarray, float):
     """
     Taper the input time serie using a window function
 
@@ -197,7 +197,7 @@ def taper(x, window='tukey', alpha=0.001):
     return y, wcorr
 
 
-def lowpass(x, dt, fc, order=5):
+def lowpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
     """
     Low pass filter data signal x at cut off frequency fc, blocking harmonic content above fc.
     
@@ -228,7 +228,7 @@ def lowpass(x, dt, fc, order=5):
     return y
 
 
-def highpass(x, dt, fc, order=5):
+def highpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
     """
     High pass filter data signal x at cut off frequency fc, blocking harmonic content below fc.
     
@@ -259,7 +259,7 @@ def highpass(x, dt, fc, order=5):
     return y
 
 
-def bandpass(x, dt, flow, fupp, order=5):
+def bandpass(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5) -> np.ndarray:
     """
     Band pass filter data signal x at cut off frequencies flow and fupp, blocking harmonic content outside the
     frequency band [flow, fupp]
@@ -291,7 +291,7 @@ def bandpass(x, dt, flow, fupp, order=5):
     return y
 
 
-def bandblock(x, dt, flow, fupp, order=5):
+def bandblock(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5) -> np.ndarray:
     """
     Band block filter data signal x at cut off frequencies flow and fupp, blocking harmonic content inside the
     frequency band [flow, fupp]
@@ -328,7 +328,7 @@ def bandblock(x, dt, flow, fupp, order=5):
     return y
 
 
-def threshold(x, thresholds):
+def threshold(x: np.ndarray, thresholds: tuple) -> np.ndarray:
     """
     Allow only frequency components whose amplitudes are between the lower threshold value and the upper threshold
     value to pass.
@@ -372,7 +372,7 @@ def threshold(x, thresholds):
     return x1[:n]
 
 
-def autocorrelation(series):
+def autocorrelation(series: np.ndarray) -> list:
     """
     Estimation of the auto-correlation coefficients of *series*
 
@@ -421,11 +421,10 @@ def autocorrelation(series):
         return round(acf_lag, 3)
 
     x = np.arange(n)  # Avoiding lag 0 calculation
-    acf = map(r, x)
-    return acf
+    return list(map(r, x))
 
 
-def average_frequency(t, x, up=True):
+def average_frequency(t: np.ndarray, x: np.ndarray, up: bool = True) -> float:
     """
     Average frequency of mean level crossings.
 
@@ -463,7 +462,7 @@ def average_frequency(t, x, up=True):
     return 1./d
 
 
-def find_maxima(x, local=False, threshold=None, up=True, retind=False):
+def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True) -> (np.ndarray, np.ndarray):
     """
     Return sorted maxima
 
@@ -477,15 +476,12 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
         Include only maxima larger than specified treshold. Default is mean value of signal.
     up : bool, optional
         If True (default), identify maxima between up-crossings. If False, identify maxima between down-crossings.
-    retind : bool, optional
-        If True, return (maxima, indices), where indices is positions of maxima in input signal array.
 
     Returns
     -------
     array
         Signal maxima, sorted from smallest to largest.
     array
-        Only returned if `retind` is True.
         Indices of signal maxima.
 
     Notes
@@ -497,16 +493,15 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
     --------
     Extract global maxima from time series signal `x`:
 
-    >>> maxima = find_maxima(x)
+    >>> maxima, _ = find_maxima(x)
 
     Extract global maxima and corresponding indices:
 
-    >>> maxima, indices = find_maxima(x, retind=True)
+    >>> maxima, indices = find_maxima(x)
 
     Assuming `time` is the time vector (numpy array) for signal `x`, the following example will provide an array of
     time instants associated with the maxima sample:
 
-    >>> maxima, indices = find_maxima(x, retind=True)
     >>> time_maxima = time[indices]
 
     """
@@ -526,10 +521,7 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
 
     # no global or local maxima if the signal crosses mean only once
     if n_crossings < 2:
-        if retind:
-            return np.array([]), np.array([], dtype=int)
-        else:
-            return np.array([])
+        return np.array([]), np.array([], dtype=int)
 
     crossing_indices = np.where(crossings == indicator)[0] + 1  # indices for crossings
 
@@ -562,12 +554,9 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
 
     # discard maxima lower than specified threshold
     if threshold is not None:
-        if isinstance(threshold, float):
-            above_threshold = (maxima >= threshold)
-            maxima = maxima[above_threshold]
-            maxima_indices = maxima_indices[above_threshold]
-        else:
-            raise TypeError("Specified threshold is wrong type, should be float: %s" % type(threshold))
+        above_threshold = (maxima >= threshold)
+        maxima = maxima[above_threshold]
+        maxima_indices = maxima_indices[above_threshold]
     else:
         pass
 
@@ -576,13 +565,10 @@ def find_maxima(x, local=False, threshold=None, up=True, retind=False):
     maxima = maxima[ascending]
     maxima_indices = maxima_indices[ascending]
 
-    if retind:
-        return maxima, maxima_indices
-    else:
-        return maxima
+    return maxima, maxima_indices
 
 
-def psd(x, dt, **kwargs):
+def psd(x: np.ndarray, dt: float, **kwargs) -> (np.ndarray, np.ndarray):
     """
     Estimate power spectral density of discrete time signal X using Welch’s method.
 
@@ -597,8 +583,10 @@ def psd(x, dt, **kwargs):
 
     Returns
     -------
-    tuple
-        Two arrays: sample frequencies and corresponding power spectral density
+    array
+        Frequencies
+    array
+        Corresponding power spectral density
 
     Notes
     -----
@@ -617,7 +605,7 @@ def psd(x, dt, **kwargs):
     return f, p
 
 
-def csd(x, y, dt, **kwargs):
+def csd(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> (np.ndarray, np.ndarray):
     """
     Estimate cross power spectral density of discrete-time signals X and Y using Welch’s method.
 
@@ -634,8 +622,10 @@ def csd(x, y, dt, **kwargs):
 
     Returns
     -------
-    tuple
-        Two arrays: sample frequencies and corresponding cross power spectral density
+    array
+        Frequencies
+    array
+        Corresponding cross power spectral density
 
     Notes
     -----
@@ -655,7 +645,7 @@ def csd(x, y, dt, **kwargs):
     return f, p
 
 
-def coherence(x, y, dt, **kwargs):
+def coherence(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> (np.ndarray, np.ndarray):
     """
     Estimate the magnitude squared coherence estimate of discrete-time signals X and Y using Welch’s method.
 
@@ -672,8 +662,10 @@ def coherence(x, y, dt, **kwargs):
 
     Returns
     -------
-    tuple
-        Two arrays: sample frequencies and corresponding cross power spectral density
+    array
+        Frequencies
+    array
+        Corresponding cross power spectral density
 
     Notes
     -----
@@ -693,7 +685,7 @@ def coherence(x, y, dt, **kwargs):
     return f, c
 
 
-def tfe(x, y, dt, clim=None, **kwargs):
+def tfe(x: np.ndarray, y: np.ndarray, dt: float, clim: float = None, **kwargs) -> (np.ndarray, np.ndarray):
     """
     Estimate the transfer function between two discrete-time signals X and Y using Welch’s method.
 
@@ -712,8 +704,10 @@ def tfe(x, y, dt, clim=None, **kwargs):
 
     Returns
     -------
-    tuple
-        Two arrays: sample frequencies and corresponding transfer function estimate
+    array
+        Frequencies
+    array
+        Corresponding transfer function estimate
 
     Examples
     --------
