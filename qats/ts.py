@@ -879,6 +879,8 @@ class TimeSeries(object):
 
         # flip the time series to that minima becomes maxima
         x *= -1.
+        if threshold is not None:
+            threshold *= -1
 
         # find minima (and associated time, if specified)
         if rettime is True:
