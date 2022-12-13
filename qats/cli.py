@@ -10,7 +10,7 @@ from qtpy.QtWidgets import QApplication
 from pkg_resources import resource_filename
 from .app.exceptions import handle_exception
 from .app.gui import Qats, LOGGING_LEVELS
-from ._version import __version__
+from . import __version__
 
 
 def link_app():
