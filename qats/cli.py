@@ -10,7 +10,7 @@ from qtpy.QtWidgets import QApplication
 from pkg_resources import resource_filename
 from .app.exceptions import handle_exception
 from .app.gui import Qats, LOGGING_LEVELS
-from . import __version__
+from ._version import __version__
 
 
 def link_app():
@@ -29,12 +29,12 @@ def link_app():
     target = os.path.join(scripts_dir, f"{pkg_name}-app.exe")
     lnk_name = pkg_name.upper() + ".lnk"
 
-    # get version
-    try:
-        import qats
-        version = qats.__version__
-    except ModuleNotFoundError:
-        version = ""
+    # # get version
+    # try:
+    #     import qats
+    #     version = qats.__version__
+    # except ModuleNotFoundError:
+    #     version = ""
 
     # open shell
     shell = Dispatch("WScript.Shell")
@@ -44,7 +44,7 @@ def link_app():
         location = shell.SpecialFolders(loc)
         path_link = os.path.join(location, lnk_name)
         shortcut = shell.CreateShortCut(path_link)
-        shortcut.Description = f"{pkg_name.upper()} v{version}"
+        shortcut.Description = f"{pkg_name.upper()} v{__version__}"
         shortcut.TargetPath = target
         shortcut.WorkingDirectory = os.getenv("USERPROFILE")
         shortcut.IconLocation = ico_path
