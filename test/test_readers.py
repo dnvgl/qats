@@ -29,6 +29,7 @@ class TestAllReaders(unittest.TestCase):
             ("n_elmtra.bin", 162),
             ("wt_blresp.bin", 21),
             ("wt_witurb.bin", 23),
+            ("sima_witurb.bin", 23),
             # direct access files
             ("mooring.ts", 14),
             ("simo_p.ts", 22),
