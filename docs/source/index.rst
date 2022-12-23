@@ -31,6 +31,8 @@ request (issue) or make it yourself and create a pull request.
 See :ref:`examples` for more examples on how to invoke QATS in your own scripts to do more advance operations. :ref:`api`
 provide information on the content of the QATS library.
 
+.. See :ref:`changelog` for changelog.
+
 GUI
 ***
 
@@ -41,11 +43,14 @@ inspecting, quality assurance and reporting. Use the library for more advanced o
     :target: _images/demo.gif
 
 
-Source code
-***********
+Source code, Issue tracker and Changelog
+****************************************
 
 The `source code <https://github.com/dnvgl/qats>`_, `issue tracker <https://github.com/dnvgl/qats/issues>`_ and
-`changelog <https://github.com/dnvgl/qats/blob/master/CHANGELOG.md>`_ is on GitHub.
+`changelog <https://github.com/dnvgl/qats/blob/master/CHANGELOG.md>`_ are hosted on GitHub.
+
+A copy of the changelog is rendered within this documentation, see :ref:`Changelog`.
+
 
 Downloads
 *********
@@ -61,6 +66,8 @@ Table of contents
    examples
    gui
    api/index
+   changes
+
 
 Indices and tables
 ******************
