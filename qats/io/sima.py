@@ -11,7 +11,8 @@ from scipy.interpolate import interp1d
 
 def read_sima_wind_names(path):
     """
-    Read time seires names from key-files associated with "wind".bin time-series files exported from SIMA/RIFLEF Dynmod.
+    Read time series names from key-files associated with '<>_witurb.bin' and '<>_blresp.bin' time-series files
+    exported from SIMA/RIFLEF Dynmod.
 
     Parameters
     ----------
@@ -31,10 +32,27 @@ def read_sima_wind_names(path):
     # Extract storage info lines
     p = re.compile(r'ignore*')
     key_lines = [li for li in lines if not li.startswith("'") and not p.search(li.lower())]
-    keys = [lo.split()[1] for lo in key_lines]
 
-    # remove time instance from line
-    keys = keys[1:]
+    # for each row, split into columns (space-separated) and keep first three
+    rows = [lo.split(maxsplit=3)[:3] for lo in key_lines]
+
+    # check which column 'Time' is in
+    # note:
+    #   idx_time is 1 for the witurb format exported by RIFLEX version <4.20
+    #   idx_time is 2 for the witurb format exported by RIFLEX version >=4.20
+    idx_time = rows[0].index('Time')
+
+    # pop first row (the one with 'Time')
+    _ = rows.pop(0)
+
+    # extract keys according inferred file format
+    if idx_time == 1:
+        # SIMA/RIFLEX version <4.20: only keys, no wind turbine name
+        keys = [row[1] for row in rows]
+    else:  # idx_time == 2:
+        # SIMA/RIFLEX version >=4.20: wind turbine name in second
+        keys = [row[1] + '_' + row[2] for row in rows]
+
     return keys
 
 
