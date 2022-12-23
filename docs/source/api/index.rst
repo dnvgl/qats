@@ -10,7 +10,7 @@ Top-level classes
 -----------------
 
 .. toctree::
-    :maxdepth: 4
+    :maxdepth: 1
 
     qats/classes
 
@@ -19,7 +19,7 @@ Submodules
 ----------
 
 .. toctree::
-    :maxdepth: 4
+    :maxdepth: 1
 
     qats/submodules
 
@@ -28,7 +28,7 @@ Subpackages
 -----------
 
 .. toctree::
-    :maxdepth: 4
+    :maxdepth: 1
 
     qats/subpackages/fatigue
     qats/subpackages/io
