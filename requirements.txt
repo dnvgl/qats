@@ -7,7 +7,7 @@ openpyxl==3.0.5
 pandas>=1.1.4, <=1.5
 QtPy==1.9.0
 pyside2>=5.15.2, <5.16
-PyQt5==5.15.2
+PyQt5>=5.15.2, <=5.15.7
 scipy>=1.7.2, <=1.9.2   # in accordance with https://docs.scipy.org/doc/scipy/dev/toolchain.html#numpy
 setuptools-scm==4.1.2
 wheel==0.38.4
