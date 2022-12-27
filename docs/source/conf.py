@@ -40,6 +40,7 @@ extensions = [
     # 'numpydoc',
     # 'm2r',
     # 'sphinx.ext.viewcode',  # remove this one to disable code view
+    'myst_parser',  # 23.12.2022/enlo: added myst-parser to enable rendering of CHANGELOG.md as part of Sphinx docs.
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -56,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'QATS'
-copyright = 'DNV GL'
+copyright = 'DNV'
 author = 'Per Voie, Erling Lone'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -82,7 +83,8 @@ release = version
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+# language = None
+language = 'en'  # 23.13.2022/enlo: changed from None to 'en' due to warning in Sphinx v5.1.1
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -152,10 +154,11 @@ html_theme_options = {  # bootstrap theme options
         ("GUI", "gui"),
         ("Examples", "examples"),
         ("API", "api/index"),
+        ("Changelog", "changes"),
     ],
 
     # Render the next and previous page links in navbar. (Default: true)
-    'navbar_sidebarrel': True,  # False,
+    'navbar_sidebarrel': False,  # True,
 
     # Render the current pages TOC in the navbar. (Default: true)
     'navbar_pagenav': False,  # True,
@@ -182,7 +185,7 @@ html_theme_options = {  # bootstrap theme options
 
     # Fix navigation bar to top of page?
     # Values: "true" (default) or "false"
-    'navbar_fixed_top': "true",
+    'navbar_fixed_top': "true",  # "false",
 
     # Location of link to source.
     # Options are "nav" (default), "footer" or anything else to exclude.
@@ -219,7 +222,8 @@ intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     # 'numpy': ('https://docs.scipy.org/doc/numpy/', None),
     'numpy': ('https://numpy.org/doc/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    # 'scipy': ('https://docs.scipy.org/doc/scipy/reference/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
 }
 
 

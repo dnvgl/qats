@@ -80,6 +80,12 @@ qats config --link-app
 
 Take a look at the resources listed below to learn more.
 
+**Note:** As of version `4.11.0`, the command line interface is accessible by running Python with the '-m' option. The following commands are now equvivalent to those above:
+```console 
+python -m qats app
+python -m qats config --link-app
+```
+
 ### Resources
 
 * [**Source**](https://github.com/dnvgl/qats)
@@ -139,6 +145,7 @@ help(qats)
 ```console
 qats -h
 ```
+(and also `python -m qats -h` from version 4.11.0).
 
 ### Running the tests
 

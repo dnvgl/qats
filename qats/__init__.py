@@ -6,8 +6,6 @@ from .tsdb import TsDB
 from .ts import TimeSeries
 from pkg_resources import get_distribution, DistributionNotFound
 
-__summary__ = __doc__
-
 # get version
 try:
     # version at runtime from distribution/package info
@@ -15,3 +13,6 @@ try:
 except DistributionNotFound:
     # package is not installed
     __version__ = ""
+
+__summary__ = __doc__
+

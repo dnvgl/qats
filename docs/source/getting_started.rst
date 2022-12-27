@@ -19,14 +19,14 @@ QATS is installed from PyPI by using `pip`:
 
 .. code-block:: console
 
-    pip install qats
+    python -m pip install qats
 
 In order to use the GUI, you must also install a Python package with qt bindings (here, `PyQt5` is used as an
 example):
 
 .. code-block::
 
-    pip install pyqt5
+    python -m pip install pyqt5
 
 Supported qt bindings are: PyQt5, Pyside2, PyQt4 and Pyside.
 
@@ -78,11 +78,44 @@ and the command line interface (CLI).
         app         Launch the desktop application
         config      Configure the package
 
-You can also add shortcuts for the QATS GUI to your start menu and desktop.
+
+
+Launching the GUI
+*****************
+
+The GUI is launched via the CLI:
+
+.. code-block::
+
+    qats app
+
+Or, you may add a shortcut for launching the QATS GUI to your Windows Start menu and on the Desktop by running the command:
 
 .. code-block::
 
     qats config --link-app
+
+.. note::
+    As of version 4.11.0, the CLI is also available through the ``python -m`` switch, for example:
+
+    .. code-block::
+
+        python -m qats -h
+        python -m qats app
+
+    To add a Windows Start menu shortcut that utilizes this to launch the GUI without invoking the qats executable
+    (i.e., does not call ``qats.exe``), use
+
+    .. code-block::
+
+        python -m qats config --link-app-no-exe
+
+
+..    :code:`python -m qats config --link-app-no-exe`.
+
+
+..    :code:`python -m qats -h` or :code:`python -m qats app`.
+
 
 Your first script
 *****************

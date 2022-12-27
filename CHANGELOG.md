@@ -1,4 +1,5 @@
-## Changelog
+(changelog)=
+# Changelog
 All notable changes to the project will be documented in this file, with format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440).
@@ -14,45 +15,45 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 -->
 
 
-### [Unreleased]
+## [Unreleased]
 
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
-### [4.10.0] // 25.5.2022
+## [4.10.0] // 25.5.2022
 
 Time series can now be exported to SIMA HDF5 format. Errors are no longer raised when having timeseries from different drives in the same time series database.
 
-### [4.9.2] // 03.12.2020
+## [4.9.2] // 03.12.2020
 
 Corrected `npTDMS` version requirement in `setup.py`.
 
-### [4.9.1] // 03.12.2020
+## [4.9.1] // 03.12.2020
 
 Updated `setup.py` and `requirements.txt` to latest versions of dependencies.
 
 
-### [4.9.0] // 18.11.2020
+## [4.9.0] // 18.11.2020
 
 This release contains pull request [#79](https://github.com/dnvgl/qats/pull/79).
 
-#### Added
+### Added
 
 - [GUI] Statistics table may is now sorted in ascending/descending order when column header is clicked. The sorting order is reset when 'Display' is invoked.
 - [GUI] Added setting that controls number of decimals in time window for data processing.
 - `TsDB.stats_dataframe()`: new method that returns statistics in a Pandas dataframe with same structure and behaviour as the dict returned from `TsDB.stats()`.
 - `qats.readers.sima`: Added support for wind turbine output from SIMA/RIFLEX, i.e. reading of `<prefix>_witurb.bin` and `<prefix>_blresp.bin`.
 
-#### Fixes
+### Fixes
 - `TsDB.stats()`: default value of parameter `statsdur` is set to 10800 [s] instead of `None`. Previously failed if this parameter was not passed, since the underlying function `TimeSeries.stats()` did not accept/handle `None`. 
 - `qats.readers.tdms`: Changed how tdms-files are opened and avoid number of obsolete iterations when inferring the time array to improve the performance of the tdms-reader.
 
 
-### [4.8.1] // 08.06.2020
+## [4.8.1] // 08.06.2020
 
 This release contains the following pull requests: [#74](https://github.com/dnvgl/qats/pull/74), [#76](https://github.com/dnvgl/qats/pull/76), [#77](https://github.com/dnvgl/qats/pull/77).
 
-#### Fixed
+### Fixed
 
 - `qats.readers.sima_h5`: Time step of generated time array is now checked towards the specified time step with a (very small) tolerance. Previously, the generated time step was required to exactly match the specified one, but in certain cases this failed due to numpy precision.
 - `qats.readers.tdms`: Removes dependencies on deprecated features in the `nptdms` library.
@@ -60,25 +61,25 @@ This release contains the following pull requests: [#74](https://github.com/dnvg
 - `requirements.txt`: Sphinx updated from 2.2.1 to 3.0.4 _(security update, relevant for maintainers only)_.
 
 
-### [4.8.0] // 10.04.2020
+## [4.8.0] // 10.04.2020
 
 This release contains the two following pull requests: [#67](https://github.com/dnvgl/qats/pull/67), [#72](https://github.com/dnvgl/qats/pull/72).
 
-#### Added
+### Added
 
 - New reader for .tdms files (Technical Data Management Streaming - file format used by LabVIEW), based on the `npTDMS` module.
 - New dependency to `npTDMS`; https://pypi.org/project/npTDMS/.
 
-#### Fixed
+### Fixed
 
 - Improved compatibility with special characters, such as accents etc. when reading data from CSV files; ref. [#69](https://github.com/dnvgl/qats/issues/69).
 - Improved compatibility for various data types (integer, numpy.int64 etc.) when initiating `TimeSeries` instance; ref. [#71](https://github.com/dnvgl/qats/issues/71).
 - Fixed bug causing time series names to vanish when exporting single time series to file; ref. [#70](https://github.com/dnvgl/qats/issues/70).
 
 
-### [4.7.0] // 15.01.2020
+## [4.7.0] // 15.01.2020
 
-#### Added
+### Added
 Three functions have been added to submodule `qats.signal`:
 
 - `qats.signal.csd()`: Estimate cross power spectral density of discrete-time signals X and Y using Welch’s method.
@@ -87,7 +88,7 @@ Three functions have been added to submodule `qats.signal`:
 
 For details, see the [API documentation](https://qats.readthedocs.io/en/latest/api/qats/submodules.html#module-qats.signal). Note that these new functions are all wrappers for relevant functions available from `scipy.signal`.
 
-#### Changed
+### Changed
 There are significant changes to subpackage `qats.fatigue`, and in particular for the `qats.fatigue.rainflow` module. Most changes are related to performance for large cycle distributions, and the output type is changed from `list` to `numpy.ndarray` for several of the functions. This allows for adjusted syntax, however; the changes are backwards compatible in the sense that the old syntax will still work. For function `qats.fatigue.rainflow.mesh()`, the mesh returned deviates from the mesh calculated for version <= 4.6.1 (mesh calculated for these versions was not correct).
 
 Main changes are as follows:
@@ -105,33 +106,34 @@ Main changes are as follows:
 - `qats.fatigue.corrections.goodman_haigh()` now accepts (and returns) np.ndarray, and utilizes this for efficiency. See docstring or [API documentation](https://qats.readthedocs.io/en/latest/api/qats/subpackages/fatigue.html#qats.fatigue.corrections.goodman_haigh) for details and an example.
 
 
-### [4.6.1] // 26.11.2019
+## [4.6.1] // 26.11.2019
 
-#### Fixed
+### Fixed
 - Catch and log KeyError occuring when trying to load the same time series file twice.
 - Make the displayed time series names uneditable
 
 
-### [4.6.0] // 14.11.2019
+## [4.6.0] // 14.11.2019
 
-#### Added
+### Added
 New reader for SINTEF Ocean data exchange format based on Matlab .mat files. It now supports all .mat file format versions <=7.3.
 
 `TsDB` has a new attribute `uuid` with a universally unique identifier.
 
 `TsDB` now supports length, membership and equality operations like:
- ```python
- db = TsDB.fromfile('data.csv')
- db_two = TsDB()
- len(db)
- 14
- 'ts_a_name' in db
- True
- db_two == db
- False
+```python
+from qats import TsDB
+db = TsDB.fromfile('data.csv')
+db_two = TsDB()
+len(db)
+# output: 14
+'ts_a_name' in db
+# output: True
+db_two == db
+# output: False
  ```
 
-#### Changed
+### Changed
 
 The file format previously referred to as Matlab files is now more precisely described as the data exchange format used by SINTEF Ocean. The submodule `qats.readers.matlab` has been renamed to `qats.readers.sintef_mat`. _Note: for backwards compatibilty, the submodule is still available as `qats.readers.matlab` due to aliased import at `qats.readers` level._
 
@@ -141,23 +143,23 @@ Previously iteration of a `TsDB` instance would return `None` for those time ser
 
 Updated the package and environment requirements.
 
-#### Fixed
+### Fixed
 Prevent error raised when the env. variable `APPDATA` does not exist.
 
-### [4.5.0] // 05.11.2019
+## [4.5.0] // 05.11.2019
 
-#### Added
+### Added
 
 File menu action that clears the logger widget. Hot key `Ctrl+Shift+Del`.
 
-#### Fixed
+### Fixed
 
 A bug that caused the time series tooltip to only display the time series' relative path, not the absolute path.
 
 
-### [4.4.0] // 04.11.2019
+## [4.4.0] // 04.11.2019
 
-#### Added
+### Added
 
 `qats.fatigue.rainflow` module:
 
@@ -169,60 +171,60 @@ A bug that caused the time series tooltip to only display the time series' relat
 - Introduced optional parameter `show` (bool), to control whether `pyplot.show()` is invoked or not.
 - `.plot_cycle_range()`: introduced optional parameter `bw`, to control bar width.
 
-#### Fixed
+### Fixed
 
 - `TimeSeries.stats()`: `np.nan` is inserted for statistical values that cannot be calculated (e.g. Weibull parameters if fit fails).
 - Desktop application (GUI), statistics tab: fixed issues related to clearing the table, updating when Weibull fit fails and mismatch between values and table heading. For details, see [issue #58](https://github.com/dnvgl/qats/issues/58).
 
 
-### [4.3.0] // 30.10.2019
+## [4.3.0] // 30.10.2019
 
-#### Added
+### Added
 The desktop application now:
 - Has a separate tab with tabulated time series statistics. The statistics can be copied to clipboard.
 - Enable user configuration of certain settings. The settings are saved between sessions.
 
-#### Changed
+### Changed
 The library now uses Scipy IIR filters instead of the self-made filters. Mainly to improve handling of edge effects and to simplify maintenance.
 
 Restructured the functions for calculating power spectral density. *Note: The desktop application now apply a default segment length of 1000 points when estimating power spectral density using Welch's method. This can be adjusted in the application settings dialog. Previously the default segment length was 1/4 of the signal length.*
 
-### [4.2.0] // 23.09.2019
+## [4.2.0] // 23.09.2019
 
-#### Changed
+### Changed
 Replaced hard dependency on `PyQt5` with `QtPy`, due to `PyQt5`'s strong copyleft GPL license. `QtPy` is a shim over various Qt bindings such as: `PyQt4`, `PyQt5`, `Pyside` and `Pyside2`. The user must now install the preferred binding himself/herself, in order to use the GUI.
 
 Note: If several qt bindings are installed (e.g. `PyQt5` and `Pyside2`), the environmental variable `QT_API` may be used to control which binding is used. See https://pypi.org/project/QtPy/ for details.
 
-### [4.1.1] // 17.09.2019
+## [4.1.1] // 17.09.2019
 
-#### Fixed
+### Fixed
 - `qats.signal.psd()`: sampling frequency `fs` in the [welch function call](https://github.com/dnvgl/qats/blob/3378ea5972f1cd56a23a902397d195f03c0f8db2/qats/signal.py#L692) corrected to `fs=1./dt` (instead of `fs=dt` which was wrong). This error appeared between versions [4.0.1 and 4.1.0](https://github.com/dnvgl/qats/compare/4.0.1...4.1.0), and also affected `TimeSeries.psd()` and the "Power Spectrum" plot tab in the GUI. 
 - `TimeSeries.plot*()` methods: plot label is now set to time series name, to avoid warning when legends are invoked.
 
-#### Added
+### Added
 Four new tests on `qats.signal.psd()` that would have caught the bug described above.
 
-### [4.1.0] // 28.08.2019
+## [4.1.0] // 28.08.2019
 
-#### Added
+### Added
 - `qats.signal.psd()`: power spectral density calculation (now available as detached function, was previously available only through `TimeSeries.psd()`).
 - `test_readers.py`: new test module for loading (reading) all supported file formats.
 - `test_signal.py`: added more tests for `qats.signal` functions.
 
 
-### [4.0.1] // 23.08.2019
+## [4.0.1] // 23.08.2019
 
-#### Fixed
+### Fixed
 - SIMA .h5 reader bug that occured if numpy 1.16 is used.
 - `qats.cli.launch_app()` did not connect `sys.excepthook` with custom error traceback dialogue.
 
 
-### [4.0.0] // 22.08.2019
+## [4.0.0] // 22.08.2019
 
 This release is not backwards compatible. Main updates are related to fatigue calculation capabilities.
 
-#### Added
+### Added
 - New sub-package `qats.fatigue` for fatigue-related modules. 
   Modules in this sub-package: `corrections` (new), `rainflow` (moved), `sncalc` (new)
 - New sub-package `qats.stats` for modules with statistical distributions. 
@@ -232,7 +234,7 @@ This release is not backwards compatible. Main updates are related to fatigue ca
 - New module `motions.py`, for transformations and operations related to motion time series.
 - Changelog (this file)
 
-#### Changed
+### Changed
 - Sub-module `rainflow` moved into sub-package `qats.fatigue` => `qats.fatigue.rainflow`
 - Sub-modules `gumbel`, `gumbelmin` and `weibull` moved into sub-package `qats.stats` => `qats.fatigue.`
 - Sub-module `stats` renamed to `empirical` and moved into sub-package `qats.stats` => `qats.stats.empirical`
@@ -240,19 +242,19 @@ This release is not backwards compatible. Main updates are related to fatigue ca
 - Changed `TsDB.getd()` method ("get dict") to return dict of `TimeSeries` objects, which is identical to `TsDB.getm()`. 
   For previous functionality of `.getd()`, use `TsDB.getda()` ("get dict of arrays").
 
-#### Fixed
+### Fixed
 - Wildcard prepending to names specified to `TsDB.list()` and `TsDB.get*()` methods. 
   See [this summary](https://github.com/dnvgl/qats/pull/28#issue-296526900) for details.
 
 
-### [3.0.6] // 2019-06-27
+## [3.0.6] // 2019-06-27
 
-#### Fixed
+### Fixed
 - Issues related to proper deployment to PyPI and Read the Docs.
 - Bug when using band-stop filter in GUI.
 
 
-### [3.0.5] // 2019-06-26
+## [3.0.5] // 2019-06-26
 First proper release to [PyPI](https://pypi.org/project/qats/).
 
 
