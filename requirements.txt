@@ -10,7 +10,7 @@ pyside2==5.15.2
 PyQt5==5.15.2
 scipy>=1.7.2, <=1.9.2   # in accordance with https://docs.scipy.org/doc/scipy/dev/toolchain.html#numpy
 setuptools-scm==4.1.2
-wheel==0.38.1
+wheel==0.38.4
 Sphinx>=5.1.1
 sphinx_bootstrap_theme==0.8.1
 myst-parser==0.18.1
