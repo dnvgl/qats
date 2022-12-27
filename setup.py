@@ -19,7 +19,7 @@ setup(
     package_data={
         "qats.app": ["qats.ico"],
     },
-    python_requires="~=3.6",
+    python_requires=">=3.7, <3.11",
     setup_requires=["setuptools_scm"],
     install_requires=[
         "numpy>=1,<2",
@@ -56,6 +56,10 @@ setup(
         'Topic :: Scientific/Engineering',
         'Development Status :: 5 - Production/Stable',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
         'Operating System :: OS Independent',
         'License :: OSI Approved :: MIT License',
     ]
