@@ -53,4 +53,4 @@ jobs:
         # test running qats via __main__ hook
         python -m qats -h
         # test that building documentation does not fail
-        sphinx-build -b html docs\source docs\_build
+        sphinx-build -b html docs/source docs/_build
