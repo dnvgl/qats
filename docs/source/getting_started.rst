@@ -6,7 +6,7 @@ Getting started
 Prerequisites
 *************
 
-You need Python version 3.6 or later. You can find it at https://www.python.org or https://www.anaconda.com.
+You need Python version 3.7 or later (up to 3.10 is supported). You can find it at https://www.python.org or https://www.anaconda.com.
 
 Installation
 ************
