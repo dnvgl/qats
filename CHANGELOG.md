@@ -20,6 +20,16 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+### Added
+
+- Command line interface (CLI) hook enabling `python -m qats app` as an equivalent to `qats app` (the entry point executable).
+  [PR [#98](https://github.com/dnvgl/qats/pull/98)]
+- CLI option `--link-app-no-exe` that generates Windows Start menu shortcut utilizing the new CLI hook (instead of entry point executable).
+  [PR [#98](https://github.com/dnvgl/qats/pull/98)]
+- Sphinx documentation includes the changelog. 
+  [PR [#98](https://github.com/dnvgl/qats/pull/98)]
+  
+
 ## [4.10.0] // 25.5.2022
 
 Time series can now be exported to SIMA HDF5 format. Errors are no longer raised when having timeseries from different drives in the same time series database.
