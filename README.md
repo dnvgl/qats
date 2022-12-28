@@ -194,8 +194,7 @@ sphinx-build -a -E -b html docs\source docs\_build
 ```
 
 ### Deployment
-Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using 
-[Travis-CI](https://travis-ci.com).
+Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using [GitHub Actions](https://docs.github.com/en/actions).
 
 ### Versioning
 
