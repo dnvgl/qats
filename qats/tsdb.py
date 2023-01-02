@@ -166,7 +166,9 @@ class TsDB(object):
         >>> tsdb.load("mooring.ts")
 
 
-        See also notes for :meth:`~TsDB.load`.
+        See Also
+        --------
+        load : Includes notes of relevance for this method.
         """
         tsdb = cls("")
         tsdb.load(filenames, read=read, verbose=verbose)
@@ -1729,9 +1731,6 @@ class TsDB(object):
         -------
         Dataframe
             Statistics for each time series organized in columns.
-
-        Notes
-        -----
 
         See also
         --------

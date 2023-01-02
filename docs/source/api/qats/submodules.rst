@@ -1,9 +1,10 @@
 
 :mod:`qats.cli`
-===================
+===============
 
 .. automodule:: qats.cli
     :members:
+
 
     .. rubric:: Functions overview
 

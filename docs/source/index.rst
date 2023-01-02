@@ -3,8 +3,11 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to QATS's documentation!
-################################
+.. Welcome to QATS's documentation!
+.. ################################
+
+QATS documentation
+##################
 
 General description
 *******************
@@ -75,9 +78,23 @@ Table of contents
    changes
 
 
-Indices and tables
-******************
+.. Indices and tables
+.. ******************
+..
+.. * :ref:`genindex`
+.. * :ref:`modindex`
+.. * :ref:`search`
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+
+..
+.. Add project links in sidebar
+..
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Project links
+
+   PyPI Project <https://pypi.org/project/qats/>
+   GitHub Repository <https://github.com/dnvgl/qats>
+   Issue Tracker <https://github.com/dnvgl/qats/issues>
