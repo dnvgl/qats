@@ -119,7 +119,7 @@ the sum of those.
 Tail fitting with Weibull
 *************************
 
-Fit a parametric Weibull distribution to the largest 1% of the peak sample. Often called tail fitting.
+Fit a parametric Weibull distribution to the largest 13% of the peak sample. Often called tail fitting.
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python
