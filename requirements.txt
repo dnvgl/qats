@@ -1,16 +1,16 @@
-h5py==3.1.0
+h5py>=3.5.0, <=3.7.0
 pymatreader==0.0.24
-matplotlib==3.3.3
+matplotlib>=3.3.3, <=3.6
 npTDMS==1.1.0
-numpy==1.22.0
+numpy>=1.21.6, <=1.24.*
 openpyxl==3.0.5
-pandas==1.1.4
+pandas>=1.1.4, <=1.5
 QtPy==1.9.0
-pyside2==5.15.2
-PyQt5==5.15.2
-scipy==1.5.3
-setuptools-scm==4.1.2
-wheel==0.38.1
+pyside2>=5.15.2, <5.16
+PyQt5>=5.15.2, <=5.15.7
+scipy>=1.7.2, <=1.9.2   # in accordance with https://docs.scipy.org/doc/scipy/dev/toolchain.html#numpy
+setuptools-scm>=7.1.0, <=8
+wheel==0.38.4
 Sphinx>=5.1.1
 sphinx_bootstrap_theme==0.8.1
 myst-parser==0.18.1

@@ -43,6 +43,12 @@ inspecting, quality assurance and reporting. Use the library for more advanced o
     :target: _images/demo.gif
 
 
+Python version support
+**********************
+
+QATS currently supports Python version 3.7, 3.8, 3.9, and 3.10.
+
+
 Source code, Issue tracker and Changelog
 ****************************************
 

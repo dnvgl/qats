@@ -2,6 +2,7 @@
 
 Python library and GUI for efficient processing and visualization of time series.
 
+[![Python versions](https://img.shields.io/pypi/pyversions/qats)](https://pypi.org/project/qats/)
 [![Build Status](https://github.com/dnvgl/qats/actions/workflows/test.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/test.yml)
 [![PyPi Deployment Status](https://github.com/dnvgl/qats/actions/workflows/publish.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/publish.yml)
 [![Documentation Status](https://readthedocs.org/projects/qats/badge/?version=latest)](https://qats.readthedocs.io/en/latest/?badge=latest)
@@ -32,7 +33,13 @@ perfect for inspecting, comparing and reporting:
 
 ![QATS GUI](https://raw.githubusercontent.com/dnvgl/qats/master/docs/source/demo.gif)
 
-### Getting started
+## Python version support
+
+QATS supports Python 3.7, 3.8, 3.9 and 3.10.
+
+## Getting started
+
+### Installation
 
 Run the below command in a Python environment to install the latest QATS release:
 
@@ -80,7 +87,7 @@ qats config --link-app
 
 Take a look at the resources listed below to learn more.
 
-**Note:** As of version `4.11.0`, the command line interface is accessible by running Python with the '-m' option. The following commands are now equvivalent to those above:
+_New in version 4.11.0._ The command line interface is also accessible by running Python with the '-m' option. The following commands are equvivalent to those above:
 ```console 
 python -m qats app
 python -m qats config --link-app
@@ -101,7 +108,7 @@ purposes. See deployment for notes on how to deploy the project on a live system
 
 ### Prerequisites
 
-Install Python version 3.6 or later from either https://www.python.org or https://www.anaconda.com.
+Install Python version 3.7 or later from either https://www.python.org or https://www.anaconda.com.
 
 ### Clone the source code repository
 
@@ -127,11 +134,13 @@ python -m venv /path/to/new/virtual/environment
 python -m pip install -r requirements.txt
 ```
 
-.. and install the package in development mode.
+.. and install the package in development ("editable") mode.
 
 ```console
-python setup.py develop
+python -m pip install -e .
 ```
+
+_Note: This is similar to the "legacy" development installation command ``python setup.py develop``, see the [setuptools page on development mode](https://setuptools.pypa.io/en/latest/userguide/development_mode.html)._
 
 You should now be able to import the package in the Python console,
 
@@ -145,7 +154,12 @@ help(qats)
 ```console
 qats -h
 ```
-(and also `python -m qats -h` from version 4.11.0).
+
+_New in version 4.11.0._ The CLI is also available from 
+
+```console
+python -m qats -h
+```
 
 ### Running the tests
 
@@ -181,12 +195,11 @@ sphinx-build -a -E -b html docs\source docs\_build
 ```
 
 ### Deployment
-Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using 
-[Travis-CI](https://travis-ci.com).
+Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using [GitHub Actions](https://docs.github.com/en/actions).
 
 ### Versioning
 
-We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/).
+We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/). See also [Scheme choices](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#scheme-choices) on https://packaging.python.org/.
 
 We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then 
 [setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) takes care of the rest. For the versions 
