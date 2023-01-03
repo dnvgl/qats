@@ -10,10 +10,17 @@
 #
 import os
 import sys
-import sphinx_rtd_theme
 import qats
-print("Generating doc for QATS version {version} installed in {path}"
-      .format(version=qats.__version__, path=qats.__path__))
+
+# which theme to use
+# options: 'sphinx_rtd_theme' or 'furo'
+THEME = 'sphinx_rtd_theme'  # 'furo'
+
+# print("Generating doc for QATS version {version} installed in {path}"
+#       .format(version=qats.__version__, path=qats.__path__))
+print("Generating doc for QATS version {version} installed in {path},\n"
+      "... using Sphinx theme '{theme}'"
+      .format(version=qats.__version__, path=qats.__path__, theme=THEME))
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -79,8 +86,6 @@ language = 'en'
 # This patterns also effect to html_static_path and html_extra_path
 exclude_patterns = []
 
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'default'  # 'sphinx'
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
@@ -111,56 +116,116 @@ napoleon_attr_annotations = True
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
-html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+html_theme = THEME  # 'sphinx_rtd_theme'
 html_logo = 'img/qats.ico'
 
+# Add any paths that contain custom static files (such as style sheets) here,
+# relative to this directory. They are copied after the builtin static files,
+# so a file named "default.css" will overwrite the builtin "default.css".
+html_static_path = ['_static']
+
+# theme-specific variables
+if THEME == 'sphinx_rtd_theme':
+    import sphinx_rtd_theme
+    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+
+    # custom css file (theme-specific)
+    # these paths are either relative to html_static_path or fully qualified paths (eg. https://...)
+    html_css_files = [
+        'css/custom-sphinx-rtd-theme.css',
+    ]
+
+    # theme options: sphinx_rtd_theme
+    # ref. https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html#theme-options
+    html_theme_options = {
+        # 'analytics_id': '',  #  Provided by Google in your dashboard
+        # 'analytics_anonymize_ip': False,
+        'logo_only': False,
+        'display_version': True,
+        'prev_next_buttons_location': 'bottom',
+        'style_external_links': True,  # default: False
+        'vcs_pageview_mode': '',
+        'style_nav_header_background': '#efefef',  # 'whitesmoke' is '#f5f5f5'  # 'lightgrey',  # 'white',
+        #
+        # TOC options
+        #
+        'collapse_navigation': True,
+        'sticky_navigation': True,
+        'navigation_depth': 4,
+        'includehidden': True,
+        'titles_only': False,
+    }
+
+    # The name of the Pygments (syntax highlighting) style to use.
+    pygments_style = 'default'  # 'sphinx'
+
+elif THEME == 'furo':
+    try:
+        import furo
+    except ImportError:
+        raise ImportError("Could not import 'furo' -- install it through `python -m pip install furo` (or similar)")
+
+    # html_theme_path = []
+
+    # custom css file (theme-specific)
+    # these paths are either relative to html_static_path or fully qualified paths (eg. https://...)
+    html_css_files = [
+        'css/custom-furo.css',
+    ]
+
+    # theme options: furo
+    # ref. https://pradyunsg.me/furo/customisation/
+    html_theme_options = {
+        "sidebar_hide_name": False,  # True  (if True, show only logo and hide project name)
+        "navigation_with_keys": True,
+        # "top_of_page_button": "edit",
+        # "announcement": "<em>Note: Backward incompatible changes introduced in version 5.0.0</em>",
+    }
+
+    # syntax highlighting, incl. for dark mode
+    # ref. https://pradyunsg.me/furo/customisation/colors/#code-block-styling
+    pygments_style = 'default'  # 'sphinx'
+    pygments_dark_style = 'monokai'
+
+    # sidebar title
+    # ref. https://pradyunsg.me/furo/customisation/sidebar-title/#changing-sidebar-title
+    html_title = f"{project} {release}"
+
+    # sidebar
+    # ref. https://pradyunsg.me/furo/customisation/sidebar/#using-html-sidebars
+    html_sidebars = {
+        "**": [
+            "sidebar/brand.html",
+            "sidebar/search.html",
+            "sidebar/scroll-start.html",
+            "sidebar/navigation.html",
+            # "sidebar/ethical-ads.html",
+            "sidebar/scroll-end.html",
+            "sidebar/variant-selector.html",
+        ]
+    }
+
+else:
+    raise ValueError(f"THEME must be set to 'sphinx_rtd_theme' or 'furo', got '{THEME}'")
+
+
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+#
+# html_theme_options = {}
 
 # Include sidebar
 # html_sidebars = {
 #     '**': ['localtoc.html', ],  # 'relations.html', ],  #'globaltoc.html', 'sourcelink.html', 'searchbox.html']}
 # }
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-#
-# theme: sphinx_rtd_theme // ref. https://sphinx-rtd-theme.readthedocs.io/en/stable/configuring.html#theme-options
-html_theme_options = {
-    # 'analytics_id': '',  #  Provided by Google in your dashboard
-    # 'analytics_anonymize_ip': False,
-    'logo_only': False,
-    'display_version': True,
-    'prev_next_buttons_location': 'bottom',
-    'style_external_links': True,  # default: False
-    'vcs_pageview_mode': '',
-    'style_nav_header_background': '#efefef',  # 'whitesmoke' is '#f5f5f5'  # 'lightgrey',  # 'white',
-    #
-    # TOC options
-    #
-    'collapse_navigation': True,
-    'sticky_navigation': True,
-    'navigation_depth': 4,
-    'includehidden': True,
-    'titles_only': False,
-}
-
 
 # ----------------------------------------------------------------------------------------------------------------------
 # Other configuration options
 # ----------------------------------------------------------------------------------------------------------------------
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-#
-html_static_path = ['_static']
-# These paths are either relative to html_static_path
-# or fully qualified paths (eg. https://...)
-html_css_files = [
-    'css/custom.css',
-]
 
-# Example configuration for intersphinx: refer to the Python standard library.
+# Intersphinx mapping
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'numpy': ('https://numpy.org/doc/stable/', None),

@@ -1,0 +1,11 @@
+/* furo theme overrides */
+
+/* logo size (default: 100%) */
+.sidebar-logo-container > img.sidebar-logo {
+    max-width: 30%
+}
+
+
+
+
+
