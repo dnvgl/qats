@@ -163,6 +163,25 @@ class TestTs(unittest.TestCase):
         self.assertEqual(np.min(self.ts.minima(twin=twin)), self.ts.min(twin=twin),
                          "Method min() returns value which is different from the smallest value from minima() method")
 
+    def test_correct_number_of_maxima(self):
+        """
+        Test that the correct number of maxima/peaks are found
+        """
+        self.assertEqual(139, len(self.ts.maxima(twin=None, threshold=None)))
+        self.assertEqual(128, len(self.ts.maxima(twin=(500, 1.e12), threshold=None)))
+        self.assertEqual(128, len(self.ts.maxima(twin=(500, 1.e12), threshold=500.)))
+
+    def test_correct_number_of_minima(self):
+        """
+        Test that the correct number of minima/troughs are found
+        """
+        # flip the time series, then the minima shall be equal to maxima in the original timeseries multiplied with -1
+        tsflip = copy.copy(self.ts)
+        tsflip.x *= -1
+        self.assertEqual(139, len(tsflip.minima(twin=None, threshold=None)))
+        self.assertEqual(128, len(tsflip.minima(twin=(500, 1.e12), threshold=None)))
+        self.assertEqual(128, len(tsflip.minima(twin=(500, 1.e12), threshold=-500.)))
+
 
 if __name__ == '__main__':
     unittest.main()

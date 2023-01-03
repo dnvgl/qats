@@ -116,6 +116,23 @@ the sum of those.
    :lines: 1-
 
 
+Tail fitting with Weibull
+*************************
+
+Fit a parametric Weibull distribution to the largest 13% of the peak sample. Often called tail fitting.
+
+.. literalinclude:: examples/tail_fitting.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+.. figure:: img/weibull_tail_fit.png
+    :figclass: align-center
+    :target: _images/weibull_tail_fit.png
+
+    Comparison of empirical sample distribution and fitted parametric distribution on linearized scales.
+
+
 Merge files and export to different format
 ******************************************
 

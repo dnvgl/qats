@@ -386,10 +386,10 @@ class Weibull(object):
         Note that the example above is equivalent to:
 
         >>> from qats.signal import find_maxima
-        >>> sample = find_maxima(x, local=False, threshold=None, up=True, retind=False)
+        >>> sample, _ = find_maxima(x, local=False, threshold=None, up=True)
         >>> weib = Weibull.fit(sample, method='msm')
         """
-        sample = find_maxima(x, local=False, threshold=None, up=True, retind=False)
+        sample, _ = find_maxima(x, local=False, threshold=None, up=True)
         return Weibull.fit(sample, method=method, verbose=verbose)
 
     def invcdf(self, p=None):
@@ -664,7 +664,7 @@ def bootstrap(loc, scale, shape, size, repetitions, method='pwm'):
     return m, cv
 
 
-def lse(x):
+def lse(x, threshold: float = None):
     """
     Fit Weibull distribution parameters to sample by method of least square fit to empirical cdf.
 
@@ -672,6 +672,10 @@ def lse(x):
     ----------
     x : array_like
         sample data
+    threshold : float, optional
+        Fit distribution to data points above this threshold. The threshold is defined as value <0, 1> in the
+        empirical CDF. So with threshold=0.87 the distribution is fitted to the values exceeding the 0.87-quantile of
+        the empirical cumulative distribution function.
 
     Returns
     -------
@@ -682,14 +686,24 @@ def lse(x):
     -----
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
     """
-    x = np.sort(x)
+    x = np.sort(x)                          # sorted dataset
     f = empirical_cdf(x.size, kind='mean')  # mean rank empirical cdf according to Weibull [1]
+    weights = np.ones(np.shape(x))          # by default include all data points
+    if threshold is not None:
+        # exclude data points below threshold (fit only to the tail)
+        weights[f < threshold] = 0.
+
+    # define error function
+    # v: distribution parameters
+    # z: data points
+    # y: empirical cdf defined at data points x (z)
+    # w: weights to exclude data points below threshold if tail fitting is requested
     fp = lambda v, z: 1. - np.exp(-((z - v[0]) / v[1]) ** v[2])  # parametric weibull function
-    e = lambda v, z, y: (fp(v, z) - y)  # error function to be minimized
+    e = lambda v, z, y, w: w * (fp(v, z) - y)  # error function to be minimized
     a0, b0, c0 = msm(x)  # initial guess based on method of moments
 
-    # least square fit
-    p, cov, info, msg, ier = leastsq(e, np.asarray([a0, b0, c0]), args=(x, f), full_output=True)
+    # least square fit (x corresponds to z in lambdas, f corresponds to y and w corresponds to weights)
+    p, cov, info, msg, ier = leastsq(e, np.asarray([a0, b0, c0]), args=(x, f, weights), full_output=True)
 
     return p[0], p[1], p[2]
 
@@ -840,58 +854,52 @@ def msm(x):
     return a, b, c
 
 
-def plot_fits(data, filename=None, method="pwm"):
+def plot_fit(x: np.ndarray, params: tuple, path: str = None):
     """
     Plot data sample versus empirical and fitted cumulative distribution function on linearized Weibull scales
 
     Parameters
     ----------
-    data : array_like
+    x : array_like
         Data sample
-    filename : str, optional
-        Save plot as `filename`, default is to show plot on sc
-    method : {'pwm', 'msm', 'lse', 'mle'}, optional
-            Method of fit, default is 'pwm'
+    params : tuple
+        location, scale and shape parameter of the Weibull distribution
+    path : str, optional
+        Save figure to file instead of displaying it.
+
     """
-    # fit distributions and plot
-    options = {'msm': msm, 'lse': lse, 'pwm': pwm, 'mle': mle}
-    assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+    # unpack distribution parameters
+    a, b, c = params
 
-    # estimate location and scale parameter
-    loc, scale, shape = options[method](data)
+    # normalize data and empirical CDF
+    x = np.sort(x)
+    x_norm = np.log(x - a)
+    y_norm = np.log(-np.log(1. - (np.arange(x.size) + 1.) / (x.size + 1.)))
 
+    # labels and tick positions for weibull paper plot
+    p = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
+    p_norm = np.log(-np.log(1. - p))
+
+    # normalize fitted distribution
+    q_norm = np.log(b * (-np.log(1. - p)) ** (1. / c))
+
+    # plot
     plt.figure()
-
-    # sort data, create empirical distribution function and plot
-    x = np.log(np.sort(data - loc))
-    y = np.log(-np.log(1. - empirical_cdf(data.size, kind='mean')))
-    plt.plot(x, y, 'ko', label='Data')
-
-    # plot fitted distribution
-    yy = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-    y = np.log(-np.log(1. - yy))
-    x = np.log(scale * (-np.log(1. - yy)) ** (1. / shape))
-    plt.plot(x, y, label=method)
-
-    # adjust figure
-    plt.xlim(x[0], x[-1])
-    plt.ylim(y[0], y[-1])
+    plt.plot(x_norm, y_norm, "ko", label="Data")
+    plt.plot(q_norm, p_norm, label="Fit")
+    plt.yticks(p_norm, p)
+    xticks = np.linspace(q_norm[0], q_norm[-1], 5)
+    xlabel = np.around(np.exp(xticks) + a, decimals=2)
+    plt.xticks(xticks, xlabel)
+    plt.title(f"a={a:5.3f}, b={b:5.3f}, c={c:5.3f}")
     plt.xlabel('X')
     plt.ylabel('Cumulative probability')
-    plt.yticks(y, yy)
-    xloc = np.linspace(x[0], x[-1], 5)
-    xlab = np.around(np.exp(xloc) + loc, decimals=2)
-    plt.xticks(xloc, xlab)
     plt.legend(loc='upper left')
     plt.grid(True)
-
-    if filename is not None:
-        plt.savefig(filename)
+    if path is not None:
+        plt.savefig(path)
     else:
         plt.show()
-
-    # close figure to avoid high memory consumption
-    plt.close()
 
 
 def pwm(x):

@@ -788,12 +788,13 @@ class TimeSeries(object):
         # get time and data
         t, x = self.get(twin=twin, **kwargs)
 
-        # find maxima (and associated time, if specified)
+        # find maxima
+        m, ind = find_maxima(x, local=local, threshold=threshold)
+
+        # ...and associated time, if specified
         if rettime is True:
-            m, ind = find_maxima(x, local=local, threshold=threshold, retind=True)
             return m, t[ind]
         else:
-            m = find_maxima(x, local=local, threshold=threshold, retind=False)
             return m
 
     def mean(self, **kwargs):
@@ -879,14 +880,18 @@ class TimeSeries(object):
 
         # flip the time series to that minima becomes maxima
         x *= -1.
+        if threshold is not None:
+            threshold *= -1
 
-        # find minima (and associated time, if specified)
+        # find minima
+        m, ind = find_maxima(x, local=local, threshold=threshold)
+        m *= -1.    # reverse flip
+
+        # ... and associated time, if specified
         if rettime is True:
-            m, ind = find_maxima(x, local=local, threshold=threshold, retind=True)
-            return -1. * m, t[ind]  # reverse flip
+            return m, t[ind]
         else:
-            m = find_maxima(x, local=local, threshold=threshold, retind=False)
-            return -1. * m          # reverse flip
+            return m
 
     def modify(self, **kwargs):
         """
@@ -1367,7 +1372,7 @@ class TimeSeries(object):
         else:
             f = -1.
 
-        mx = find_maxima(f * x)
+        mx,  _ = find_maxima(f * x)
         if np.size(mx) <= 1:
             wloc = wscale = wshape = gloc = gscale = np.nan
             pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
