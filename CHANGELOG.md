@@ -6,8 +6,8 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 
 <!-- Notes:
 - Header links are defined at the bottom of this markdown file.
-- Versions are level 3 headings (###) (no difference between major/minor/micro versions)
-- Change categories are level 4 headings (####).
+- Versions are level 2 headings (##) (no difference between major/minor/micro versions)
+- Change categories are level 3 headings (###).
 - The following change categories should be used (and they should be grouped): 
   Added, Changed, Deprecated, Removed, Fixed.
   For details and guidance, see: https://keepachangelog.com/en/1.0.0/#how
@@ -19,14 +19,30 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
+<!--
+This release includes pull requests [PR [#98](https://github.com/dnvgl/qats/pull/98)], [PR [#99](https://github.com/dnvgl/qats/pull/99)], [PR [#101](https://github.com/dnvgl/qats/pull/101)] and [PR [#103](https://github.com/dnvgl/qats/pull/103)].
+-->
+
+### Changed
+
+- Python version support [PR [#101](https://github.com/dnvgl/qats/pull/101)]
+    - Added support for Python 3.10
+    - Removed support for Python 3.6 
+- Documentation (https://qats.readthedocs.io)
+    - Includes changelog [PR [#98](https://github.com/dnvgl/qats/pull/98)]
+    - New theme [PR [#103](https://github.com/dnvgl/qats/pull/103)]
+
+
 ### Added
 
-- Command line interface (CLI) hook enabling `python -m qats app` as an equivalent to `qats app` (the entry point executable).
-  [PR [#98](https://github.com/dnvgl/qats/pull/98)]
-- CLI option `--link-app-no-exe` that generates Windows Start menu shortcut utilizing the new CLI hook (instead of entry point executable).
-  [PR [#98](https://github.com/dnvgl/qats/pull/98)]
-- Sphinx documentation includes the changelog. 
-  [PR [#98](https://github.com/dnvgl/qats/pull/98)]
+- Command line interface (CLI) improvements. [PR [#98](https://github.com/dnvgl/qats/pull/98)]
+    - Added hook enabling `python -m qats app` as an equivalent to `qats app` (the entry point executable).
+    - Option `--link-app-no-exe` that generates Windows Start menu shortcut utilizing the new CLI hook (instead of entry point executable).
+  
+### Fixed
+
+- Support for reading wind turbine key-files (`key_<>_witurb.txt`) exported from SIMA/RIFLEX version >=4.20 (where wind turbine name is included in a column to the left of time series name).
+  [PR [#99](https://github.com/dnvgl/qats/pull/99), issue [#97](https://github.com/dnvgl/qats/issues/97)]
   
 
 ## [4.10.0] // 25.5.2022
@@ -53,7 +69,7 @@ This release contains pull request [#79](https://github.com/dnvgl/qats/pull/79).
 - `TsDB.stats_dataframe()`: new method that returns statistics in a Pandas dataframe with same structure and behaviour as the dict returned from `TsDB.stats()`.
 - `qats.readers.sima`: Added support for wind turbine output from SIMA/RIFLEX, i.e. reading of `<prefix>_witurb.bin` and `<prefix>_blresp.bin`.
 
-### Fixes
+### Fixed
 - `TsDB.stats()`: default value of parameter `statsdur` is set to 10800 [s] instead of `None`. Previously failed if this parameter was not passed, since the underlying function `TimeSeries.stats()` did not accept/handle `None`. 
 - `qats.readers.tdms`: Changed how tdms-files are opened and avoid number of obsolete iterations when inferring the time array to improve the performance of the tdms-reader.
 
@@ -270,7 +286,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.9.2...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.10.0...HEAD
+[4.11.0]: https://github.com/dnvgl/qats/compare/4.10.0...4.11.0
 [4.10.0]: https://github.com/dnvgl/qats/compare/4.9.2...4.10.0
 [4.9.2]: https://github.com/dnvgl/qats/compare/4.9.1...4.9.2
 [4.9.1]: https://github.com/dnvgl/qats/compare/4.9.0...4.9.1
