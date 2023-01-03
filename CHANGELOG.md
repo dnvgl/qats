@@ -19,7 +19,11 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
-## [4.11.0] // 03.01.2023
+## [4.11.1] (03.01.2023)
+
+[dev] Fix documentation build on Read the Docs by adding build configuration file (`.readthedocs.yaml`).
+
+## [4.11.0] (03.01.2023)
 
 This release includes pull requests [#98](https://github.com/dnvgl/qats/pull/98), [#99](https://github.com/dnvgl/qats/pull/99), [#101](https://github.com/dnvgl/qats/pull/101), [#103](https://github.com/dnvgl/qats/pull/103) and [#104](https://github.com/dnvgl/qats/pull/104).
 
@@ -47,20 +51,20 @@ This release includes pull requests [#98](https://github.com/dnvgl/qats/pull/98)
 - Support for reading wind turbine key-files (`key_<>_witurb.txt`) exported from SIMA/RIFLEX version >=4.20 (where wind turbine name is included in a column to the left of time series name). [issue [#97](https://github.com/dnvgl/qats/issues/97)]
 - `TimeSeries.minima()` threshold error. [issue [#95](https://github.com/dnvgl/qats/issues/95)]
 
-## [4.10.0] // 25.05.2022
+## [4.10.0] (25.05.2022)
 
 Time series can now be exported to SIMA HDF5 format. Errors are no longer raised when having timeseries from different drives in the same time series database.
 
-## [4.9.2] // 03.12.2020
+## [4.9.2] (03.12.2020)
 
 Corrected `npTDMS` version requirement in `setup.py`.
 
-## [4.9.1] // 03.12.2020
+## [4.9.1] (03.12.2020)
 
 Updated `setup.py` and `requirements.txt` to latest versions of dependencies.
 
 
-## [4.9.0] // 18.11.2020
+## [4.9.0] (18.11.2020)
 
 This release contains pull request [#79](https://github.com/dnvgl/qats/pull/79).
 
@@ -76,7 +80,7 @@ This release contains pull request [#79](https://github.com/dnvgl/qats/pull/79).
 - `qats.readers.tdms`: Changed how tdms-files are opened and avoid number of obsolete iterations when inferring the time array to improve the performance of the tdms-reader.
 
 
-## [4.8.1] // 08.06.2020
+## [4.8.1] (08.06.2020)
 
 This release contains the following pull requests: [#74](https://github.com/dnvgl/qats/pull/74), [#76](https://github.com/dnvgl/qats/pull/76), [#77](https://github.com/dnvgl/qats/pull/77).
 
@@ -88,7 +92,7 @@ This release contains the following pull requests: [#74](https://github.com/dnvg
 - `requirements.txt`: Sphinx updated from 2.2.1 to 3.0.4 _(security update, relevant for maintainers only)_.
 
 
-## [4.8.0] // 10.04.2020
+## [4.8.0] (10.04.2020)
 
 This release contains the two following pull requests: [#67](https://github.com/dnvgl/qats/pull/67), [#72](https://github.com/dnvgl/qats/pull/72).
 
@@ -104,7 +108,7 @@ This release contains the two following pull requests: [#67](https://github.com/
 - Fixed bug causing time series names to vanish when exporting single time series to file; ref. [#70](https://github.com/dnvgl/qats/issues/70).
 
 
-## [4.7.0] // 15.01.2020
+## [4.7.0] (15.01.2020)
 
 ### Added
 Three functions have been added to submodule `qats.signal`:
@@ -133,14 +137,14 @@ Main changes are as follows:
 - `qats.fatigue.corrections.goodman_haigh()` now accepts (and returns) np.ndarray, and utilizes this for efficiency. See docstring or [API documentation](https://qats.readthedocs.io/en/latest/api/qats/subpackages/fatigue.html#qats.fatigue.corrections.goodman_haigh) for details and an example.
 
 
-## [4.6.1] // 26.11.2019
+## [4.6.1] (26.11.2019)
 
 ### Fixed
 - Catch and log KeyError occuring when trying to load the same time series file twice.
 - Make the displayed time series names uneditable
 
 
-## [4.6.0] // 14.11.2019
+## [4.6.0] (14.11.2019)
 
 ### Added
 New reader for SINTEF Ocean data exchange format based on Matlab .mat files. It now supports all .mat file format versions <=7.3.
@@ -173,7 +177,7 @@ Updated the package and environment requirements.
 ### Fixed
 Prevent error raised when the env. variable `APPDATA` does not exist.
 
-## [4.5.0] // 05.11.2019
+## [4.5.0] (05.11.2019)
 
 ### Added
 
@@ -184,7 +188,7 @@ File menu action that clears the logger widget. Hot key `Ctrl+Shift+Del`.
 A bug that caused the time series tooltip to only display the time series' relative path, not the absolute path.
 
 
-## [4.4.0] // 04.11.2019
+## [4.4.0] (04.11.2019)
 
 ### Added
 
@@ -204,7 +208,7 @@ A bug that caused the time series tooltip to only display the time series' relat
 - Desktop application (GUI), statistics tab: fixed issues related to clearing the table, updating when Weibull fit fails and mismatch between values and table heading. For details, see [issue #58](https://github.com/dnvgl/qats/issues/58).
 
 
-## [4.3.0] // 30.10.2019
+## [4.3.0] (30.10.2019)
 
 ### Added
 The desktop application now:
@@ -216,14 +220,14 @@ The library now uses Scipy IIR filters instead of the self-made filters. Mainly 
 
 Restructured the functions for calculating power spectral density. *Note: The desktop application now apply a default segment length of 1000 points when estimating power spectral density using Welch's method. This can be adjusted in the application settings dialog. Previously the default segment length was 1/4 of the signal length.*
 
-## [4.2.0] // 23.09.2019
+## [4.2.0] (23.09.2019)
 
 ### Changed
 Replaced hard dependency on `PyQt5` with `QtPy`, due to `PyQt5`'s strong copyleft GPL license. `QtPy` is a shim over various Qt bindings such as: `PyQt4`, `PyQt5`, `Pyside` and `Pyside2`. The user must now install the preferred binding himself/herself, in order to use the GUI.
 
 Note: If several qt bindings are installed (e.g. `PyQt5` and `Pyside2`), the environmental variable `QT_API` may be used to control which binding is used. See https://pypi.org/project/QtPy/ for details.
 
-## [4.1.1] // 17.09.2019
+## [4.1.1] (17.09.2019)
 
 ### Fixed
 - `qats.signal.psd()`: sampling frequency `fs` in the [welch function call](https://github.com/dnvgl/qats/blob/3378ea5972f1cd56a23a902397d195f03c0f8db2/qats/signal.py#L692) corrected to `fs=1./dt` (instead of `fs=dt` which was wrong). This error appeared between versions [4.0.1 and 4.1.0](https://github.com/dnvgl/qats/compare/4.0.1...4.1.0), and also affected `TimeSeries.psd()` and the "Power Spectrum" plot tab in the GUI. 
@@ -232,7 +236,7 @@ Note: If several qt bindings are installed (e.g. `PyQt5` and `Pyside2`), the env
 ### Added
 Four new tests on `qats.signal.psd()` that would have caught the bug described above.
 
-## [4.1.0] // 28.08.2019
+## [4.1.0] (28.08.2019)
 
 ### Added
 - `qats.signal.psd()`: power spectral density calculation (now available as detached function, was previously available only through `TimeSeries.psd()`).
@@ -240,14 +244,14 @@ Four new tests on `qats.signal.psd()` that would have caught the bug described a
 - `test_signal.py`: added more tests for `qats.signal` functions.
 
 
-## [4.0.1] // 23.08.2019
+## [4.0.1] (23.08.2019)
 
 ### Fixed
 - SIMA .h5 reader bug that occured if numpy 1.16 is used.
 - `qats.cli.launch_app()` did not connect `sys.excepthook` with custom error traceback dialogue.
 
 
-## [4.0.0] // 22.08.2019
+## [4.0.0] (22.08.2019)
 
 This release is not backwards compatible. Main updates are related to fatigue calculation capabilities.
 
@@ -274,21 +278,22 @@ This release is not backwards compatible. Main updates are related to fatigue ca
   See [this summary](https://github.com/dnvgl/qats/pull/28#issue-296526900) for details.
 
 
-## [3.0.6] // 2019-06-27
+## [3.0.6] (27.06.2019)
 
 ### Fixed
 - Issues related to proper deployment to PyPI and Read the Docs.
 - Bug when using band-stop filter in GUI.
 
 
-## [3.0.5] // 2019-06-26
+## [3.0.5] (26.06.2019)
 First proper release to [PyPI](https://pypi.org/project/qats/).
 
 
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.11.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.11.1...HEAD
+[4.11.1]: https://github.com/dnvgl/qats/compare/4.11.0...4.11.1
 [4.11.0]: https://github.com/dnvgl/qats/compare/4.10.0...4.11.0
 [4.10.0]: https://github.com/dnvgl/qats/compare/4.9.2...4.10.0
 [4.9.2]: https://github.com/dnvgl/qats/compare/4.9.1...4.9.2
