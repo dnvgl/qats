@@ -14,7 +14,7 @@ import qats
 
 # which theme to use
 # options: 'sphinx_rtd_theme' or 'furo'
-THEME = 'sphinx_rtd_theme'  # 'furo'
+THEME = 'furo'  # 'sphinx_rtd_theme'
 
 # print("Generating doc for QATS version {version} installed in {path}"
 #       .format(version=qats.__version__, path=qats.__path__))

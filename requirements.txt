@@ -13,5 +13,6 @@ setuptools-scm>=7.1.0, <=8
 wheel==0.38.4
 # documentation build requirements:
 Sphinx>=5.1.1
-sphinx-rtd-theme>=1.1.1
+##sphinx-rtd-theme>=1.1.1
+furo>=2022.12.7
 myst-parser>=0.18.1
