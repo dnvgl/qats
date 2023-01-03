@@ -224,6 +224,9 @@ class TimeSeries(object):
 
     @property
     def dtg_ref(self):
+        """
+        Date-time referring to ``t=0`` (time equal zero).
+        """
         return self._dtg_ref
 
     @property
