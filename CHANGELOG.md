@@ -19,9 +19,9 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
-<!--
-This release includes pull requests [PR [#98](https://github.com/dnvgl/qats/pull/98)], [PR [#99](https://github.com/dnvgl/qats/pull/99)], [PR [#101](https://github.com/dnvgl/qats/pull/101)] and [PR [#103](https://github.com/dnvgl/qats/pull/103)].
--->
+## [4.11.0] // 03.01.2023
+
+This release includes pull requests [#98](https://github.com/dnvgl/qats/pull/98), [#99](https://github.com/dnvgl/qats/pull/99), [#101](https://github.com/dnvgl/qats/pull/101), [#103](https://github.com/dnvgl/qats/pull/103) and [#104](https://github.com/dnvgl/qats/pull/104).
 
 ### Changed
 
@@ -31,21 +31,23 @@ This release includes pull requests [PR [#98](https://github.com/dnvgl/qats/pull
 - Documentation (https://qats.readthedocs.io)
     - Includes changelog [PR [#98](https://github.com/dnvgl/qats/pull/98)]
     - New theme [PR [#103](https://github.com/dnvgl/qats/pull/103)]
+- `qats.signal`: function `find_maxima()` now always returns indices of maxima and optional parameter `retind` is removed. 
+  [PR [#104](https://github.com/dnvgl/qats/pull/104)]
 
 
 ### Added
 
 - Command line interface (CLI) improvements. [PR [#98](https://github.com/dnvgl/qats/pull/98)]
-    - Added hook enabling `python -m qats app` as an equivalent to `qats app` (the entry point executable).
-    - Option `--link-app-no-exe` that generates Windows Start menu shortcut utilizing the new CLI hook (instead of entry point executable).
+    - Added Hook enabling `python -m qats app` as an equivalent to `qats app` (the entry point executable).
+    - Added `config` option `--link-app-no-exe` that generates Windows Start menu shortcut utilizing the new CLI hook (instead of entry point executable).
+- `qats.stats.weibull`: added Weibull distribution tail-fitting using least squares (`qats.stats.weibull.lse()`). [PR [#104](https://github.com/dnvgl/qats/pull/104)]
   
 ### Fixed
 
-- Support for reading wind turbine key-files (`key_<>_witurb.txt`) exported from SIMA/RIFLEX version >=4.20 (where wind turbine name is included in a column to the left of time series name).
-  [PR [#99](https://github.com/dnvgl/qats/pull/99), issue [#97](https://github.com/dnvgl/qats/issues/97)]
-  
+- Support for reading wind turbine key-files (`key_<>_witurb.txt`) exported from SIMA/RIFLEX version >=4.20 (where wind turbine name is included in a column to the left of time series name). [issue [#97](https://github.com/dnvgl/qats/issues/97)]
+- `TimeSeries.minima()` threshold error. [issue [#95](https://github.com/dnvgl/qats/issues/95)]
 
-## [4.10.0] // 25.5.2022
+## [4.10.0] // 25.05.2022
 
 Time series can now be exported to SIMA HDF5 format. Errors are no longer raised when having timeseries from different drives in the same time series database.
 
@@ -286,7 +288,7 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.10.0...HEAD
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.11.0...HEAD
 [4.11.0]: https://github.com/dnvgl/qats/compare/4.10.0...4.11.0
 [4.10.0]: https://github.com/dnvgl/qats/compare/4.9.2...4.10.0
 [4.9.2]: https://github.com/dnvgl/qats/compare/4.9.1...4.9.2
