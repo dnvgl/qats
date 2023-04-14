@@ -1293,7 +1293,7 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), is_minima=False, include_sample=False, **kwargs):
+    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), **kwargs):
         """
         Returns dictionary with time series properties and statistics
 
@@ -1304,10 +1304,6 @@ class TimeSeries(object):
             Default is 10800 seconds (3 hours).
         quantiles : tuple, optional
             Quantiles in the Gumbel distribution used for extreme value estimation, defaults to (0.37, 0.57, 0.90).
-        is_minima : bool, optional
-            Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
-        include_sample : bool, optional
-            Return sample of maxima or minima (minima=True).
         **kwargs
             Additional keyword arguments are passed to :meth:`get()`.
 
@@ -1333,12 +1329,18 @@ class TimeSeries(object):
             min         Minimum value of signal array
             max         Maximum value of signal array
             tz          Average mean crossing period [s]
-            wloc        Weibull distribution location parameter fitted to sample of global maxima
-            wscale      Weibull distribution scale parameter fitted to sample of global maxima
-            wshape      Weibull distribution shape parameter fitted to sample of global maxima
-            gloc        Gumbel distribution location parameter estimated from Weibull distribution and `statsdur`
-            gscale      Gumbel distribution scale parameter estimated from Weibull distribution and `statsdur`
-            p_* ..      Extreme values estimated from the Gumbel distribution, e.g. p_90 is the 0.9 quantile
+            wlocmax     Weibull distribution location parameter fitted to sample of global maxima
+            wscalemax   Weibull distribution scale parameter fitted to sample of global maxima
+            wshapemax   Weibull distribution shape parameter fitted to sample of global maxima
+            glocmax     Gumbel distribution location parameter estimated from Weibull maximum distribution and `statsdur`
+            gscalemax   Gumbel distribution scale parameter estimated from Weibull maximum distribution and `statsdur`
+            p_*max ..   Extreme values estimated from the Gumbel maximum distribution, e.g. p_90 is the 0.9 quantile
+            wlocmin     Weibull distribution location parameter fitted to sample of global minima
+            wscalemin   Weibull distribution scale parameter fitted to sample of global minima
+            wshapemin   Weibull distribution shape parameter fitted to sample of global minima
+            glocmin     Gumbel distribution location parameter estimated from Weibull minimum distribution and `statsdur`
+            gscalemin   Gumbel distribution scale parameter estimated from Weibull minimum distribution and `statsdur`
+            p_*min ..   Extreme values estimated from the Gumbel minimum distribution, e.g. p_90 is the 0.9 quantile
 
 
         See Also
@@ -1360,6 +1362,10 @@ class TimeSeries(object):
 
         >>> stats = ts.stats(twin=(500., 1e12))
         """
+        # todo: consider to remove Weibull and Gumbel parameters from returned dict. The minimum distribution
+        #  parameters can be difficult to understand (maybe misleading) becayse we flip the sample to use the same
+        #  method as we use for estimating the maximum distributions.
+
         # get time series as array
         t, x = self.get(**kwargs)
 
@@ -1369,46 +1375,60 @@ class TimeSeries(object):
             # too few maxima, tz may not calculated (keep it as None)
             tz = np.nan
 
-        # find global maxima or minima
-        if not is_minima:
-            f = 1.
-        else:
-            f = -1.
-
-        mx,  _ = find_maxima(f * x)
-        if np.size(mx) <= 1:
-            wloc = wscale = wshape = gloc = gscale = np.nan
-            pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
-        else:
-            wloc, wscale, wshape = pwm(mx)
-            if any(np.isnan([wloc, wscale, wshape])):
-                # force all parameters to nan if one (typically scale or shape) is
-                wloc = wscale = wshape = np.nan
-            n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
-            try:
-                gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
-            except (AssertionError, ZeroDivisionError) as e:
-                # invalid distribution parameters or bad combinations
-                gloc = gscale = np.nan
-
-            try:
-                g = Gumbel(loc=gloc, scale=gscale)
-            except AssertionError as e:
-                # invalid distribution parameters
-                values = np.nan * np.ones(np.shape(quantiles))
-            else:
-                values = g.invcdf(p=quantiles)
-            finally:
-                pvalues = {f"p_{100 * q:.2f}": f * v for q, v in zip(quantiles, values)}
-
         # establish output dictionary
         d = OrderedDict(
             start=t[0], end=t[-1], duration=t[-1] - t[0], dtavg=np.mean(np.diff(t)),
             mean=x.mean(), std=tstd(x), skew=skew(x, bias=False),
-            kurt=kurtosis(x, fisher=False, bias=False), min=x.min(), max=x.max(), tz=tz,
-            wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, is_minima=is_minima,
-            sample=f * mx if include_sample else None, **pvalues
+            kurt=kurtosis(x, fisher=False, bias=False), min=x.min(), max=x.max(), tz=tz
         )
+
+        for kind, f in dict(min=-1., max=1.).items():
+            # find minima/maxima
+            mx,  _ = find_maxima(f * x)
+            n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
+
+            if np.size(mx) <= 1:
+                # d.update(
+                #     {
+                #         f"wloc{kind}": np.nan,
+                #         f"wscale{kind}": np.nan,
+                #         f"wshape{kind}": np.nan,
+                #         f"gloc{kind}": np.nan,
+                #         f"gscale{kind}": np.nan,
+                #     }
+                # )
+                d.update({f"p{100 * q:.1f}_{kind}": np.nan for q in quantiles})
+            else:
+                wloc, wscale, wshape = pwm(mx)
+                if any(np.isnan([wloc, wscale, wshape])):
+                    # force all parameters to nan if one (typically scale or shape) is
+                    wloc = wscale = wshape = np.nan
+
+                try:
+                    gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
+                except (AssertionError, ZeroDivisionError) as e:
+                    # invalid distribution parameters or bad combinations
+                    gloc = gscale = np.nan
+
+                try:
+                    g = Gumbel(loc=gloc, scale=gscale)
+                except AssertionError as e:
+                    # invalid distribution parameters
+                    values = np.nan * np.ones(np.shape(quantiles))
+                else:
+                    values = g.invcdf(p=quantiles)
+                finally:
+                    # d.update(
+                    #     {
+                    #         f"wloc{kind}": wloc,
+                    #         f"wscale{kind}": wscale,
+                    #         f"wshape{kind}": wshape,
+                    #         f"gloc{kind}": gloc,
+                    #         f"gscale{kind}": gscale,
+                    #     }
+                    # )
+                    d.update({f"p{100 * q:.1f}_{kind}": f * v for q, v in zip(quantiles, values)})
+
         return d
 
     def std(self, **kwargs):
