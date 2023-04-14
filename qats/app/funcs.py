@@ -107,7 +107,7 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
-def calculate_stats(container, twin, fargs, minima=False):
+def calculate_stats(container, twin, fargs):
     """
     Calculate time series statistics
 
@@ -119,8 +119,6 @@ def calculate_stats(container, twin, fargs, minima=False):
         Time window. Time series are cropped to time window before extracting maxima.
     fargs : tuple
         Filter arguments. Time series are filtered before extracting maxima.
-    minima : bool, optional
-        Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
 
     Returns
     -------
@@ -128,7 +126,7 @@ def calculate_stats(container, twin, fargs, minima=False):
         Filtered and windowed time series and peaks/throughs
     """
     return {name: ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9),
-                           is_minima=minima, include_sample=True) for name, ts in container.items()}
+                           include_samples=True) for name, ts in container.items()}
 
 
 def calculate_gumbel_fit(container, twin, fargs, minima=False):
