@@ -982,31 +982,34 @@ class Qats(QMainWindow):
         """
         self.weibull_axes.clear()
         self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel('X - location')
+        self.weibull_axes.set_xlabel('Quantiles - location parameter')
         self.weibull_axes.set_ylabel('Cumulative probability (-)')
 
         # labels and tick positions for weibull paper plot
         p_labels = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
         p_ticks = np.log(np.log(1. / (1. - p_labels)))
-        x_lb, x_ub = None, None
+        x_lb, x_ub, loc = None, None, None
 
         # draw
         for name, value in container.items():
-            x = value.get("sample")
-            loc = value.get("wloc")
-            scale = value.get("wscale")
-            shape = value.get("wshape")
-            is_minima = value.get("is_minima")
+            if self.minima.isChecked():
+                # minima distribution
+                x = -1. * value.get("minima")   # flip sample to be able to plot sample on weibull scales
+                loc = value.get("wlocmin")
+                scale = value.get("wscalemin")
+                shape = value.get("wshapemin")
+            else:
+                # maxima distribution
+                x = value.get("maxima")
+                loc = value.get("wlocmax")
+                scale = value.get("wscalemax")
+                shape = value.get("wshapemax")
 
             if x is None:
                 # skip
                 continue
 
-            # flip sample to be able to plot sample on weibull scales
-            if is_minima:
-                x *= -1.
-
-            # normalize maxima/minima sample on weibull scales
+            # normalize sample on weibull scales
             x = np.sort(x)  # sort ascending
             mask = (x >= loc)  # weibull paper plot will fail for mv-loc < 0
             x_norm = np.log(x[mask] - loc)
@@ -1022,40 +1025,39 @@ class Qats(QMainWindow):
                 q_norm_fitted = np.log(q_fitted)
 
                 # calculate data range for xtick/label calculation later
-                if not x_lb:
-                    # first time
-                    x_lb = np.min(q_fitted)
-                elif np.min(q_fitted) < x_lb:
-                    # lower value
+                if not x_lb or np.min(q_fitted) < x_lb:
+                    # adjust lower bound
                     x_lb = np.min(q_fitted)
 
-                if not x_ub:
+                if not x_ub or np.max(q_fitted) > x_ub:
+                    # adjust upper bound
                     x_ub = np.max(q_fitted)
-                elif np.max(q_fitted) > x_ub:
-                    x_ub = np.max(q_fitted)
-
-                # calculate axes tick and labels
-                labels_sample = np.around(np.linspace(x_lb, x_ub, 4), decimals=1)
-
-                ticks_sample = np.log(labels_sample[labels_sample > 0.])
 
                 # and draw weibull paper plot (avoid log(0))
                 self.weibull_axes.plot(x_norm, ecdf_norm[mask], 'o', label=name)
                 self.weibull_axes.plot(q_norm_fitted, p_ticks, '-')
 
-                self.weibull_axes.set_xticks(ticks_sample)
-                if self.maxima.isChecked():
-                    self.weibull_axes.set_xticklabels(labels_sample[labels_sample > 0.])
-                else:
-                    self.weibull_axes.set_xticklabels(-1. * labels_sample[labels_sample > 0.])
+        # horizontal axis tick and labels
+        # the labels x - location to enable comparison of multiple samples with different location parameter
+        if x_lb < 0.:
+            x_lb = 0.1
+        ticks_sample = np.log(np.linspace(x_lb, x_ub, 4))
+        labels_sample = np.around(np.linspace(x_lb, x_ub, 4), decimals=1)
 
-                self.weibull_axes.set_ylim((p_labels[0], p_labels[-1]))
-                self.weibull_axes.set_yticks(p_ticks)
-                self.weibull_axes.set_yticklabels(p_labels)
-                self.weibull_axes.legend(loc='upper left')
-                self.weibull_canvas.draw()
+        self.weibull_axes.set_xticks(ticks_sample)
+        if self.maxima.isChecked():
+            self.weibull_axes.set_xticklabels(labels_sample)
+        else:
+            self.weibull_axes.set_xticklabels(-1. * labels_sample)
 
-            self.set_status("Weibull distribution plot updated", msecs=3000)
+        # vertical axis tick and labels
+        self.weibull_axes.set_ylim((p_labels[0], p_labels[-1]))
+        self.weibull_axes.set_yticks(p_ticks)
+        self.weibull_axes.set_yticklabels(p_labels)
+        self.weibull_axes.legend(loc='upper left')
+        self.weibull_canvas.draw()
+
+        self.set_status("Weibull distribution plot updated", msecs=3000)
 
     def plot_gumbel(self, container):
         """
@@ -1149,7 +1151,7 @@ class Qats(QMainWindow):
         self.spectrum_canvas.draw()
         self.weibull_axes.clear()
         self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel('X - location')
+        self.weibull_axes.set_xlabel('Quantiles - location parameter')
         self.weibull_axes.set_ylabel('Cumulative probability (-)')
         self.weibull_canvas.draw()
         self.cycles_axes.clear()
