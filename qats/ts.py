@@ -1293,7 +1293,7 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), **kwargs):
+    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), include_samples=False, **kwargs):
         """
         Returns dictionary with time series properties and statistics
 
@@ -1304,6 +1304,8 @@ class TimeSeries(object):
             Default is 10800 seconds (3 hours).
         quantiles : tuple, optional
             Quantiles in the Gumbel distribution used for extreme value estimation, defaults to (0.37, 0.57, 0.90).
+        include_samples: bool, optional
+            Include minima and maxima samples.
         **kwargs
             Additional keyword arguments are passed to :meth:`get()`.
 
@@ -1322,25 +1324,31 @@ class TimeSeries(object):
             end         Last value of time array [s]
             duration    end - start [s]
             dtavg       Average time step [s]
-            mean        Mean value of signal array
-            std         Unbiased standard deviation of signal array
-            skew        Unbiased skewness of signal array (=0 for normal distribution)
-            kurt        Unbiased kurtosis of signal array (=3 for normal distribution)
-            min         Minimum value of signal array
-            max         Maximum value of signal array
+            mean        Sample mean
+            std         Sample unbiased standard deviation
+            skew        Sample unbiased skewness (=0 for normal distribution)
+            kurt        Sample unbiased kurtosis (=3 for normal distribution)
+            min         Sample minimum
+            max         Sample maximum
             tz          Average mean crossing period [s]
-            wlocmax     Weibull distribution location parameter fitted to sample of global maxima
-            wscalemax   Weibull distribution scale parameter fitted to sample of global maxima
-            wshapemax   Weibull distribution shape parameter fitted to sample of global maxima
-            glocmax     Gumbel distribution location parameter estimated from Weibull maximum distribution and `statsdur`
-            gscalemax   Gumbel distribution scale parameter estimated from Weibull maximum distribution and `statsdur`
-            p_*max ..   Extreme values estimated from the Gumbel maximum distribution, e.g. p_90 is the 0.9 quantile
-            wlocmin     Weibull distribution location parameter fitted to sample of global minima
-            wscalemin   Weibull distribution scale parameter fitted to sample of global minima
-            wshapemin   Weibull distribution shape parameter fitted to sample of global minima
-            glocmin     Gumbel distribution location parameter estimated from Weibull minimum distribution and `statsdur`
-            gscalemin   Gumbel distribution scale parameter estimated from Weibull minimum distribution and `statsdur`
-            p_*min ..   Extreme values estimated from the Gumbel minimum distribution, e.g. p_90 is the 0.9 quantile
+            wlocmax     Location parameter of Weibull distribution fitted to maxima sample
+            wscalemax   Scale parameter of Weibull distribution fitted to maxima sample
+            wshapemax   Shape parameter of Weibull distribution fitted to maxima sample
+            glocmax     Location parameter of Gumbel distribution (largest maximum distribution) estimated from maxima distribution.
+            gscalemax   Scale parameter of Gumbel distribution (largest maximum distribution) estimated from maxima distribution.
+            p*max ..    Extreme maximum estimates from the Gumbel distribution fitted to sample of largest maxima.
+                        p90max is the 90 percentile in the distribution of largest maxima. Reference duration
+                        is `statsdur` e.g. 10800s is 3hours
+            wlocmin     Location parameter of Weibull distribution fitted to minima sample
+            wscalemin   Scale parameter of Weibull distribution fitted to minima sample
+            wshapemin   Shape parameter of Weibull distribution fitted to minima sample
+            glocmin     Location parameter of Gumbel distribution (smallest minimum distribution) estimated from minima distribution.
+            gscalemin   Scale parameter of Gumbel distribution (smallest minimum distribution) estimated from minima distribution.
+            p*min ..    Extreme minimum estimates from the Gumbel distribution fitted to sample of smalles minima.
+                        p90min is the 90 percentile in the distribution of smalles minima. Reference duration
+                        is `statsdur` e.g. 10800s is 3hours
+            maxsample   Maxima sample (if `include_samples` is true)
+            minsample   Minima sample (if `include_samples` is true)
 
 
         See Also
@@ -1388,16 +1396,8 @@ class TimeSeries(object):
             n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
 
             if np.size(mx) <= 1:
-                # d.update(
-                #     {
-                #         f"wloc{kind}": np.nan,
-                #         f"wscale{kind}": np.nan,
-                #         f"wshape{kind}": np.nan,
-                #         f"gloc{kind}": np.nan,
-                #         f"gscale{kind}": np.nan,
-                #     }
-                # )
-                d.update({f"p{100 * q:.1f}_{kind}": np.nan for q in quantiles})
+                wloc = wscale = wshape = gloc = gscale = np.nan
+                values = np.nan * np.ones(np.shape(quantiles))
             else:
                 wloc, wscale, wshape = pwm(mx)
                 if any(np.isnan([wloc, wscale, wshape])):
@@ -1417,17 +1417,21 @@ class TimeSeries(object):
                     values = np.nan * np.ones(np.shape(quantiles))
                 else:
                     values = g.invcdf(p=quantiles)
-                finally:
-                    # d.update(
-                    #     {
-                    #         f"wloc{kind}": wloc,
-                    #         f"wscale{kind}": wscale,
-                    #         f"wshape{kind}": wshape,
-                    #         f"gloc{kind}": gloc,
-                    #         f"gscale{kind}": gscale,
-                    #     }
-                    # )
-                    d.update({f"p{100 * q:.1f}_{kind}": f * v for q, v in zip(quantiles, values)})
+
+            # structure returned data
+            d.update(
+                {
+                    f"wloc{kind}": wloc,
+                    f"wscale{kind}": wscale,
+                    f"wshape{kind}": wshape,
+                    f"gloc{kind}": gloc,
+                    f"gscale{kind}": gscale,
+                }
+            )
+            d.update({f"p{100 * q:.1f}_{kind}": f * v for q, v in zip(quantiles, values)})
+
+            if include_samples:
+                d.update({f"{kind}ima": f * mx})    # use original sign
 
         return d
 
