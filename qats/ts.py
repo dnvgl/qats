@@ -1322,25 +1322,19 @@ class TimeSeries(object):
             end         Last value of time array [s]
             duration    end - start [s]
             dtavg       Average time step [s]
-            mean        Mean value of signal array
-            std         Unbiased standard deviation of signal array
-            skew        Unbiased skewness of signal array (=0 for normal distribution)
-            kurt        Unbiased kurtosis of signal array (=3 for normal distribution)
-            min         Minimum value of signal array
-            max         Maximum value of signal array
+            mean        Sample mean
+            std         Unbiased standard deviation of sample
+            skew        Unbiased skewness of sample (=0 for normal distribution)
+            kurt        Unbiased kurtosis of sample (=3 for normal distribution)
+            min         Sample minimum
+            max         Sample maximum
             tz          Average mean crossing period [s]
-            wlocmax     Weibull distribution location parameter fitted to sample of global maxima
-            wscalemax   Weibull distribution scale parameter fitted to sample of global maxima
-            wshapemax   Weibull distribution shape parameter fitted to sample of global maxima
-            glocmax     Gumbel distribution location parameter estimated from Weibull maximum distribution and `statsdur`
-            gscalemax   Gumbel distribution scale parameter estimated from Weibull maximum distribution and `statsdur`
-            p_*max ..   Extreme values estimated from the Gumbel maximum distribution, e.g. p_90 is the 0.9 quantile
-            wlocmin     Weibull distribution location parameter fitted to sample of global minima
-            wscalemin   Weibull distribution scale parameter fitted to sample of global minima
-            wshapemin   Weibull distribution shape parameter fitted to sample of global minima
-            glocmin     Gumbel distribution location parameter estimated from Weibull minimum distribution and `statsdur`
-            gscalemin   Gumbel distribution scale parameter estimated from Weibull minimum distribution and `statsdur`
-            p_*min ..   Extreme values estimated from the Gumbel minimum distribution, e.g. p_90 is the 0.9 quantile
+            p*max ..    Extreme maximum estimates from the Gumbel distribution fitted to sample of largest maxima.
+                        p90max is the 90 percentile in the distribution of largest maxima. Reference duration
+                        is `statsdur` e.g. 10800s is 3hours
+            p*min ..    Extreme minimum estimates from the Gumbel distribution fitted to sample of smalles minima.
+                        p90min is the 90 percentile in the distribution of smalles minima. Reference duration
+                        is `statsdur` e.g. 10800s is 3hours
 
 
         See Also
@@ -1362,10 +1356,6 @@ class TimeSeries(object):
 
         >>> stats = ts.stats(twin=(500., 1e12))
         """
-        # todo: consider to remove Weibull and Gumbel parameters from returned dict. The minimum distribution
-        #  parameters can be difficult to understand (maybe misleading) becayse we flip the sample to use the same
-        #  method as we use for estimating the maximum distributions.
-
         # get time series as array
         t, x = self.get(**kwargs)
 
@@ -1388,15 +1378,6 @@ class TimeSeries(object):
             n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
 
             if np.size(mx) <= 1:
-                # d.update(
-                #     {
-                #         f"wloc{kind}": np.nan,
-                #         f"wscale{kind}": np.nan,
-                #         f"wshape{kind}": np.nan,
-                #         f"gloc{kind}": np.nan,
-                #         f"gscale{kind}": np.nan,
-                #     }
-                # )
                 d.update({f"p{100 * q:.1f}_{kind}": np.nan for q in quantiles})
             else:
                 wloc, wscale, wshape = pwm(mx)
@@ -1418,15 +1399,6 @@ class TimeSeries(object):
                 else:
                     values = g.invcdf(p=quantiles)
                 finally:
-                    # d.update(
-                    #     {
-                    #         f"wloc{kind}": wloc,
-                    #         f"wscale{kind}": wscale,
-                    #         f"wshape{kind}": wshape,
-                    #         f"gloc{kind}": gloc,
-                    #         f"gscale{kind}": gscale,
-                    #     }
-                    # )
                     d.update({f"p{100 * q:.1f}_{kind}": f * v for q, v in zip(quantiles, values)})
 
         return d
