@@ -1068,10 +1068,9 @@ class Qats(QMainWindow):
             Sample and fitted Gumbel distribution parameters
         """
         # get sample and fitted distribution parameters
-        sample = container.get('sample')
-        loc = container.get('loc')
-        scale = container.get('scale')
-        is_minima = container.get('minima')
+        sample = container.get("sample")
+        loc = container.get("loc")
+        scale = container.get("scale")
 
         # nomalize sample distribution and fitted distribution
         sample_dist = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
@@ -1092,7 +1091,7 @@ class Qats(QMainWindow):
         tabindex = self.tabs.indexOf(w)
         self.tabs.setTabToolTip(tabindex, "Plot fitted Gumbel cumulative distribution function "
                                           "to extremes (maxima/minima) of selected time series")
-        if is_minima:
+        if self.minima.isChecked():
             # TODO: Double check that this is correct considering sample multiplied with -1 etc.
             axes.invert_xaxis()
             txt = 'minima'
@@ -1243,7 +1242,6 @@ class Qats(QMainWindow):
         nperseg = self.psd_nperseg()
         psdnorm = self.psd_normalized()
         nbins = self.rfc_nbins()
-        minima_stats = self.minima.isChecked()
 
         # start calculation of filtered and windows time series trace
         worker = Worker(calculate_trace, container, twin, fargs)
@@ -1286,7 +1284,7 @@ class Qats(QMainWindow):
         fargs = self.filter_settings()
 
         # start calculation of filtered and windows time series trace
-        worker = Worker(calculate_gumbel_fit, container, twin, fargs)
+        worker = Worker(calculate_gumbel_fit, container, twin, fargs, minima=self.minima.isChecked())
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_gumbel)
         self.threadpool.start(worker)

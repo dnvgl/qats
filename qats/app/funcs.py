@@ -158,8 +158,8 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False):
         _, x = ts.get(twin=twin, filterargs=fargs)
 
         if minima:
-            # sample minimum value
-            sample.append(np.min(x))
+            # sample minimum value and flip to enable Gumbel fit
+            sample.append(-1. * np.min(x))
         else:
             # sample maximum value
             sample.append(np.max(x))
@@ -167,13 +167,9 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False):
     # numpy array sorted ascending
     sample = np.sort(np.array(sample))
 
-    # flip sample of minima to enable Gumbel fit
-    if minima:
-        sample *= -1
-
     # estimate gumbel distribution parameters
     loc, scale = gumbel_pwm(sample)
-    return dict(loc=loc, scale=scale, sample=sample, minima=minima)
+    return dict(loc=loc, scale=scale, sample=sample)
 
 
 def export_to_file(filename, db, names, twin, fargs):
