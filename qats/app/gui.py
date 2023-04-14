@@ -1252,7 +1252,7 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of statistics
-        worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats)
+        worker = Worker(calculate_stats, container, twin, fargs)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.tabulate_stats)
         worker.signals.result.connect(self.plot_weibull)
