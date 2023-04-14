@@ -1168,7 +1168,7 @@ class Qats(QMainWindow):
         header_labels = [STATS_LABELS_TOOLTIPS.get(k, [k, None])[0] for k in STATS_ORDER]
         self.stats_table.setHorizontalHeaderLabels(header_labels)
         for i, k in enumerate(STATS_ORDER):  # set tooltips for column headers
-            tooltip = STATS_LABELS_TOOLTIPS.get(k, [None, None])[0]
+            tooltip = STATS_LABELS_TOOLTIPS.get(k, [None, None])[1]
             if tooltip is not None:
                 self.stats_table.horizontalHeaderItem(i).setToolTip(tooltip)
         header = self.stats_table.horizontalHeader()
