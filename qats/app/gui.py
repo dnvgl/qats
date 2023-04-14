@@ -51,38 +51,39 @@ else:
     SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
 
-STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
-               "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]
+STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "p37.0_min", "p57.0_min", "p90.0_min",
+               "p37.0_max", "p57.0_max", "p90.0_max"]
 STATS_LABELS_TOOLTIPS = {
     "name": ("Name", "Time series name."),
     "min": ("Min.", "Sample minimum."),
     "max": ("Max.", "Sample maximum."),
-    "mean": ("Mean", "Mean/average."),
-    "std": ("Std.", "Unbiased standard deviation."),
-    "skew": ("Skew.", "Skewness."),
-    "kurt": ("Kurt.", "Kurtosis, Pearson’s definition (3.0 --> normal)."),
+    "mean": ("Mean", "Sample mean/average."),
+    "std": ("Std.", "Sample unbiased standard deviation."),
+    "skew": ("Skew.", "Sample skewness."),
+    "kurt": ("Kurt.", "Sample kurtosis, Pearson’s definition (3.0 --> normal)."),
     "tz": ("Tz", "Average mean crossing period (s)."),
-    "wloc": ("Wloc", "Weibull location parameter in distribution fitted to\n"
-                     "sample maxima or -1 multiplied with the sample minima."),
-    "wscale": ("Wscale", "Weibull scale parameter in distribution fitted to\n"
-                         "sample maxima or -1 multiplied with the sample minima."),
-    "wshape": ("Wshape", "Weibull shape parameter in distribution fitted to\n"
-                         "sample maxima or -1 multiplied with the sample minima."),
-    "gloc": ("Gloc", "Gumbel location parameter in sample extreme distribution,\n"
-                     "derived from sample maxima/minima distribution."),
-    "gscale": ("Gscale", "Gumbel location parameter in sample extreme distribution,\n"
-                         "derived from sample maxima/minima distribution."),
-    "p_37.00": ("P .37", "Most probable largest maximum (MPM). 37 percentile in\n"
-                         "the extreme maxima/minima distribution. The generic\n"
-                         "Gumbel (extreme value) distribution is derived from the Weibull\n"
-                         "distribution fitted to sample maxima/minima."),
-    "p_57.00": ("P .57", "Expected largest maximum. 57 percentile in\n"
-                         "the extreme maxima/minima distribution. The generic\n"
-                         "Gumbel (extreme value) distribution is derived from the Weibull\n"
-                         "distribution fitted to sample maxima/minima."),
-    "p_90.00": ("P .90", "90 percentile in the extreme maxima/minima distribution.\n"
-                         "The generic Gumbel (extreme value) distribution is derived from the\n"
-                         "Weibull distribution fitted to sample maxima/minima."),
+    "p37.0_min": ("P .37 Min.", "Most probable smallest minimum (MPM). 37 percentile in\n"
+                                "the extreme minima distribution. The generic\n"
+                                "Gumbel (extreme value) distribution is derived from the Weibull\n"
+                                "distribution fitted to sample minima."),
+    "p57.0_min": ("P .57 Min.", "Expected smallest minimum. 57 percentile in\n"
+                                "the extreme minima distribution. The generic\n"
+                                "Gumbel (extreme value) distribution is derived from the Weibull\n"
+                                "distribution fitted to sample minima."),
+    "p90.0_min": ("P .90 Min.", "90 percentile in the extreme minima distribution.\n"
+                                "The generic Gumbel (extreme value) distribution is derived from the\n"
+                                "Weibull distribution fitted to sample minima."),
+    "p37.0_max": ("P .37 Max.", "Most probable largest maximum (MPM). 37 percentile in\n"
+                                "the extreme maxima distribution. The generic\n"
+                                "Gumbel (extreme value) distribution is derived from the Weibull\n"
+                                "distribution fitted to sample maxima."),
+    "p57.0_max": ("P .57 Max.", "Expected largest maximum. 57 percentile in\n"
+                                "the extreme maxima distribution. The generic\n"
+                                "Gumbel (extreme value) distribution is derived from the Weibull\n"
+                                "distribution fitted to sample maxima."),
+    "p90.0_max": ("P .90 Max.", "90 percentile in the extreme maxima distribution.\n"
+                                "The generic Gumbel (extreme value) distribution is derived from the\n"
+                                "Weibull distribution fitted to sample maxima."),
 }
 
 # TODO: New method that generalize threading
