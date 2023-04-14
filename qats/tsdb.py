@@ -1746,10 +1746,44 @@ class TsDB(object):
 
         >>> # transpose dataframe to get statistics for each time series in rows instead of columns
         >>> df = df.transpose(copy=True)
+
         """
         df = pd.DataFrame(self.stats(statsdur=statsdur, names=names, ind=ind, store=store, fullkey=fullkey, **kwargs))
-
         return df
+
+    def stats_export(self, path, statsdur=10800., names=None, ind=None, store=True, fullkey=False, **kwargs):
+        """
+        Export time series statistics to spreadsheet.
+
+        Parameters
+        ----------
+        path : str
+            Export path e.g. 'statistics.xlsx'
+        statsdur : float, optional
+            Duration in seconds for estimation of extreme value distribution (Gumbel) from peak distribution (Weibull).
+            Default is 3 hours.
+        names : str or list or tuple, optional
+            Time series names
+        ind : int or list, optional
+            Time series indices in database
+        store : bool, optional
+            Disable time series storage. Default is to store the time series objects first time it is read.
+        fullkey : bool, optional
+            Use full key in returned container
+        kwargs : optional
+            see documentation of TimeSeries.stats() and TimeSeries.get() methods for available options
+
+        Notes
+        -----
+        Creates a spreadsheet with statistics for each time series organized in rows.
+
+        See also
+        --------
+        qats.TsDB.stats
+        """
+        df = self.stats_dataframe(statsdur=statsdur, names=names, ind=ind, store=store, fullkey=fullkey, **kwargs)
+        df = df.transpose(copy=True)
+        df.to_excel(path)
 
     def update(self, tsdb, names=None, shallow=False):
         """

@@ -133,6 +133,21 @@ Fit a parametric Weibull distribution to the largest 13% of the peak sample. Oft
     Comparison of empirical sample distribution and fitted parametric distribution on linearized scales.
 
 
+Export summary of statistics
+****************************
+
+Export time series statistics to spreadsheet
+- Sample statistics
+- Distribution parameters for minima and maxima distributions (Weibull)
+- Distribution parameters for smallest minimum and largest maximum distributions (Gumbel))
+- Key quantiles in the distributions of smallest minimum and largest maximum
+
+.. literalinclude:: examples/statistics.py
+   :language: python
+   :linenos:
+   :lines: 4-
+
+
 Merge files and export to different format
 ******************************************
 
