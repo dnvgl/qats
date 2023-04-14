@@ -990,6 +990,9 @@ class Qats(QMainWindow):
         p_ticks = np.log(np.log(1. / (1. - p_labels)))
         x_lb, x_ub, loc = None, None, None
 
+        # cycle colors
+        colors = cycle("bgrcmyk")
+
         # draw
         for name, value in container.items():
             if self.minima.isChecked():
@@ -1013,7 +1016,7 @@ class Qats(QMainWindow):
             x = np.sort(x)  # sort ascending
             mask = (x >= loc)  # weibull paper plot will fail for mv-loc < 0
             x_norm = np.log(x[mask] - loc)
-            ecdf_norm = np.log(np.log(1. / (1. - (np.arange(x.size) + 1.) / (x.size + 1.))))
+            ecdf_norm = np.log(np.log(1. / (1. - (np.arange(x.size) + 1.) / (x.size + 1.))))[mask]
             q_fitted = scale * (-np.log(1. - p_labels)) ** (1. / shape)  # x-loc
 
             # consider switching to np.any(), not sure what is more correct
@@ -1033,9 +1036,10 @@ class Qats(QMainWindow):
                     # adjust upper bound
                     x_ub = np.max(q_fitted)
 
-                # and draw weibull paper plot (avoid log(0))
-                self.weibull_axes.plot(x_norm, ecdf_norm[mask], 'o', label=name)
-                self.weibull_axes.plot(q_norm_fitted, p_ticks, '-')
+                # and draw weibull paper plot
+                color = next(colors)    # use same color on data points and fitted line
+                self.weibull_axes.plot(x_norm, ecdf_norm, f'o{color}', label=name)
+                self.weibull_axes.plot(q_norm_fitted, p_ticks, f'--{color}')
 
         # horizontal axis tick and labels
         # the labels x - location to enable comparison of multiple samples with different location parameter
