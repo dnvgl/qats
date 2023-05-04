@@ -48,7 +48,6 @@ LOGGING_LEVELS = dict(
 if sys.platform == "win32":
     SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")
 else:
-    # SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
     SETTINGS_FILE = os.path.join("~", ".config", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
 
@@ -1348,7 +1347,7 @@ class Qats(QMainWindow):
         try:
             self.db.update(newdb)
         except KeyError:
-            logging.error(f"The time series are not unique. You have probably loaded this file already.")
+            logging.error("The time series are not unique. You have probably loaded this file already.")
             return
 
         # fill item model with time series by unique id (common path is removed)
