@@ -48,7 +48,8 @@ LOGGING_LEVELS = dict(
 if sys.platform == "win32":
     SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")
 else:
-    SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
+    # SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
+    SETTINGS_FILE = os.path.join("~", ".config", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
 
 STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
@@ -1176,6 +1177,11 @@ class Qats(QMainWindow):
 
     def save_settings(self):
         """Save settings to file."""
+        # create directory for settings file if it doesn't exist
+        settings_dir = os.path.dirname(self.settings_file)
+        if not os.path.exists(settings_dir):
+            os.makedirs(settings_dir)
+        # dump settings to file
         with open(self.settings_file, "w") as fp:
             json.dump(self.settings, fp, indent=2)
 
