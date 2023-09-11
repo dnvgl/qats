@@ -5,6 +5,99 @@ import fnmatch
 import numpy as np
 
 
+def read_txt_names(path):
+    """
+    Read time series names from an ASCII file with data arranged column-wise. Accepts text files with multiple rows
+    containing meta data, stats etc. before the time series data block.
+
+    Parameters
+    ----------
+    path : str
+        File path
+
+    Returns
+    -------
+    list
+        Time series names
+
+    Notes
+    -----
+    The names are extracted from the header row (the row starting with 'time'). Time is assumed to be in the first column.
+    """
+    timekeys = []
+    with open(path) as f:
+        for line in f:
+            names = line.split()
+
+            # identify header row by time key, check that there is only one
+            timekeys = fnmatch.filter(names, '[Tt]ime*')
+            if len(timekeys) == 1:
+                # include units info
+                units = next(f).split()
+                names_with_units = [f"{n} ({u})" for n, u in zip(names, units)]
+
+                # skip the time array name assumed to be in the first column
+                return names_with_units[1:]
+            else:
+                continue
+
+    # ensure unique time
+    if len(timekeys) < 1:
+        raise KeyError(f"The file '{path}' does not contain a time vector")
+    elif len(timekeys) > 1:
+        raise KeyError(f"The file '{path}' contain duplicate time vectors")
+    else:
+        raise TypeError(f"Unknown error encountered when parsing {path}")
+
+
+def read_txt_data(path, ind=None):
+    """
+    Read time series arranged column wise on ascii formatted file. Accepts text files with multiple rows
+    containing meta data, stats etc. before the time series data block.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    ind : list of integers, optional
+        Defines which responses to include in returned array. Each of the indices in `ind` refer the sequence number
+        of the reponses. Note that `0` is the index of the time array.
+
+    Returns
+    -------
+    array
+        Time and data
+
+    Notes
+    -----
+    If ``ind`` is specified, time array is only included if `0` is included in the specified indices.
+
+    If ``ind`` is specified, the response arrays (1-D) are stored in the returned 2-D array in the same order as
+    specified. I.e. if ``ind=[0,10,2,3]``, then the response array with index `10` on .ts file is obtained from
+    ``data[1,:]``.
+
+    """
+    with open(path) as f:
+        for line in f:
+            names = line.split()
+
+            # identify header row by time key, check that there is only one
+            timekeys = fnmatch.filter(names, '[Tt]ime*')
+            if len(timekeys) == 1:
+                break
+            else:
+                continue
+
+        if len(timekeys) < 1:
+            raise KeyError(f"The file '{path}' does not contain a time vector")
+        elif len(timekeys) > 1:
+            raise KeyError(f"The file '{path}' contain duplicate time vectors")
+        else:
+            # load data from the remaining rows as an array, skip the row with unit information
+            data = np.loadtxt(f, skiprows=1, usecols=ind, unpack=True)
+            return data
+
+
 def read_dat_names(path):
     """
     Read time series names from an ASCII file with data arranged column-wise. The names are in the first non-commented

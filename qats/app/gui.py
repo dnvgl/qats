@@ -771,7 +771,7 @@ class Qats(QMainWindow):
                                         "RIFLEX SIMO binary files (*.bin);;"
                                         "RIFLEX SIMO ASCII files (*.asc);;"
                                         "SINTEF Ocean test data export format (*.mat);;"
-                                        "ASCII file with header (*.dat);;"
+                                        "ASCII file with header (*.dat, *.txt);;"
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"
                                         "Technical Data Management Streaming files (*.tdms);;"

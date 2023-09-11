@@ -47,7 +47,9 @@ from .io.tdms import (
 from .io.other import (
     read_dat_names,
     read_dat_data,
-    write_dat_data
+    write_dat_data,
+    read_txt_names,
+    read_txt_data
 )
 
 # todo: cross spectrum(scipy.signal.csd)
@@ -566,6 +568,11 @@ class TsDB(object):
 
             elif fext == '.dat':
                 data = read_dat_data(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+
+            elif fext == '.txt':
+                data = read_txt_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
 
@@ -1334,6 +1341,10 @@ class TsDB(object):
             elif fext == '.dat':
                 # plain column wise ascii format
                 names = read_dat_names(thefile)
+
+            elif fext == '.txt':
+                # plain column wise ascii format
+                names = read_txt_names(thefile)
 
             elif fext == '.mat':
                 # SINTEF Ocean test data export format based on Matlab .mat files.
