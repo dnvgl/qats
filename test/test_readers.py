@@ -43,9 +43,10 @@ class TestAllReaders(unittest.TestCase):
             ("example.csv", 6),
             ("integer.csv", 1),
             ("negative_time.csv", 1),
-            # # ascii files
+            # ascii files
             ("model_test_data.dat", 39),
-            # # tdms files
+            ("tab_waves.txt", 11),
+            # tdms files
             ("data.tdms", 4),
         ]
 
