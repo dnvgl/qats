@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v2
@@ -31,8 +31,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install flake8
-        # python -m pip install setuptools-scm flake8 wheel pyside2 h5py pymatreader matplotlib npTDMS numpy openpyxl pandas scipy
-        # changed 27.12.2023: install from requirements.txt, so that incompatibilities in requirements lead to failed tests
         python -m pip install -r requirements.txt
     - name: Lint with flake8
       run: |
@@ -40,17 +38,25 @@ jobs:
         #   flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Run tests
+    - name: Run unit tests
+      run: |
+        # run unit tests
+        python -m unittest discover
+    - name: Test installation
       env:
         QT_API: pyside2
       run: |
-        python -m unittest discover
-        python setup.py install
+        # install the package
+        pip install .
         # test running qats via entry points
         qats -h
         qats app -h
         qats config -h
         # test running qats via __main__ hook
         python -m qats -h
+    - name: Test documentation build
+      run: |
+        # install dev requirements to enable sphinx-build
+        pip install -r requirements-dev.txt
         # test that building documentation does not fail
         sphinx-build -b html docs/source docs/_build

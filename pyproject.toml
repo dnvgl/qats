@@ -1,0 +1,80 @@
+# pyproject.toml
+# https://setuptools.pypa.io/en/latest/userguide/quickstart.html
+# https://github.com/pypa/setuptools_scm#setuptools_scm
+
+[build-system]
+requires = [
+  "setuptools>=64", 
+  "setuptools_scm[toml]>=8"
+]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "qats"
+description = "Library for efficient processing and visualization of time series"
+readme = "README.md"
+license.file = "LICENSE"
+requires-python = ">=3.8"
+dynamic = [
+    "version",
+    "dependencies",
+]
+authors = [{name="Per Voie"}, {name="Erling Lone"}]  # {name="", email=""}
+# urls = {"Issue Tracker"="https://github.com/dnvgl/qats/issues","Documentation"="https://qats.readthedocs.io", "Changelog"="https://github.com/dnvgl/qats/blob/master/CHANGELOG.md"}
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: MIT License",
+]
+
+[project.urls]
+# https://flit.pypa.io/en/stable/pyproject_toml.html#pyproject-project-urls
+Source = "https://github.com/dnvgl/qats"
+Documentation = "https://qats.readthedocs.io"
+Download = "https://pypi.org/project/qats/"
+Issuetracker = "https://github.com/dnvgl/qats/issues"
+
+# entry points, ref.
+# https://setuptools.pypa.io/en/latest/userguide/quickstart.html#entry-points-and-automatic-script-creation
+[project.scripts]
+qats = "qats.cli:main"
+
+[project.gui-scripts]
+qats-app = "qats.cli:launch_app"
+
+# [HOLD] consider how to (or the need to) include "package_data"
+# syntax in setup.py was:
+# package_data={
+#         "qats.app": ["qats.ico"],
+#     },
+
+
+[tool.setuptools.packages.find]
+# - All the following settings are optional:
+where = ["."]         # ["."] by default
+include = ["*"]       # ["*"] by default
+exclude = ["test*"]   # empty by default
+# - additional excludes are included in MANIFEST.in, as a workaround for current limitations in pyproject.toml
+#   (ref. e.g. https://github.com/pypa/setuptools/issues/3341)
+# namespaces = false  # true by default
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+
+[tool.setuptools_scm]
+# - A version file can be written by setuptools_scm if specified
+# - for setuptools_scm==7.10, the syntax is:
+# write_to = "qats/_version.py"
+# - for setuptools_scm>=8.0, the syntax is:
+version_file = "qats/_version.py"

@@ -4,15 +4,13 @@ Library for efficient processing and visualization of time series.
 """
 from .tsdb import TsDB
 from .ts import TimeSeries
-from pkg_resources import get_distribution, DistributionNotFound
 
-# get version
+# version string
 try:
-    # version at runtime from distribution/package info
-    __version__ = get_distribution("qats").version
-except DistributionNotFound:
-    # package is not installed
+    from ._version import __version__
+except ImportError:
     __version__ = ""
 
+# summary
 __summary__ = __doc__
 

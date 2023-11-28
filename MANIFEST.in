@@ -1,0 +1,18 @@
+# MANIFEST.in is included as a workaround for current limitations in pyproject.toml
+# (see e.g. https://github.com/pypa/setuptools/issues/3341)
+exclude \
+    .env* \
+    .git* \
+    .github\** \
+    .readthedocs.yaml \    
+    data\** \
+    test\** \
+    version_bumper.py \
+    tmp*\** \
+    .vscode\* \
+
+global-exclude \
+    *.py[cod]$ {2:.DS_Store} \
+    *.egg-info\* \
+    _version.py \
+
