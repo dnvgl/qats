@@ -4,7 +4,9 @@ Module for testing signal processing functions
 """
 import unittest
 import numpy as np
-from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass, psd
+import os
+from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass, psd, find_maxima
+from qats import TsDB
 
 
 class TestSignal(unittest.TestCase):
@@ -14,6 +16,10 @@ class TestSignal(unittest.TestCase):
         self.x2 = 0.15 * np.sin(2. * np.pi * 0.20 * self.t)
         self.x = self.x1 + self.x2
         self.xnoise = self.x + 0.1 * np.random.randn(np.size(self.x))
+
+        self.data_directory = os.path.join(os.path.dirname(__file__), '..', 'data')
+        self.peaks_file = "example.peaks.ts"
+        self.peaks_path = os.path.join(self.data_directory, self.peaks_file)
 
     def test_average_frequency(self):
         """Check that the average frequency is correct."""
@@ -116,6 +122,21 @@ class TestSignal(unittest.TestCase):
         f, _ = psd(self.x, dt)
         self.assertAlmostEqual(np.min(f), 0., delta=1.e-6)
 
+    def test_find_maxima_global(self):
+        """ 
+        Check that correct number of global maxima is found, including a last one 
+        between the last mean-level up- and down-crossing.
+        Ref. issue #106: https://github.com/dnvgl/qats/issues/106
+        """
+        db = TsDB.fromfile(self.peaks_path)
+        ts = db.get(ind=0)
+        peaks, _ = find_maxima(ts.x, local=False)
+        npeaks = peaks.size
+
+        # this time series has 842 global maxima, including one that is after the last up-crossing
+        # but before a last down-crossing 
+        self.assertEqual(npeaks, 842)
+        
 
 if __name__ == '__main__':
     unittest.main()
