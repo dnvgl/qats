@@ -124,19 +124,32 @@ class TestSignal(unittest.TestCase):
 
     def test_find_maxima_global(self):
         """ 
-        Check that correct number of global maxima is found, including a last one 
-        between the last mean-level up- and down-crossing.
-        Ref. issue #106: https://github.com/dnvgl/qats/issues/106
+        Check that correct number of global maxima is found
+        * end points shoult not be included
+        * if down-crossing after last up-crossing, peak in-between should be included
+        
+        This test would have caught issue #106: https://github.com/dnvgl/qats/issues/106
         """
         db = TsDB.fromfile(self.peaks_path)
         ts = db.get(ind=0)
-        peaks, _ = find_maxima(ts.x, local=False)
-        npeaks = peaks.size
 
-        # this time series has 842 global maxima, including one that is after the last up-crossing
-        # but before a last down-crossing 
-        self.assertEqual(npeaks, 842)
+        # this time series has 842 global maxima
+        # * the last global maximum is between an up-crossing and a down-crossing
+        # * the last up-crossing is between the last two points in the series - this 
+        #   previously lead find_maxima() to erroneously identify the end point as an
+        #   additional global maximum (=> 843 maxima), ref. issue 106.
+        x1 = ts.x
+        peaks1, _ = find_maxima(x1, local=False)
+        npeaks1 = peaks1.size
+        self.assertEqual(npeaks1, 842)
         
+        # also check that if the last mean-level crossing is a down-crossing, the
+        # global maximum of this last half-cycle is included (otherwise, only 841 peaks
+        # will be found)
+        x2 = x1[:-10]
+        peaks2, _ = find_maxima(x2, local=False)
+        npeaks2 = peaks2.size
+        self.assertEqual(npeaks2, 842)
 
 if __name__ == '__main__':
     unittest.main()
