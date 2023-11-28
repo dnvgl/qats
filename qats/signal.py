@@ -6,6 +6,7 @@ Module with functions for signal processing.
 import numpy as np
 from scipy.fftpack import fft, ifft, rfft, irfft
 from scipy.signal import welch, butter, filtfilt, sosfiltfilt, csd as spcsd, coherence as spcoherence
+import warnings
 
 
 def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
@@ -475,10 +476,7 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     threshold : float, optional
         Include only maxima larger than specified treshold. Default is not to remove any of the maxima identified.
     up : bool, optional
-        If True (default), identify maxima between up-crossings. If False, identify maxima between down-crossings.
-        This parameter is only relevant when global maxima are considered (``local=False``, the default).
-        Note that as of version 4.12, this parameter is obsolete as both options should yield the same array of
-        maxima - see note below.
+        This parameter is deprecated and has no effect on the peak/maxima identification.
 
     Returns
     -------
@@ -496,8 +494,9 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     When extracting global maxima (``local=False``, the default), positive half-cycles at the beginning or end of the
     time series are included. For example, if there is a mean-level up-crossing before the first down-crossing, the
     maximum value between these crossings is included. Similarly, if there is a down-crossing after the last
-    up-crossing, the maximum value between these crossings is included. In practice, this implies that ``up=True`` and
-    ``up=False`` should yield the same maxima arrays.
+    up-crossing, the maximum value between these crossings is included. This also implies that there is no difference
+    in considering mean level up-crossings (`up=True`) vs. down-crossings (`up=False`). The `up` parameter is
+    therefore deprecated.
 
     Examples
     --------
@@ -523,6 +522,10 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     >>> time_maxima = time[indices]
 
     """
+    # parameter `up` is deprecated and has no effect
+    if up is not True:
+        warnings.warn("qats.signal.find_maxima: parameter `up` is deprecated and has no effect", category=DeprecationWarning)
+    
     # remove mean value from time series to identify crossings
     x_ = x - np.mean(x)
 
@@ -537,27 +540,14 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
         crossing_indices_up = np.where(crossings == 1)[0] + 1   # up-crossings
         crossing_indices_do = np.where(crossings == -1)[0] + 1  # down-crossings
 
-        # consider maxima between up- or down-crossings?
-        if up:
-            # maxima between up-crossings
-            crossing_indices = crossing_indices_up
+        # use up-crossings as the basis
+        crossing_indices = crossing_indices_up
 
-            # if there is a down-crossing after the last up-crossing, add that crossing as well
-            # (this is to avoid losing the last peak, and is particularly important for problems with few crossings,
-            #  e.g., due to low-frequent oscillations)
-            if crossing_indices[-1] < crossing_indices_do[-1]:
-                crossing_indices = np.append(crossing_indices, crossing_indices_do[-1])
-
-        else:
-            # maxima between down-crossings
-            crossing_indices = crossing_indices_do
-
-            # if there is an up-crossing before the first down-crossing, add that crossing as well
-            # (this is to avoid losing the first peak, and is particularly important for problems with few crossings,
-            #  e.g., due to low-frequent oscillations)
-            if crossing_indices[0] > crossing_indices_up[0]:
-                # insert first up-crossing as first crossing index
-                crossing_indices = np.insert(crossing_indices, 0, crossing_indices_up[0])
+        # if there is a down-crossing after the last up-crossing, add that crossing as well
+        # (this is to avoid losing the last peak, and is particularly important for problems with few crossings,
+        #  e.g., due to low-frequent oscillations)
+        if crossing_indices_up[-1] < crossing_indices_do[-1]:
+            crossing_indices = np.append(crossing_indices, crossing_indices_do[-1])
 
         # number of crossings and number of peaks
         n_crossings = crossing_indices.size
