@@ -106,3 +106,5 @@ ENV/
 # misc
 code-snippets/
 
+# local test folders
+tmp*/*
