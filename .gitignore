@@ -106,5 +106,8 @@ ENV/
 # misc
 code-snippets/
 
+# Version file written by setuptools-scm
+**/_version.py
+
 # local test folders
 tmp*/*

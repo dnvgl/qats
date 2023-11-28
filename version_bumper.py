@@ -3,13 +3,7 @@
 Set new version tag, using git command line interface.
 
 In order to obtain the current version (before setting new), git command 'git describe --tag' is used. This will
-yield version tags like '4.1.0' or '4.1.0-1-g82869e0'.
-
-Alternatively, pgk_resources.get_distribution (available through setuptools) could be used. This would yield version
-tags like '4.1.0' or '4.0.1.dev0+g963a10f.d20190823', i.e. with slightly better description of development version.
-However; information about development version is not relevant here, and also the use of pkg_resources.get_distribution
-increases the risk of extracting version for another qats installation on the computer (e.g. if this script is invoked
-within the wrong conda/virtual environment.
+yield version tags like '1.1.0' or '1.1.0-1-g82869e0'.
 
 Note: user is prompted for approval on command line before new tag is actually set.
 """
@@ -17,40 +11,20 @@ import argparse
 import os
 import sys
 import textwrap
-from pkg_resources import get_distribution
 
-
-def get_version_setuptools(package="qats", return_dev=False):
-    # get version (will raise DistributionNotFound error if package is not found/installed)
-    version_string = get_distribution(package).version
-
-    version = version_string.split(".", maxsplit=2)
-    assert len(version) == 3, f"Not able to interpret version string: {version_string}"
-
-    # extract major, minor, micro
-    major, minor, micro = version
-
-    # interpret/correct micro
-    if "-" in micro:
-        # dev info included in micro
-        micro, dev = micro.split(".", maxsplit=1)
-    else:
-        # pure major.minor.micro version, no dev part of tag
-        dev = ""
-
-    if return_dev:
-        return major, minor, micro, dev
-    else:
-        return major, minor, micro
-
+PREFIX = ""
 
 def get_version_git(return_dev=False):
+    global PREFIX
     # get version (will raise DistributionNotFound error if package is not found/installed)
     version_string = os.popen("git describe --tag").read().strip()
 
     if version_string.startswith("fatal"):
         # git failed, probably because not invoked at root of a git repo (.git not found)
         raise Exception("Not able to extract version using git")
+    elif version_string.startswith("v"):
+        PREFIX = "v"
+        version_string = version_string.lstrip(PREFIX)
 
     version = version_string.split(".", maxsplit=2)
     assert len(version) == 3, f"Not able to interpret version string: {version_string}"
@@ -110,12 +84,15 @@ def query_yes_no(question, default="yes"):
                              "(or 'y' or 'n').\n")
 
 
-def construct_version_string(major, minor, micro, dev=None):
+def construct_version_string(major, minor, micro, dev=None, prefix=None):
     """
-    Construct version tag: "major.minor.micro" (or if 'dev' is specified: "major.minor.micro-dev").
+    Construct version tag: "[prefix]major.minor.micro" (or if 'dev' is specified: "major.minor.micro-dev").
     """
-    version_tag = f"{major}.{minor}.{micro}"
-    if dev is not None:
+    if prefix is None:
+        # if prefix is not specified, use the global variable
+        prefix = PREFIX
+    version_tag = f"{prefix}{major}.{minor}.{micro}"
+    if dev:
         version_tag += f"-{dev}"
     return version_tag
 
