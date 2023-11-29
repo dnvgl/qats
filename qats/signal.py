@@ -6,6 +6,7 @@ Module with functions for signal processing.
 import numpy as np
 from scipy.fftpack import fft, ifft, rfft, irfft
 from scipy.signal import welch, butter, filtfilt, sosfiltfilt, csd as spcsd, coherence as spcoherence
+import warnings
 
 
 def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
@@ -473,9 +474,9 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     local : bool, optional
         If True, local maxima are also included (see notes below). Default is to include only global maxima.
     threshold : float, optional
-        Include only maxima larger than specified treshold. Default is mean value of signal.
+        Include only maxima larger than specified treshold. Default is not to remove any of the maxima identified.
     up : bool, optional
-        If True (default), identify maxima between up-crossings. If False, identify maxima between down-crossings.
+        This parameter is deprecated and has no effect on the peak/maxima identification.
 
     Returns
     -------
@@ -488,6 +489,14 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     -----
     By default only 'global' maxima are considered, i.e. the largest maximum between each mean-level up-crossing.
     If ``local=True``, local maxima are also included (first derivative is zero, second derivative is negative).
+
+    *Changes from version 4.12.*
+    When extracting global maxima (``local=False``, the default), positive half-cycles at the beginning or end of the
+    time series are included. For example, if there is a mean-level up-crossing before the first down-crossing, the
+    maximum value between these crossings is included. Similarly, if there is a down-crossing after the last
+    up-crossing, the maximum value between these crossings is included. This also implies that there is no difference
+    in considering mean level up-crossings (`up=True`) vs. down-crossings (`up=False`). The `up` parameter is
+    therefore deprecated.
 
     Examples
     --------
@@ -504,37 +513,53 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
 
     >>> time_maxima = time[indices]
 
+    Note that the returned maxima (and corresponding indices) are sorted in ascending order. To reverse this and obtain
+    an array with the maxima arranged in order of appearance, the following code may be used:
+
+    >>> indsort = np.argsort(indices)
+    >>> maxima = maxima[indsort]
+    >>> indices = indices[indsort]
+    >>> time_maxima = time[indices]
+
     """
+    # parameter `up` is deprecated and has no effect
+    if up is not True:
+        warnings.warn("qats.signal.find_maxima: parameter `up` is deprecated and has no effect", category=DeprecationWarning)
+    
     # remove mean value from time series to identify crossings
     x_ = x - np.mean(x)
 
-    if up:
-        crossings = 1 * (x_ > 0.)
-        indicator = 1
-    else:
-        crossings = 1 * (x_ < 0.)
-        indicator = -1
-
-    crossings = np.diff(crossings)          # array with 1 at position of each up-crossing and -1 at each down-crossing
-    crossings[crossings != indicator] = 0   # remove crossings with opposite direction
-    n_crossings = np.sum(crossings)         # number of crossings
-
-    # no global or local maxima if the signal crosses mean only once
-    if n_crossings < 2:
-        return np.array([]), np.array([], dtype=int)
-
-    crossing_indices = np.where(crossings == indicator)[0] + 1  # indices for crossings
-
-    # add first and last index in time series to avoid loosing important peaks, particularly important for problems
-    # with low-frequent oscillations
-    if crossing_indices[-1] < (x_.size - 1):
-        crossing_indices = np.append(crossing_indices, [x_.size - 1])
-
     # find maxima
     if not local:
-        # global
-        maxima = np.zeros(n_crossings)
-        maxima_indices = np.zeros(n_crossings, dtype=int)
+        # global maxima (largest between mean-level crossings)
+        # identify crossings
+        crossings = 1 * (x_ > 0.)
+        crossings = np.diff(crossings)  # array with 1 at position of each up-crossing and -1 at each down-crossing
+
+        # get array indices for up-/down-crossings
+        crossing_indices_up = np.where(crossings == 1)[0] + 1   # up-crossings
+        crossing_indices_do = np.where(crossings == -1)[0] + 1  # down-crossings
+
+        # use up-crossings as the basis
+        crossing_indices = crossing_indices_up
+
+        # if there is a down-crossing after the last up-crossing, add that crossing as well
+        # (this is to avoid losing the last peak, and is particularly important for problems with few crossings,
+        #  e.g., due to low-frequent oscillations)
+        if crossing_indices_up[-1] < crossing_indices_do[-1]:
+            crossing_indices = np.append(crossing_indices, crossing_indices_do[-1])
+
+        # number of crossings and number of peaks
+        n_crossings = crossing_indices.size
+        n_peaks = n_crossings - 1
+
+        # no global maxima if the signal crosses mean only once
+        if n_crossings < 2:
+            return np.array([]), np.array([], dtype=int)
+
+        # initiate arrays to be populated subsequently
+        maxima = np.zeros(n_peaks)
+        maxima_indices = np.zeros(n_peaks, dtype=int)
 
         # loop to find max. between each up-crossing:
         for j, start in enumerate(crossing_indices[:-1]):
@@ -543,7 +568,7 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
             maxima_indices[j] = start + np.argmax(x[start:stop])
 
     else:
-        # local
+        # local maxima (all peaks)
         ds = 1 * (np.diff(x) < 0)     # zero while ascending (positive derivative) and 1 while descending
         ds = np.append(ds, [0])       # lost data points when differentiating, close cycles by adding 0 at end
         d2s = np.diff(ds)             # equal to +/-1 at each turning point, +1 indicates maxima
@@ -551,6 +576,12 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
 
         maxima_indices = np.where(d2s == 1)[0]  # unpack tuple returned from np.where
         maxima = x[maxima_indices]
+
+        n_peaks = maxima.size
+
+        # return quickly if no peaks/local maxima were found (e.g., if time series is monotonically increasing)
+        if n_peaks == 0:
+            return np.array([]), np.array([], dtype=int)
 
     # discard maxima lower than specified threshold
     if threshold is not None:

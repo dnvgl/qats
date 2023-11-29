@@ -4,7 +4,9 @@ Module for testing signal processing functions
 """
 import unittest
 import numpy as np
-from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass, psd
+import os
+from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass, psd, find_maxima
+from qats import TsDB
 
 
 class TestSignal(unittest.TestCase):
@@ -14,6 +16,10 @@ class TestSignal(unittest.TestCase):
         self.x2 = 0.15 * np.sin(2. * np.pi * 0.20 * self.t)
         self.x = self.x1 + self.x2
         self.xnoise = self.x + 0.1 * np.random.randn(np.size(self.x))
+
+        self.data_directory = os.path.join(os.path.dirname(__file__), '..', 'data')
+        self.peaks_file = "example.peaks.ts"
+        self.peaks_path = os.path.join(self.data_directory, self.peaks_file)
 
     def test_average_frequency(self):
         """Check that the average frequency is correct."""
@@ -116,6 +122,34 @@ class TestSignal(unittest.TestCase):
         f, _ = psd(self.x, dt)
         self.assertAlmostEqual(np.min(f), 0., delta=1.e-6)
 
+    def test_find_maxima_global(self):
+        """ 
+        Check that correct number of global maxima is found
+        * end points shoult not be included
+        * if down-crossing after last up-crossing, peak in-between should be included
+        
+        This test would have caught issue #106: https://github.com/dnvgl/qats/issues/106
+        """
+        db = TsDB.fromfile(self.peaks_path)
+        ts = db.get(ind=0)
+
+        # this time series has 842 global maxima
+        # * the last global maximum is between an up-crossing and a down-crossing
+        # * the last up-crossing is between the last two points in the series - this 
+        #   previously lead find_maxima() to erroneously identify the end point as an
+        #   additional global maximum (=> 843 maxima), ref. issue 106.
+        x1 = ts.x
+        peaks1, _ = find_maxima(x1, local=False)
+        npeaks1 = peaks1.size
+        self.assertEqual(npeaks1, 842)
+        
+        # also check that if the last mean-level crossing is a down-crossing, the
+        # global maximum of this last half-cycle is included (otherwise, only 841 peaks
+        # will be found)
+        x2 = x1[:-10]
+        peaks2, _ = find_maxima(x2, local=False)
+        npeaks2 = peaks2.size
+        self.assertEqual(npeaks2, 842)
 
 if __name__ == '__main__':
     unittest.main()
