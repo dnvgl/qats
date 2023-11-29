@@ -19,7 +19,7 @@ We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https:
 Click link to see all [unreleased] changes to the master branch of the repository. 
 For comparison to specific branches, use the [GitHub compare](https://github.com/dnvgl/qats/compare) page.
 
-## [4.12.0] (29.11.2023)
+## [4.12.1] (29.11.2023)
 
 This release includes pull request [#109](https://github.com/dnvgl/qats/pull/109).
 
@@ -307,8 +307,8 @@ First proper release to [PyPI](https://pypi.org/project/qats/).
 
 <!-- Links to be defined below here -->
 
-[Unreleased]: https://github.com/dnvgl/qats/compare/4.12.0...HEAD
-[4.12.0]: https://github.com/dnvgl/qats/compare/4.11.1...4.12.0
+[Unreleased]: https://github.com/dnvgl/qats/compare/4.12.1...HEAD
+[4.12.1]: https://github.com/dnvgl/qats/compare/4.11.1...4.12.1
 [4.11.1]: https://github.com/dnvgl/qats/compare/4.11.0...4.11.1
 [4.11.0]: https://github.com/dnvgl/qats/compare/4.10.0...4.11.0
 [4.10.0]: https://github.com/dnvgl/qats/compare/4.9.2...4.10.0
