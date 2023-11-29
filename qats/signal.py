@@ -6,6 +6,7 @@ Module with functions for signal processing.
 import numpy as np
 from scipy.fftpack import fft, ifft, rfft, irfft
 from scipy.signal import welch, butter, filtfilt, sosfiltfilt, csd as spcsd, coherence as spcoherence
+from typing import Tuple
 
 
 def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
@@ -460,6 +461,47 @@ def average_frequency(t: np.ndarray, x: np.ndarray, up: bool = True) -> float:
     i = np.where(crossings == indicator)[0] + 1  # indices for crossings
     d = (t[i[-1]] - t[i[0]]) / (np.abs(np.sum(crossings)) - 1)  # duration between first and last crossing
     return 1./d
+
+
+def envelope(x: np.ndarray, n: int = 1, split: bool = False) -> Tuple[np.array, np.array]:
+    """
+    Find upper and lower envelopes.
+
+    Parameters
+    ----------
+    x :  array
+        Data signal
+    n : int, optional
+        Chunk size, use this if the size the signal is too big.
+    split : bool, optional
+        Split the signal in half along its mean. Might help identifying the envelope in some cases.
+
+    Returns
+    -------
+    array
+        Indices of upper envelope
+    array
+        Indices of lower envelope
+    """
+    # local min/max
+    lmin = (np.diff(np.sign(np.diff(x))) > 0).nonzero()[0] + 1
+    # locals max
+    lmax = (np.diff(np.sign(np.diff(x))) < 0).nonzero()[0] + 1
+
+    if split:
+        # s_mid is zero if s centered around x-axis or more generally mean of signal
+        x_mid = np.mean(x)
+        # pre-sorting of locals min based on relative position with respect to s_mid
+        lmin = lmin[x[lmin] < x_mid]
+        # pre-sorting of local max based on relative position with respect to s_mid
+        lmax = lmax[x[lmax] > x_mid]
+
+    # global min of n-chunks of locals min
+    lmin = lmin[[i + np.argmin(x[lmin[i:i + n]]) for i in range(0, len(lmin), n)]]
+    # global max of n-chunks of locals max
+    lmax = lmax[[i + np.argmax(x[lmax[i:i + n]]) for i in range(0, len(lmax), x)]]
+
+    return lmin, lmax
 
 
 def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True) -> (np.ndarray, np.ndarray):
