@@ -20,10 +20,10 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import json
-from pkg_resources import resource_filename, get_distribution, DistributionNotFound
+from importlib.metadata import version as importlib_version, PackageNotFoundError
+from pkg_resources import resource_filename
 from .logger import QLogger
 from .threading import Worker
-from .models import CustomSortFilterProxyModel
 from .widgets import CustomTabWidget, CustomTableWidgetItem, CustomTableWidget
 from ..tsdb import TsDB
 from ..stats.empirical import empirical_cdf
@@ -37,7 +37,6 @@ from .funcs import (
     calculate_gumbel_fit,
     calculate_stats
 )
-from ._qt_main_version import QT_MAIN_VERSION
 
 
 LOGGING_LEVELS = dict(
@@ -242,7 +241,7 @@ class Qats(QMainWindow):
         # initiate time series data base and checkable model and view with filter
         self.db = TsDB()
         self.db_source_model = QStandardItemModel()
-        self.db_proxy_model = CustomSortFilterProxyModel()
+        self.db_proxy_model = QSortFilterProxyModel()
         self.db_proxy_model.setDynamicSortFilter(True)
         self.db_proxy_model.setSourceModel(self.db_source_model)
         self.db_view = QListView()
@@ -253,19 +252,9 @@ class Qats(QMainWindow):
         self.db_view_filter_pattern.setPlaceholderText("type filter text")
         self.db_view_filter_pattern.setText("")
         self.db_view_filter_syntax = QComboBox()
-        # --- QRegExp is removed from qt6 (pyside6, pyqt6)
-        if QT_MAIN_VERSION == 5:
-            self.db_view_filter_syntax.addItem("Wildcard", QRegExp.Wildcard)
-            self.db_view_filter_syntax.addItem("Regular expression", QRegExp.RegExp)
-            self.db_view_filter_syntax.addItem("Fixed string", QRegExp.FixedString)
-        else:
-            # self.db_view_filter_syntax.addItem("Wildcard", Qt.MatchWildcard)
-            # self.db_view_filter_syntax.addItem("Regular expression", Qt.MatchRegularExpression)
-            # self.db_view_filter_syntax.addItem("Fixed string", Qt.MatchFixedString)
-            self.db_view_filter_syntax.addItem("Wildcard", "wildcard")
-            self.db_view_filter_syntax.addItem("Regular expression", "regexp")
-            self.db_view_filter_syntax.addItem("Fixed string", "fixedstring")
-        # --- 
+        self.db_view_filter_syntax.addItem("Wildcard", "wildcard")
+        self.db_view_filter_syntax.addItem("Regular expression", "regexp")
+        self.db_view_filter_syntax.addItem("Fixed string", "fixedstring")
         self.db_view_filter_pattern.textChanged.connect(self.model_view_filter_changed)
         self.db_view_filter_syntax.currentIndexChanged.connect(self.model_view_filter_changed)
         self.db_view_filter_casesensitivity.toggled.connect(self.model_view_filter_changed)
@@ -635,96 +624,47 @@ class Qats(QMainWindow):
         pattern = self.db_view_filter_pattern.text()
         # case sensitivity (if 'Case sensitive filter' is checked)
         case_sensitive = self.db_view_filter_casesensitivity.isChecked()
-        case_sensitivity = (case_sensitive and Qt.CaseSensitive or Qt.CaseInsensitive)  # qt.CaseSensitive | qt.CaseInsensitive
-        # handle differently if QRegExp is available (qt5)
-        if QT_MAIN_VERSION == 5:
-            syntax = QRegExp.PatternSyntax(filter_type)
-            reg_exp = QRegExp(pattern, case_sensitivity, syntax)
-            self.db_proxy_model.setFilterRegExp(reg_exp)
+        
+        # the code below works for python qt5 (pyside2/pyqt5) and qt6 (pyside6/pyqt6)
+        # pyside6: see the following links for documentation on QRegularExpression and the filter model (QSortFilterProxyModel)
+        #   https://doc.qt.io/qtforpython-6/PySide6/QtCore/QRegularExpression.html
+        #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#filtering
+        #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#PySide6.QtCore.QSortFilterProxyModel.filterAcceptsRow
+
+        # notes on the methods available for self.db_proxy_model (type: QSortFilterProxyModel)
+        #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
+        #   .setFilterRegularExpression(QRegularExpression) may not be used with .setFilterCaseSensitivity(...)
+        #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks the binding to what previously set)
+        #       * setting a filter case sensitivity afterwards breaks the binding to the regular expression
+        
+        # construct regexp string that may be used to initiate QRegularExpression instance
+        if filter_type == "wildcard":
+            # pad with wildcard ('*') to get expected behaviour
+            reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(f"*{pattern}*")
+        elif filter_type == "regexp":
+            # pattern string should be interpreted as a regexp pattern
+            reg_exp_pattern = pattern
+        elif filter_type == "fixedstring":
+            # according to https://doc.qt.io/qt-6/qregexp.html, a fixed string is 
+            # equivalent to using the regexp pattern on a string in which all 
+            # metacharacters are escaped using escape()
+            reg_exp_pattern = QRegularExpression.escape(pattern)
         else:
-            # pyside6: see the following links for documentation on QRegularExpression and the filter model (QSortFilterProxyModel)
-            #   https://doc.qt.io/qtforpython-6/PySide6/QtCore/QRegularExpression.html
-            #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#filtering
-            #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#PySide6.QtCore.QSortFilterProxyModel.filterAcceptsRow
+            raise ValueError(f"Unsupported filter type: {filter_type}")
+    
+        # options (for case sensitivity) to QRegularExpression construction
+        if case_sensitive:
+            # case sensitive is default for QRegularExpression => no options
+            options = {}
+        else:
+            # case insensitive => must be specified
+            options = {"options": QRegularExpression.CaseInsensitiveOption}
 
-            # notes on the methods available for self.db_proxy_model (type: QSortFilterProxyModel)
-            #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
-            #   .setFilterRegularExpression(QRegularExpression) may not be used with .setFilterCaseSensitivity(...)
-            #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks the binding to what previously set)
-            #       * setting a filter case sensitivity afterwards breaks the binding to the regular expression
-            
-            # options (for case sensitivity) to QRegularExpression construction
-            if case_sensitive:
-                # case sensitive is default for QRegularExpression => no options
-                options = {}
-            else:
-                # case insensitive => must be specified
-                options = {"options": QRegularExpression.CaseInsensitiveOption}
-            
-            # initiate regular expression variable to avoid error if not defined
-            reg_exp = None
-            
-            # construct QRegularExpression or set filter directly using proxy model methods (depending on filter type)
-            if filter_type == "wildcard":
-                # note: all options (1-3) below work as intended
-                #
-                # option 1: set wildcard filter directly (using proxy model methods)
-                # self.db_proxy_model.setFilterCaseSensitivity(case_sensitivity)  # Qt.CaseSensitive | Qt.CaseInsensitive
-                # self.db_proxy_model.setFilterWildcard(pattern)
-                # option 2: use regular expression instance, using .fromWildcard() method
-                # (pad with "*" to support empty string)
-                # reg_exp = QRegularExpression.fromWildcard(f"*{pattern}*", cs=case_sensitivity)  # cs: Qt.CaseSensitive | Qt.CaseInsensitive
-                # option 3: use regular expression, via string (note: should work but not tested)
-                reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(f"*{pattern}*")
-                reg_exp = QRegularExpression(reg_exp_pattern, **options)
-            elif filter_type == "regexp":
-                reg_exp = QRegularExpression(pattern, **options)
-            elif filter_type == "fixedstring":
-                # note: both options (1-2) below work as intended
-                #
-                # note: according to https://doc.qt.io/qt-6/qregexp.html, a fixed string is 
-                #       equivalent to using the regexp pattern on a string in which all 
-                #       metacharacters are escaped using escape()
-                #
-                # # option 1: set fixed string filter directly (using proxy model methods)
-                # self.db_proxy_model.setFilterCaseSensitivity(case_sensitivity)  # Qt.CaseSensitive | Qt.CaseInsensitive
-                # self.db_proxy_model.setFilterFixedString(pattern)
-                # option 2: use regular expression instance
-                reg_exp_pattern = QRegularExpression.escape(pattern)
-                reg_exp = QRegularExpression(reg_exp_pattern, **options)
-            else:
-                raise ValueError(f"Unsupported filter type: {filter_type}")
-            
-            if reg_exp is not None:
-                self.db_proxy_model.setFilterRegularExpression(reg_exp)
-
-        # --- debug ---
-        # TODO: remove debug print statements
-        print()
-        print(f"API_NAME = {QTPY_API_NAME}")
-        print(f"filter_type")
-        print(f"    value: {filter_type}")
-        print(f"case_sensitive")
-        print(f"    value : {case_sensitive}")
-        print(f"case_sensitivity")
-        print(f"    type : {type(case_sensitivity)}")
-        print(f"    value : {case_sensitivity}")
-        print(f"pattern")
-        print(f"    type : {type(pattern)}")
-        print(f"    value : {pattern}")
-        # print(f"syntax")
-        # print(f"    type : {type(syntax)}")
-        # print(f"    value : {syntax}")
-        print(f"reg_exp")
-        print(f"    type : {type(reg_exp)}")
-        print(f"    value : {reg_exp}")
-        print(f"self.db_proxy_model.filterCaseSensitivity()")
-        print(f"    type : {type(self.db_proxy_model.filterCaseSensitivity())}")
-        print(f"    value : {self.db_proxy_model.filterCaseSensitivity()}")
-        # ---
-
-            
-
+        # initiate QRegularExpression instance
+        reg_exp = QRegularExpression(reg_exp_pattern, **options)
+        
+        # assign reg exp to proxy model filter
+        self.db_proxy_model.setFilterRegularExpression(reg_exp)
 
     def on_about(self):
         """
@@ -733,8 +673,8 @@ class Qats(QMainWindow):
         # get distribution version
         try:
             # version at runtime from distribution/package info
-            version = get_distribution("qats").version
-        except DistributionNotFound:
+            version = importlib_version
+        except PackageNotFoundError:
             # package is not installed
             version = ""
 
@@ -1310,12 +1250,12 @@ class Qats(QMainWindow):
 
         # self.statusBar().showMessage(message, msecs=msecs)
 
-        if QTPY_API_NAME.endswith("6"):  # pyqt6 and pyside6
-            kwargs = {"timeout": msecs}
-        else:
-            kwargs = {"msecs": msecs}
-        
-        self.statusBar().showMessage(message, **kwargs)  # msecs=msecs)
+        # pyside6 uses 'timeout' keyword, pyqt6 uses 'msecs' keyword
+        # solve pragmatically by try-except
+        try:
+            self.statusBar().showMessage(message, timeout=msecs)
+        except TypeError:
+            self.statusBar().showMessage(message, msecs=msecs)
 
     def selected_series(self):
         """

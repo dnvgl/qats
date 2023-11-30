@@ -6,7 +6,6 @@ numpy >= 1.21.6
 openpyxl >= 3.0.5
 pandas >= 1.1.4
 qtpy >= 2.4.1
-# pyside2 >= 5.15.2 ; python_version < "3.11"
-# pyside6 ; python_version >= "3.11"
+pyside6
 scipy >= 1.7.2   # https://docs.scipy.org/doc/scipy/dev/toolchain.html#numpy
 pywin32; platform_system == "Windows"
