@@ -40,8 +40,7 @@ jobs:
       run: poetry install --no-root --without docs
     - name: Lint with flake8
       # Stop the build if there are Python syntax errors or undefined names. Exit-zero treats all errors as warnings.
-      run: |
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      run: python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Run unit tests
       run: pytest
     - name: Test installation
