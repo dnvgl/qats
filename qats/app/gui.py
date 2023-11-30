@@ -20,7 +20,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import json
-from importlib.metadata import version as importlib_version, PackageNotFoundError
 from pkg_resources import resource_filename
 from .logger import QLogger
 from .threading import Worker
@@ -37,6 +36,7 @@ from .funcs import (
     calculate_gumbel_fit,
     calculate_stats
 )
+from .._version import __version__
 
 
 LOGGING_LEVELS = dict(
@@ -670,14 +670,6 @@ class Qats(QMainWindow):
         """
         Show information about the application
         """
-        # get distribution version
-        try:
-            # version at runtime from distribution/package info
-            version = importlib_version
-        except PackageNotFoundError:
-            # package is not installed
-            version = ""
-
         msg = "This is a low threshold tool for inspection of time series, power spectra and statistics. " \
               "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
               "Import qats Python package and use the <a href='https://qats.readthedocs.io/en/latest/'>API</a> " \
@@ -692,7 +684,7 @@ class Qats(QMainWindow):
         msgbox.setIcon(QMessageBox.Information)
         msgbox.setTextFormat(Qt.RichText)
         msgbox.setText(msg.strip())
-        msgbox.setWindowTitle(f"About QATS - version {version}")
+        msgbox.setWindowTitle(f"About QATS - version {__version__}")
         msgbox.exec_()
 
     def on_clear(self):
