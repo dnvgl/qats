@@ -37,7 +37,7 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
     - name: Install dependencies and package
-      run: poetry install --without docs
+      run: poetry install --no-root --without docs
     - name: Run unit tests
       run: poetry run pytest
     - name: Lint with flake8
@@ -55,5 +55,5 @@ jobs:
       run: poetry build
     - name: Test documentation build
       run: |
-        poetry install --with docs
+        poetry install --no-root --with docs
         poetry run sphinx-build -b html docs/source docs/_build
