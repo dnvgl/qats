@@ -36,18 +36,17 @@ jobs:
         # Consider specifying version (version: 1.7.1 on Python 3.11)
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
-    - name: Install dependencies
-      run: poetry install --no-root --without docs
+    - name: Install dependencies and package
+      run: poetry install
     - name: Run unit tests
       run: pytest
     - name: Lint with flake8
       # Stop the build if there are Python syntax errors or undefined names. Exit-zero treats all errors as warnings.
-      run: python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test installation
       env:
         QT_API: pyside6
       run: |
-        poetry install --without docs
         qats -h
         qats app -h
         qats config -h
