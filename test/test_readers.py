@@ -8,15 +8,17 @@ from qats import TsDB
 import unittest
 import os
 import sys
+from pathlib import Path
 
 # todo: add test class for matlab
 
+ROOT = Path(__file__).resolve().parent
 
 class TestAllReaders(unittest.TestCase):
     def setUp(self):
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env
-        self.data_directory = os.path.join('..', 'data')
+        self.data_directory = os.path.join(ROOT, '..', 'data')
         # file name, number of (time series) keys
         self.files = [
             # sima h5 files
