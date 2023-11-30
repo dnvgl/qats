@@ -27,10 +27,9 @@ numpy = ">=1.21.6"
 openpyxl = ">=3.0.5"
 pandas = ">=1.1.4"
 qtpy = ">=1.9.0"
-pyside2 = {version = ">=5.15.2", python = "<3.11"}
-# pyqt5 = ">=5.15.2"
 scipy = ">=1.7.2"   # https://docs.scipy.org/doc/scipy/dev/toolchain.html#numpy
 pywin32 = {version = "^306", markers = "platform_system == 'Windows'"} # MUST check the appropriate constraint
+pyside6 = "^6.6.0"
 
 [tool.poetry.group.dev.dependencies]
 build = "^1.0.3"    # needed?
