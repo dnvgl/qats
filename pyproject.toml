@@ -42,7 +42,7 @@ classifiers = [
 Source = "https://github.com/dnvgl/qats"
 Documentation = "https://qats.readthedocs.io"
 Download = "https://pypi.org/project/qats/"
-Issuetracker = "https://github.com/dnvgl/qats/issues"
+Issues = "https://github.com/dnvgl/qats/issues"
 
 # entry points, ref.
 # https://setuptools.pypa.io/en/latest/userguide/quickstart.html#entry-points-and-automatic-script-creation
