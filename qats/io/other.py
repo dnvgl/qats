@@ -39,7 +39,7 @@ def read_dat_names(path):
         if len(timekeys) < 1:
             raise KeyError(f"The file '{path}' does not contain a time vector")
         elif len(timekeys) > 1:
-            raise KeyError(f"The file '{path}' contain duplicate time vectors")
+            raise KeyError(f"The file '{path}' contains duplicate time vectors")
 
     # skip the time array name assumed to be in the first column
     return names[1:]
@@ -72,6 +72,12 @@ def read_dat_data(path, ind=None):
 
     """
     with open(path, 'r') as f:
+        # skip commented lines at beginning of file
+        for line in f:
+            # break at first uncommented line (which is the header row and should not be read here)
+            if not line.startswith("#"):
+                break
+        
         # load data, skipping commented lines and the header row with keys (first uncommented line)
         data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
 

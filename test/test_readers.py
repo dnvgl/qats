@@ -52,6 +52,7 @@ class TestAllReaders(unittest.TestCase):
         ]
 
     def test_correct_number_of_timeseries(self):
+        """ Read key file, check number of keys (data not loaded) """
         failed = []
         for filename, nts in self.files:
             db = TsDB.fromfile(os.path.join(self.data_directory, filename))
@@ -62,6 +63,7 @@ class TestAllReaders(unittest.TestCase):
                         f"\n   *** ".join(failed))
 
     def test_correct_timeseries_size(self):
+        """ Load time series: check that it loads and that t.size matches x.size """
         failed = []
         for filename, _ in self.files:
             try:
