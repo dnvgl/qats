@@ -42,13 +42,10 @@ jobs:
     - name: Run unit tests
       run: pytest
     - name: Test installation
-      # quick-fix (see issue with pyside6 below): do not use pyside6 in test environment
-      # env:
-      #   QT_API: pyside6
+      env:
+        QT_API: pyside6
       run: |
-        # install the package
-        pip install .
-        # test running qats via entry points
+        poetry install --without docs
         qats -h
         qats app -h
         qats config -h
