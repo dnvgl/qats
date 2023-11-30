@@ -116,9 +116,7 @@ class TsDB(object):
             time series in database
         """
         for key in self.register_keys:
-            item = self.register[key]
-            if item is not None:
-                yield self.register[key]
+            yield self.get(name=key)
 
     def __len__(self):
         return self.n
