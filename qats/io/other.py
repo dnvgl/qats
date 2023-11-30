@@ -72,13 +72,7 @@ def read_dat_data(path, ind=None):
 
     """
     with open(path, 'r') as f:
-        # skip commmented lines at start of file
-        for line in f:
-            if not line.startswith("#"):
-                # skip all comment lines
-                break
-
-        # load data from the remaining rows as an array, skip the header row with keys (first row after comments)
+        # load data, skipping commented lines and the header row with keys (first uncommented line)
         data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
 
     return data
