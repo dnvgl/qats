@@ -111,3 +111,6 @@ code-snippets/
 
 # local test folders
 tmp*/*
+
+# Poetry
+poetry.lock

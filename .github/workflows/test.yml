@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# This workflow will install the package, run tests, lint and build with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Test Python package
@@ -20,43 +20,39 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v2
+    - name: Check out repository
+      uses: actions/checkout@v3
       with:
           fetch-depth: 0
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        # Consider specifying version (version: 1.7.1 on Python 3.11)
+        virtualenvs-create: true
+        virtualenvs-in-project: true  #.venv in current directory
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install flake8
-        python -m pip install -r requirements.txt
+      run: poetry install --no-root --without docs
     - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        #   flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      # Stop the build if there are Python syntax errors or undefined names. Exit-zero treats all errors as warnings.
+      run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Run unit tests
-      run: |
-        # run unit tests
-        python -m unittest discover
+      run: pytest
     - name: Test installation
       env:
         QT_API: pyside2
       run: |
-        # install the package
-        pip install .
-        # test running qats via entry points
+        poetry install --without docs
         qats -h
         qats app -h
         qats config -h
-        # test running qats via __main__ hook
         python -m qats -h
+    - name: Test package build
+      run: poetry build
     - name: Test documentation build
       run: |
-        # install dev requirements to enable sphinx-build
-        pip install -r requirements-dev.txt
-        # test that building documentation does not fail
+        poetry install --with docs
         sphinx-build -b html docs/source docs/_build

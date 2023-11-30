@@ -1,6 +1,0 @@
-build
-pytest
-# documentation build requirements:
-Sphinx >= 5.1.1
-furo >= 2022.12.7
-myst-parser >= 0.18.1

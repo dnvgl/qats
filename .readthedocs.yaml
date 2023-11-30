@@ -8,22 +8,20 @@ version: 2
 # Set the version of Python and other tools you might need
 build:
   os: ubuntu-20.04
-  tools:
-    # minimum supported Python version
-    python: "3.7"
+  tools: {python: "3.11"}
+  # A solution to build docs with Poetry and avoid an additional (out of sync) requirements.txt
+  # https://github.com/Robpol86/sphinx-multi-theme/blob/28aac0ac3bd54387bd51bfb9c673c2208394c729/.readthedocs.yaml
+  jobs:
+    pre_create_environment:
+      - asdf plugin add poetry
+      - asdf install poetry latest
+      - asdf global poetry latest
+      - poetry config virtualenvs.create false
+    post_install:
+      - poetry install
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
   builder: html
   configuration: docs/source/conf.py
   fail_on_warning: true
-
-# Optionally declare the Python requirements required to build your docs
-python:
-  # install qats first, then requirements 
-  # (because RTD uses `--upgrade-strategy eager` to install the package, 
-  # which installs the latest possible version of all dependencies)
-  install:
-    - method: pip
-      path: .
-    - requirements: requirements.txt
