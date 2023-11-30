@@ -39,21 +39,21 @@ jobs:
     - name: Install dependencies and package
       run: poetry install
     - name: Run unit tests
-      run: pytest
+      run: poetry run pytest
     - name: Lint with flake8
       # Stop the build if there are Python syntax errors or undefined names. Exit-zero treats all errors as warnings.
-      run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      run: poetry run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test installation
       env:
         QT_API: pyside6
       run: |
-        qats -h
-        qats app -h
-        qats config -h
+        poetry run qats -h
+        poetry run qats app -h
+        poetry run qats config -h
         python -m qats -h
     - name: Test package build
       run: poetry build
     - name: Test documentation build
       run: |
         poetry install --with docs
-        sphinx-build -b html docs/source docs/_build
+        poetry run sphinx-build -b html docs/source docs/_build
