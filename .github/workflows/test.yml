@@ -37,7 +37,7 @@ jobs:
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
     - name: Install dependencies and package
-      run: poetry install
+      run: poetry install --without docs
     - name: Run unit tests
       run: poetry run pytest
     - name: Lint with flake8
