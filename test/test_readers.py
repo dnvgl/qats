@@ -17,7 +17,6 @@ class TestAllReaders(unittest.TestCase):
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env
         self.data_directory = os.path.join('..', 'data')
-        print(self.data_directory)
         # file name, number of (time series) keys
         self.files = [
             # sima h5 files
