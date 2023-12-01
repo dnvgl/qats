@@ -23,11 +23,17 @@ h5py = ">=3.5.0"
 pymatreader = ">=0.0.24"
 matplotlib = ">=3.3.3"
 nptdms = ">=1.1.0"
-numpy = ">=1.21.6"
+numpy = [
+    {version = ">=1.21.6", python = "<3.12"},
+    {version = ">=1.26.0", python = ">=3.12"}
+]
 openpyxl = ">=3.0.5"
 pandas = ">=1.1.4"
 qtpy = ">=1.9.0"
-scipy = ">=1.7.2"   # https://docs.scipy.org/doc/scipy/dev/toolchain.html#numpy
+scipy = [
+    {version = ">=1.9.0", python = "<3.12"},
+    {version = ">=1.11.1", python = ">=3.12"}
+]
 pywin32 = {version = "^306", markers = "platform_system == 'Windows'"} # MUST check the appropriate constraint
 pyside6 = "^6.6.0"
 
