@@ -89,7 +89,7 @@ jobs:
     - name: Run unit tests
       run: |
         source .venv/bin/activate
-        pytest tests/
+        pytest test/
     - name: Test CLI
       env:
         QT_API: pyside6
