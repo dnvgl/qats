@@ -55,18 +55,17 @@ You may now import qats in your own scripts:
 from qats import TsDB, TimeSeries
 ```
 
-... or use the GUI to inspect time series. Note that as of version 4.2.0 you are quite free to choose which 
-[Qt](https://www.qt.io) binding you would like to use for the GUI: [PyQt5](https://pypi.org/project/PyQt5/) or 
-[PySide2](https://pypi.org/project/PySide2/), or even [PyQt4](https://pypi.org/project/PyQt4/) / 
-[PySide](https://pypi.org/project/PySide/).
+... or use the GUI to inspect time series. 
 
-Install the chosen binding (here PyQt5 as an example):
+_New in version 5.0.0._ 
+The [Qt](https://www.qt.io) binding [PySide6](https://pypi.org/project/PySide6/) is installed with `qats`. 
+If you would rather like to use [PyQt6](https://pypi.org/project/PyQt6/), run
 
 ```console
-python -m pip install pyqt5
+python -m pip install pyqt6
 ```
 
-If multiple Qt bindinds are installed, the one to use may be controlled by setting the environmental variable `QT_API` to the desired package. Accepted values include `pyqt5` (to use PyQt5) and `pyside2` (PySide2). For more details, see [README file for qtpy](https://github.com/spyder-ide/qtpy/blob/master/README.md).
+If multiple Qt bindinds are installed, the one to use may be controlled by setting the environmental variable `QT_API` to the desired package. Accepted values include `pyqt6` (to use PyQt6) and `pyside6` (PySide6). For more details, see [README file for qtpy](https://github.com/spyder-ide/qtpy/blob/master/README.md).
 
 The GUI may now be launched by:
 
@@ -104,7 +103,7 @@ purposes. See deployment for notes on how to deploy the project on a live system
 
 ### Prerequisites
 
-Install Python version 3.7 or later from either https://www.python.org or https://www.anaconda.com.
+Install Python version 3.8 or later from either https://www.python.org or https://www.anaconda.com.
 
 Install Poetry with [the official installer](https://python-poetry.org/docs/#installing-with-the-official-installer).
 
