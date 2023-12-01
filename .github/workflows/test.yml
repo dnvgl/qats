@@ -10,51 +10,96 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-    
-    name: Test with Python ${{ matrix.python-version }} on Ubuntu
+  linting:
+    name: Linting
+    # linting has nothing to do with multiple versions of os and python
+    # (the result will be the same) and therefore separated to save time
     runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+      - name: Load pip cache if cache exists
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip
+          restore-keys: ${{ runner.os }}-pip
+      - name: Install linters
+        run: python -m pip install black flake8 isort
+      - name: Lint code
+        run: |
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          black . --check
+          isort .
+
+  testing:
+    needs: linting
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
+        os: ["ubuntu-latest"]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       # https://stackoverflow.com/questions/75549995/why-do-the-pyside6-qt-modules-cause-tox-to-fail-during-a-github-action
     - name: Install missing libraries on GitHub agent
       run: sudo apt update && sudo apt install -y libegl1-mesa-dev
-      # https://github.blog/changelog/2023-06-13-github-actions-all-actions-will-run-on-node16-instead-of-node12-by-default/
-      # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#example-using-versioned-actions
     - name: Check out repository
-      uses: actions/checkout@v4
-      with:
-          fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
+      # fetch the single commit that triggered the workflow, 
+      # use fetch-depth: 0 to fetch all history for branches and tags
+      uses: actions/checkout@v3
+    - name: Set up python ${{ matrix.python-version }}
+      id: setup-python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install Poetry
+    - name: Load cached Poetry installation
+      id: cached-poetry
+      uses: actions/cache@v3
+      with:
+        path: ~/.local  # the path depends on the OS
+        key: poetry-0  # increment to reset cache
+    - name: Install and configure Poetry
+      # install if not cached. Create venv in project to simplify caching
+      if: steps.cached-poetry.outputs.cache-hit != 'true'
       uses: snok/install-poetry@v1
       with:
         # Consider specifying version (version: 1.7.1 on Python 3.11)
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
-    - name: Install dependencies and package
-      run: poetry install
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Create venv and install project dependencies
+      # install if not cached
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+    - name: Install project
+      # required to test the CLI
+      run: poetry install --no-interaction
     - name: Run unit tests
-      run: poetry run pytest
-    - name: Lint with flake8
-      # Stop the build if there are Python syntax errors or undefined names. Exit-zero treats all errors as warnings.
-      run: poetry run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Test installation
+      run: |
+        source .venv/bin/activate
+        pytest tests/
+    - name: Test CLI
       env:
         QT_API: pyside6
       run: |
-        poetry run qats -h
-        poetry run qats app -h
-        poetry run qats config -h
+        source .venv/bin/activate
+        run qats -h
+        run qats app -h
+        run qats config -h
         python -m qats -h
-    - name: Test package build
+    - name: Test building package
       run: poetry build
-    - name: Test documentation build
-      run: poetry run sphinx-build -b html docs/source docs/_build
+    - name: Test building documentation
+      run: |
+        source .venv/bin/activate
+        sphinx-build -b html docs/source docs/_build
