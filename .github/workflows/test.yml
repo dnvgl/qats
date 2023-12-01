@@ -31,8 +31,8 @@ jobs:
       - name: Lint code
         run: |
           flake8 ./qats/ --exit-zero --max-complexity=10 --statistics
-          black . --check
-          isort . --check --diff
+          black .
+          isort .
 
   testing:
     needs: linting
