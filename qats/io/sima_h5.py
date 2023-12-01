@@ -2,6 +2,7 @@
 Readers for HDF5 formatted time series files exported from SIMA
 """
 import os
+
 import h5py
 import numpy as np
 

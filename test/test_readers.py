@@ -4,11 +4,12 @@ Module for testing io.
 The module utilizes TsDB.fromfile and .get() to read at least one time series from the file, to check that this does not
 generate any exceptions.
 """
-from qats import TsDB
-import unittest
 import os
 import sys
+import unittest
 from pathlib import Path
+
+from qats import TsDB
 
 # todo: add test class for matlab
 

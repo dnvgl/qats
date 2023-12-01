@@ -4,11 +4,13 @@ Module for testing rainflow algorithm
 """
 
 import itertools
-import unittest
-import numpy as np
 import os
-from qats.fatigue import rainflow
+import unittest
+
+import numpy as np
+
 from qats import TsDB
+from qats.fatigue import rainflow
 
 
 class TestRainflowCounting(unittest.TestCase):

@@ -2,11 +2,12 @@
 """
 Module for testing io operations directly
 """
-from qats import TsDB
-from qats.io import sima
-import unittest
 import os
 import sys
+import unittest
+
+from qats import TsDB
+from qats.io import sima
 
 
 class TestTsDB(unittest.TestCase):

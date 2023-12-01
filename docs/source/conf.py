@@ -10,6 +10,7 @@
 #
 import os
 import sys
+
 import qats
 
 # which theme to use
@@ -267,8 +268,10 @@ def setup(app):
 
     try:
         import inspect
-        from sphinx.ext.autosummary import Autosummary
+
         from docutils.parsers.rst import directives
+        from sphinx.ext.autosummary import Autosummary
+
         # import sphinx.ext.autodoc
         # from sphinx.ext.autosummary import get_documenter
         # from sphinx.util.inspect import safe_getattr

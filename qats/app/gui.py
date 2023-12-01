@@ -5,39 +5,38 @@ Module containing windows, widgets etc. to create the QATS application
 
 @author: perl
 """
+import json
 import logging
-import sys
 import os
+import sys
 from itertools import cycle
+
 import numpy as np
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+from pkg_resources import resource_filename
 from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
-from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
-    QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-import json
-from pkg_resources import resource_filename
+from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox, QDialog,
+                            QDialogButtonBox, QDoubleSpinBox, QFileDialog,
+                            QFrame, QGroupBox, QHBoxLayout, QHeaderView,
+                            QLabel, QLineEdit, QListView, QMainWindow,
+                            QMessageBox, QPushButton, QRadioButton, QSpinBox,
+                            QSplitter, QTabBar, QVBoxLayout, QWidget)
+
+from .._version import __version__
+from ..stats.empirical import empirical_cdf
+from ..tsdb import TsDB
+from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
+                    calculate_stats, calculate_trace, export_to_file,
+                    import_from_file, read_timeseries)
 from .logger import QLogger
 from .threading import Worker
-from .widgets import CustomTabWidget, CustomTableWidgetItem, CustomTableWidget
-from ..tsdb import TsDB
-from ..stats.empirical import empirical_cdf
-from .funcs import (
-    export_to_file,
-    import_from_file,
-    read_timeseries,
-    calculate_trace,
-    calculate_psd,
-    calculate_rfc,
-    calculate_gumbel_fit,
-    calculate_stats
-)
-from .._version import __version__
-
+from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget
 
 LOGGING_LEVELS = dict(
     debug=logging.DEBUG,

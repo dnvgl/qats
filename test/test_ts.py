@@ -3,12 +3,14 @@
 Module for testing TimeSeries class
 """
 
+import copy
 import os
 import unittest
 from datetime import datetime
+
 import numpy as np
+
 from qats import TimeSeries, TsDB
-import copy
 
 
 class TestTs(unittest.TestCase):

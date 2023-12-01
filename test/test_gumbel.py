@@ -5,8 +5,7 @@ Module for testing gumbel class
 
 import unittest
 
-from qats.stats.gumbel import Gumbel, pwm, mle, msm, lse
-from qats.stats.gumbel import _euler_masceroni
+from qats.stats.gumbel import Gumbel, _euler_masceroni, lse, mle, msm, pwm
 
 
 class EulerMascheroniTest(unittest.TestCase):

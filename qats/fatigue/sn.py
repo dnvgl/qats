@@ -6,7 +6,8 @@ Classes and functions for fatigue calculations:
     - Fatigue damage calculation (functions)
 """
 import numpy as np
-from scipy.special import gamma as gammafunc, gammainc, gammaincc
+from scipy.special import gamma as gammafunc
+from scipy.special import gammainc, gammaincc
 
 # todo: Update SNCurve docstring to include description of class and attributes
 

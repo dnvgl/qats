@@ -2,9 +2,9 @@
 Example showing tail fitting with Weibull
 """
 import os
+
 from qats import TsDB
 from qats.stats.weibull import lse, plot_fit
-
 
 # locate time series file
 file_name = os.path.join("..", "..", "..", "data", "mooring.ts")

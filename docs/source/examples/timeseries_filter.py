@@ -2,7 +2,9 @@
 Example showing how to directly initiate the database with time series from file and then filter the time series.
 """
 import os
+
 import matplotlib.pyplot as plt
+
 from qats import TsDB
 
 # locate time series file

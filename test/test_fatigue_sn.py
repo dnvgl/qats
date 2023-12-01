@@ -4,10 +4,12 @@ Module for testing module fatigue.sn
 """
 
 import unittest
-import numpy as np
 from collections import OrderedDict, defaultdict
+
+import numpy as np
 from scipy.optimize import brenth, brentq
 from scipy.special import gamma
+
 from qats.fatigue.sn import SNCurve, minersum, minersum_weibull
 
 # todo: include tests for thickness correction of SNCurve class

@@ -2,11 +2,13 @@
 """
 Module for testing functions in operations module
 """
-from qats import TsDB
-from qats.motions import transform_motion, velocity, acceleration
-import unittest
 import os
+import unittest
+
 import numpy as np
+
+from qats import TsDB
+from qats.motions import acceleration, transform_motion, velocity
 
 
 class TestOperations(unittest.TestCase):

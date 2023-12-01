@@ -4,8 +4,9 @@ Readers for ASCII and direct access formatted time series files exported from SI
 import fnmatch
 import os
 import re
-import numpy as np
 from struct import unpack
+
+import numpy as np
 from scipy.interpolate import interp1d
 
 

@@ -6,6 +6,7 @@ import os
 import sys
 import traceback
 import webbrowser
+
 from qtpy.QtWidgets import QMessageBox
 
 

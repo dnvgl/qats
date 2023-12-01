@@ -4,12 +4,13 @@
 :class:`GumbelMin` class and functions related to Gumbel (minima) distribution.
 """
 import numpy as np
+from matplotlib.pyplot import (figure, grid, legend, plot, savefig, show,
+                               xlabel, ylabel, ylim, yticks)
+from scipy.optimize import fsolve, leastsq
 from scipy.special import zetac
-from scipy.optimize import leastsq, fsolve
-from matplotlib.pyplot import figure, ylabel, yticks, plot, legend, grid, show, xlabel, ylim, savefig
+
 from .empirical import empirical_cdf
 from .gumbel import _euler_masceroni as em
-
 
 # todo: move fit methods e.g. _msm from class to standalone functions (importable)
 # todo: check fit procedures (read up once more and check implementation)

@@ -6,6 +6,7 @@ Module implementing a logger class
 @author: perl
 """
 import logging
+
 from qtpy.QtWidgets import QTextBrowser
 
 

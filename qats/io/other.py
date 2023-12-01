@@ -2,6 +2,7 @@
 Readers for various time series file formats
 """
 import fnmatch
+
 import numpy as np
 
 
