@@ -427,7 +427,7 @@ class TsDB(object):
         container : dict
             Container with time series
         keep_basename : bool, optional
-            Keep only time series names e.g. 'tension' in key 'C:\data\results.ts\tension'. Default False.
+            Keep only time series names e.g. 'tension' in key 'C:\\data\\results.ts\\tension'. Default False.
 
         Returns
         -------

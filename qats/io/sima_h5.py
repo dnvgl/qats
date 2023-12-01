@@ -205,11 +205,14 @@ def _timearray_info(dset):
     attrs = dset.attrs
     if "start" in attrs and "delta" in attrs:
         # SIMA-way of defining time array
-        timeinfo = {
-            "kind": "sima",
-            "start": float(attrs["start"]),
-            "dt": float(attrs["delta"]),
-        }
+        timeinfo = {"kind": "sima"} 
+        # timeinfo["start"] = float(attrs["start"])
+        # timeinfo["dt"} =: float(attrs["delta"]),
+        for keyout, keysima in {"start": "start", "dt": "delta"}.items():
+            # we presume that attrs["start"] and attrs["delta"] are numpy arrays of size 1
+            # (otherwise .item() will fail, but then it should because we expect start and delta
+            #  to be single values not arrays)
+            timeinfo[keyout] = attrs[keysima].item()
         return timeinfo
     else:
         return None
