@@ -81,7 +81,9 @@ jobs:
       run: poetry install --no-interaction --no-root
     - name: Install project
       # required to test the CLI
-      run: poetry install --no-interaction
+      run: |
+        poetry install --no-interaction
+        ls -a
     - name: Run unit tests
       run: |
         source .venv/bin/activate
