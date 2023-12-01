@@ -664,7 +664,9 @@ class Qats(QMainWindow):
         reg_exp = QRegularExpression(reg_exp_pattern, **options)
         
         # assign reg exp to proxy model filter
-        self.db_proxy_model.setFilterRegularExpression(reg_exp)
+        # (but only if reg exp is valid, which is not always the case when user is still typing)
+        if reg_exp.isValid():
+            self.db_proxy_model.setFilterRegularExpression(reg_exp)
 
     def on_about(self):
         """
