@@ -18,8 +18,6 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: Setup Python
         uses: actions/setup-python@v4
       - name: Load pip cache if cache exists
@@ -52,8 +50,6 @@ jobs:
       run: sudo apt update && sudo apt install -y libegl1-mesa-dev
     - name: Check out repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
     - name: Set up python ${{ matrix.python-version }}
       id: setup-python
       uses: actions/setup-python@v4
@@ -95,9 +91,9 @@ jobs:
         QT_API: pyside6
       run: |
         source .venv/bin/activate
-        run qats -h
-        run qats app -h
-        run qats config -h
+        qats -h
+        qats app -h
+        qats config -h
         python -m qats -h
     - name: Test building package
       run: poetry build
