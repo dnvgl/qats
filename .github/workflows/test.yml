@@ -71,15 +71,15 @@ jobs:
         # Consider specifying version (version: 1.7.1 on Python 3.11)
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    #- name: Load cached venv
+    #  id: cached-poetry-dependencies
+    #  uses: actions/cache@v3
+    #  with:
+    #    path: .venv
+    #    key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Create venv and install project dependencies
       # install if not cached
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      #: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
     - name: Install project
       # required to test the CLI
