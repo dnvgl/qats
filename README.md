@@ -190,6 +190,8 @@ We use the [release cycle in GitHub](https://github.com/dnvgl/qats/releases) to 
 
 Once a new release is published, [GitHub Actions](https://docs.github.com/en/actions) takes care of the packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/).
 
+The workflows for continuous integration and deployment are found in [.github/workflows](.github/workflows/).
+
 ## Authors
 
 * **Per Voie** - [tovop](https://github.com/tovop)
