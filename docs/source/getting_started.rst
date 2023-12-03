@@ -15,8 +15,14 @@ Installation
 ************
 
 .. note::
-    As of version 4.13.0, qats uses Pyside6 as the Qt-binding (needed for the GUI to work).
-    Although not recommended you can choose a different qt binding yourself (e.g. pyqt6).
+    As of version 4.13.0, qats installs with Pyside6 as the Qt-binding (needed for the GUI to work).
+    Although not recommended you can choose a different qt binding yourself by setting the 
+    environmental variable `QT_API`.
+
+    QT_API can take the following values: pyqt5 (to use PyQt5), pyside2 (to use PySide2), 
+    pyqt6 (to use PyQt6), pyside6 (to use PySide6).
+
+    If several of these packages are found, PyQt5 is used by default unless you set the QT_API environment variable.
 
 QATS is installed from PyPI by using `pip`:
 
@@ -71,7 +77,6 @@ and run the command line interface (CLI).
       {app,config}
         app         Launch the desktop application
         config      Configure the package
-
 
 
 Launching the GUI
