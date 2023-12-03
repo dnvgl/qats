@@ -1,4 +1,4 @@
-# This workflow will install the package, run tests, lint and build with a variety of Python versions
+# This workflow will lint, run unit tests, test CLI and build with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Test Python package
