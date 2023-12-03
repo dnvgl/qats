@@ -6,29 +6,23 @@ Getting started
 Prerequisites
 *************
 
-You need Python version 3.7 or later (up to 3.10 is supported). You can find it at https://www.python.org or https://www.anaconda.com.
+You need Python version 3.8 or later. Versions up to and including 3.11 are tested, version 3.12 is not tested on deployment 
+with Github Actions but successfully tested locally.
+
+You can install Python from https://www.python.org or https://www.anaconda.com.
 
 Installation
 ************
 
 .. note::
-    As of version 4.2.0, you must install the desired qt binding yourself (needed for the GUI to work).
-    Supported packages are: PyQt5, Pyside2, PyQt4 and Pyside. See installation instructions below.
+    As of version 4.13.0, qats uses Pyside6 as the Qt-binding (needed for the GUI to work).
+    Although not recommended you can choose a different qt binding yourself (e.g. pyqt6).
 
 QATS is installed from PyPI by using `pip`:
 
 .. code-block:: console
 
     python -m pip install qats
-
-In order to use the GUI, you must also install a Python package with qt bindings (here, `PyQt5` is used as an
-example):
-
-.. code-block::
-
-    python -m pip install pyqt5
-
-Supported qt bindings are: PyQt5, Pyside2, PyQt4 and Pyside.
 
 Now you should be able to import the package in the Python console
 
@@ -59,7 +53,7 @@ Now you should be able to import the package in the Python console
     ...
     >>>
 
-and the command line interface (CLI).
+and run the command line interface (CLI).
 
 .. code-block:: console
 
