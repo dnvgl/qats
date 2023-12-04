@@ -84,12 +84,11 @@ STATS_LABELS_TOOLTIPS = {
                          "Weibull distribution fitted to sample maxima/minima."),
 }
 
-# TODO: New method that generalize threading
-# TODO: Explore how to create consecutive threads without handshake in main loop
+# todo: New method that generalize threading
+# todo: Explore how to create consecutive threads without handshake in main loop
 # todo: add technical guidance and result interpretation to help menu, link docs website
 # todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions,
 #  gumbel distributions etc.)
-# todo: read orcaflex time series files
 
 
 class Qats(QMainWindow):
@@ -98,10 +97,10 @@ class Qats(QMainWindow):
 
     Contain widgets for plotting time series, power spectra and statistics.
 
-    Series of data are loaded from a .ts file, and their names are displayed in a checkable list view. The user can
-    select the series it wants from the list and plot them on a matplotlib canvas. The prodlinelib python package is
-    used for loading time series from file, perform signal processing, calculating power spectra and statistics and
-    plotting.
+    Series of data are loaded from a time series file (e.g., .ts), and their names are displayed in a checkable 
+    list view. The user can select the series it wants from the list and plot them on a matplotlib canvas. The 
+    base library is used to load time series from file (`qats.io`), perform signal processing (`qats.signal`), 
+    calculating power spectra and statistics (`qats.stats`) and plotting.
     """
 
     def __init__(self, parent=None, files_on_init=None, logging_level="info"):
