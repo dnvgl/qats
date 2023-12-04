@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "qats"
-version = "0.0.1"   # overridden by dynamic versioning, must still be specified
+version = "0.0.0"   # overridden by dynamic versioning, must still be specified
 description = "Library for efficient processing and visualization of time series"
 authors = [
     "Per Voie <per.voie@gmail.com>", 
@@ -81,5 +81,6 @@ format-jinja-imports = [
 ]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+# https://pypi.org/project/poetry-dynamic-versioning/
+requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.0.0,<2.0.0"]
+build-backend = "poetry_dynamic_versioning.backend"  # "poetry.core.masonry.api"

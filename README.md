@@ -107,6 +107,10 @@ Install Python version 3.8 or later from either https://www.python.org or https:
 
 Install Poetry with [the official installer](https://python-poetry.org/docs/#installing-with-the-official-installer).
 
+Install the [poetry-dynamic-versioning](https://pypi.org/project/poetry-dynamic-versioning/) plugin:
+
+```poetry self add "poetry-dynamic-versioning[plugin]"```
+
 ### Clone the source code repository
 
 At the desired location, run: 
