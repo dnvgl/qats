@@ -106,3 +106,5 @@ ENV/
 # misc
 code-snippets/
 
+poetry.lock
+_version.py
