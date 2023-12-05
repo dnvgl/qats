@@ -52,7 +52,7 @@ python -m pip install --upgrade qats
 You may now import qats in your own scripts:
 
 ```python
-from qats import TsDB, TimeSeries
+>>> from qats import TsDB, TimeSeries
 ```
 
 ... or use the GUI to inspect time series. 
@@ -133,8 +133,8 @@ This will
 You should now be able to import the package in the Python console,
 
 ```python
-import qats
-help(qats)
+>>> import qats
+>>> help(qats)
 ```
 
 ... and use the command line interface (CLI).

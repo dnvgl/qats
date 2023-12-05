@@ -13,7 +13,7 @@ Create link to GUI in start menu and desktop
     :figclass: align-center
     :target: _images/link_app.gif
 
-    In the terminal, run ``qats config --link-app`` to create start menu and desktop links to QATS. Pin the start menu
+    In the terminal, run :code:`qats config --link-app` to create start menu and desktop links to qats. Pin the start menu
     link to the taskbar to further ease accessibility.
 
 
