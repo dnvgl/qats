@@ -3,10 +3,14 @@
 """
 Module with functions for signal processing.
 """
-import numpy as np
-from scipy.fftpack import fft, ifft, rfft, irfft
-from scipy.signal import welch, butter, filtfilt, sosfiltfilt, csd as spcsd, coherence as spcoherence
 import warnings
+
+import numpy as np
+from scipy.fftpack import fft, ifft, irfft, rfft
+from scipy.signal import butter
+from scipy.signal import coherence as spcoherence
+from scipy.signal import csd as spcsd
+from scipy.signal import filtfilt, sosfiltfilt, welch
 
 
 def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:

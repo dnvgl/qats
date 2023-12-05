@@ -2,10 +2,10 @@
 Readers for various direct access formatted time series files
 """
 import os
-import numpy as np
-from struct import unpack
-from struct import pack
 from array import array
+from struct import pack, unpack
+
+import numpy as np
 
 
 def read_ts_names(path):

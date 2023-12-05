@@ -1,7 +1,6 @@
 import unittest
 
-from qats.stats.weibull import Weibull, pwm, mle, msm, lse, pwm2
-
+from qats.stats.weibull import Weibull, lse, mle, msm, pwm, pwm2
 
 # todo: more test cases for weibull class and functions
 

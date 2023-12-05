@@ -3,12 +3,12 @@
 """
 :class:`Gumbel` class and functions related to Gumbel distribution.
 """
-import numpy as np
-from scipy.special import zetac, binom
-from scipy.optimize import leastsq, fsolve
 import matplotlib.pyplot as plt
-from .empirical import empirical_cdf
+import numpy as np
+from scipy.optimize import fsolve, leastsq
+from scipy.special import binom, zetac
 
+from .empirical import empirical_cdf
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples

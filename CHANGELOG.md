@@ -1,4 +1,9 @@
 # Changelog
+
+> **Note:**
+> After version 4.12.1 this changelog is deprecated. Releases will in future be documented in [Github's releases page](https://github.com/dnvgl/qats/releases). 
+
+
 All notable changes to the project will be documented in this file, with format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 We apply the *"major.minor.micro"* versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440).

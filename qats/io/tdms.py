@@ -1,6 +1,7 @@
-from nptdms import TdmsFile
-from typing import List, Tuple, Union
 import os
+from typing import List, Tuple, Union
+
+from nptdms import TdmsFile
 
 
 def read_names(path):

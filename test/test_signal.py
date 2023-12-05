@@ -2,11 +2,14 @@
 """
 Module for testing signal processing functions
 """
-import unittest
-import numpy as np
 import os
-from qats.signal import smooth, average_frequency, taper, lowpass, highpass, bandblock, bandpass, psd, find_maxima
+import unittest
+
+import numpy as np
+
 from qats import TsDB
+from qats.signal import (average_frequency, bandblock, bandpass, find_maxima,
+                         highpass, lowpass, psd, smooth, taper)
 
 
 class TestSignal(unittest.TestCase):

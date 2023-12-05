@@ -4,9 +4,10 @@ Readers for SINTEF Ocean test data exhange format based on the Matlab .mat file.
 Works for matlab file format version <=7.2 and >=7.3.
 """
 import fnmatch
-import numpy as np
-from typing import List, Tuple, Union
 from datetime import datetime, timedelta
+from typing import List, Tuple, Union
+
+import numpy as np
 from pymatreader import read_mat
 
 

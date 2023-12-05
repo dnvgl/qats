@@ -7,17 +7,20 @@ import copy
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
+
+import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import cm
 from scipy.interpolate import interp1d
 from scipy.stats import kurtosis, skew, tstd
-import matplotlib.pyplot as plt
-from matplotlib import cm
-from .fatigue.rainflow import count_cycles, rebin as rebin_cycles, mesh
-from .signal import lowpass, highpass, bandblock, bandpass, threshold as thresholdpass, smooth, taper, \
-    average_frequency, find_maxima, psd
-from .stats.weibull import Weibull, weibull2gumbel, pwm
-from .stats.gumbel import Gumbel
 
+from .fatigue.rainflow import count_cycles, mesh
+from .fatigue.rainflow import rebin as rebin_cycles
+from .signal import (average_frequency, bandblock, bandpass, find_maxima,
+                     highpass, lowpass, psd, smooth, taper)
+from .signal import threshold as thresholdpass
+from .stats.gumbel import Gumbel
+from .stats.weibull import Weibull, pwm, weibull2gumbel
 
 # todo: weibull and gumbel + plotting (self.pd = Weibull(), self.evd = Gumbel())
 # todo: autocorrelation (see signal module)
