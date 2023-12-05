@@ -5,6 +5,7 @@ Rainflow cycle counting algorithm according to ASTM E1049-85 (2011), section 5.4
 """
 from collections import deque
 from itertools import chain
+
 import numpy as np
 
 # TODO: Evaluate from-to counting which stores the "orientation" of each cycle. Enables reconstruction of a time history

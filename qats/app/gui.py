@@ -5,39 +5,43 @@ Module containing windows, widgets etc. to create the QATS application
 
 @author: perl
 """
+import json
 import logging
-import sys
 import os
+import sys
 from itertools import cycle
+
 import numpy as np
+from matplotlib.backends.backend_qt5agg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.backends.backend_qt5agg import \
+    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.figure import Figure
+from pkg_resources import resource_filename
 from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
-from qtpy.QtWidgets import QMainWindow, QFileDialog, QMessageBox, QWidget, QHBoxLayout, \
-    QListView, QGroupBox, QLabel, QRadioButton, QCheckBox, QSpinBox, QDoubleSpinBox, QVBoxLayout, QPushButton, \
-    QLineEdit, QComboBox, QSplitter, QFrame, QTabBar, QHeaderView, QDialog, QAction, QDialogButtonBox
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
-import json
-from pkg_resources import resource_filename, get_distribution, DistributionNotFound
+from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox, QDialog,
+                            QDialogButtonBox, QDoubleSpinBox, QFileDialog,
+                            QFrame, QGroupBox, QHBoxLayout, QHeaderView,
+                            QLabel, QLineEdit, QListView, QMainWindow,
+                            QMessageBox, QPushButton, QRadioButton, QSpinBox,
+                            QSplitter, QTabBar, QVBoxLayout, QWidget)
+
+from ..stats.empirical import empirical_cdf
+from ..tsdb import TsDB
+from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
+                    calculate_stats, calculate_trace, export_to_file,
+                    import_from_file, read_timeseries)
 from .logger import QLogger
 from .threading import Worker
-from .models import CustomSortFilterProxyModel
-from .widgets import CustomTabWidget, CustomTableWidgetItem, CustomTableWidget
-from ..tsdb import TsDB
-from ..stats.empirical import empirical_cdf
-from .funcs import (
-    export_to_file,
-    import_from_file,
-    read_timeseries,
-    calculate_trace,
-    calculate_psd,
-    calculate_rfc,
-    calculate_gumbel_fit,
-    calculate_stats
-)
-
+from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget
+# version string
+# from .._version import __version__
+try:
+    from .._version import __version__
+except ImportError:
+    __version__ = "0.0.0"
 
 LOGGING_LEVELS = dict(
     debug=logging.DEBUG,
@@ -48,7 +52,7 @@ LOGGING_LEVELS = dict(
 if sys.platform == "win32":
     SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")
 else:
-    SETTINGS_FILE = os.path.join("var", "lib", "qats.settings")
+    SETTINGS_FILE = os.path.join("~", ".config", "qats.settings")
 ICON_FILE = resource_filename("qats.app", "qats.ico")
 
 STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "p37.0_min", "p57.0_min", "p90.0_min",
@@ -86,12 +90,11 @@ STATS_LABELS_TOOLTIPS = {
                                 "Weibull distribution fitted to sample maxima."),
 }
 
-# TODO: New method that generalize threading
-# TODO: Explore how to create consecutive threads without handshake in main loop
+# todo: New method that generalize threading
+# todo: Explore how to create consecutive threads without handshake in main loop
 # todo: add technical guidance and result interpretation to help menu, link docs website
 # todo: add 'export' option to file menu: response statistics summary (mean, std, skew, kurt, tz, weibull distributions,
 #  gumbel distributions etc.)
-# todo: read orcaflex time series files
 
 
 class Qats(QMainWindow):
@@ -100,10 +103,10 @@ class Qats(QMainWindow):
 
     Contain widgets for plotting time series, power spectra and statistics.
 
-    Series of data are loaded from a .ts file, and their names are displayed in a checkable list view. The user can
-    select the series it wants from the list and plot them on a matplotlib canvas. The prodlinelib python package is
-    used for loading time series from file, perform signal processing, calculating power spectra and statistics and
-    plotting.
+    Series of data are loaded from a time series file (e.g., .ts), and their names are displayed in a checkable 
+    list view. The user can select the series it wants from the list and plot them on a matplotlib canvas. The 
+    base library is used to load time series from file (`qats.io`), perform signal processing (`qats.signal`), 
+    calculating power spectra and statistics (`qats.stats`) and plotting.
     """
 
     def __init__(self, parent=None, files_on_init=None, logging_level="info"):
@@ -242,7 +245,7 @@ class Qats(QMainWindow):
         # initiate time series data base and checkable model and view with filter
         self.db = TsDB()
         self.db_source_model = QStandardItemModel()
-        self.db_proxy_model = CustomSortFilterProxyModel()
+        self.db_proxy_model = QSortFilterProxyModel()
         self.db_proxy_model.setDynamicSortFilter(True)
         self.db_proxy_model.setSourceModel(self.db_source_model)
         self.db_view = QListView()
@@ -253,9 +256,9 @@ class Qats(QMainWindow):
         self.db_view_filter_pattern.setPlaceholderText("type filter text")
         self.db_view_filter_pattern.setText("")
         self.db_view_filter_syntax = QComboBox()
-        self.db_view_filter_syntax.addItem("Wildcard", QRegExp.Wildcard)
-        self.db_view_filter_syntax.addItem("Regular expression", QRegExp.RegExp)
-        self.db_view_filter_syntax.addItem("Fixed string", QRegExp.FixedString)
+        self.db_view_filter_syntax.addItem("Wildcard", "wildcard")
+        self.db_view_filter_syntax.addItem("Regular expression", "regexp")
+        self.db_view_filter_syntax.addItem("Fixed string", "fixedstring")
         self.db_view_filter_pattern.textChanged.connect(self.model_view_filter_changed)
         self.db_view_filter_syntax.currentIndexChanged.connect(self.model_view_filter_changed)
         self.db_view_filter_casesensitivity.toggled.connect(self.model_view_filter_changed)
@@ -618,23 +621,61 @@ class Qats(QMainWindow):
         """
         Apply filter changes to db proxy model
         """
-        syntax = QRegExp.PatternSyntax(self.db_view_filter_syntax.itemData(self.db_view_filter_syntax.currentIndex()))
-        case_sensitivity = (self.db_view_filter_casesensitivity.isChecked() and Qt.CaseSensitive or Qt.CaseInsensitive)
-        reg_exp = QRegExp(self.db_view_filter_pattern.text(), case_sensitivity, syntax)
-        self.db_proxy_model.setFilterRegExp(reg_exp)
+        # type of filter selected in drop-down menu
+        filter_index = self.db_view_filter_syntax.currentIndex()
+        filter_type = self.db_view_filter_syntax.itemData(filter_index)
+        # text input by user
+        pattern = self.db_view_filter_pattern.text()
+        # case sensitivity (if 'Case sensitive filter' is checked)
+        case_sensitive = self.db_view_filter_casesensitivity.isChecked()
+        
+        # the code below works for python qt5 (pyside2/pyqt5) and qt6 (pyside6/pyqt6)
+        # pyside6: see the following links for documentation on QRegularExpression and the filter model (QSortFilterProxyModel)
+        #   https://doc.qt.io/qtforpython-6/PySide6/QtCore/QRegularExpression.html
+        #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#filtering
+        #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#PySide6.QtCore.QSortFilterProxyModel.filterAcceptsRow
+
+        # notes on the methods available for self.db_proxy_model (type: QSortFilterProxyModel)
+        #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
+        #   .setFilterRegularExpression(QRegularExpression) may not be used with .setFilterCaseSensitivity(...)
+        #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks the binding to what previously set)
+        #       * setting a filter case sensitivity afterwards breaks the binding to the regular expression
+        
+        # construct regexp string that may be used to initiate QRegularExpression instance
+        if filter_type == "wildcard":
+            # pad with wildcard ('*') to get expected behaviour
+            reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(f"*{pattern}*")
+        elif filter_type == "regexp":
+            # pattern string should be interpreted as a regexp pattern
+            reg_exp_pattern = pattern
+        elif filter_type == "fixedstring":
+            # according to https://doc.qt.io/qt-6/qregexp.html, a fixed string is 
+            # equivalent to using the regexp pattern on a string in which all 
+            # metacharacters are escaped using escape()
+            reg_exp_pattern = QRegularExpression.escape(pattern)
+        else:
+            raise ValueError(f"Unsupported filter type: {filter_type}")
+    
+        # options (for case sensitivity) to QRegularExpression construction
+        if case_sensitive:
+            # case sensitive is default for QRegularExpression => no options
+            options = {}
+        else:
+            # case insensitive => must be specified
+            options = {"options": QRegularExpression.CaseInsensitiveOption}
+
+        # initiate QRegularExpression instance
+        reg_exp = QRegularExpression(reg_exp_pattern, **options)
+        
+        # assign reg exp to proxy model filter
+        # (but only if reg exp is valid, which is not always the case when user is still typing)
+        if reg_exp.isValid():
+            self.db_proxy_model.setFilterRegularExpression(reg_exp)
 
     def on_about(self):
         """
         Show information about the application
         """
-        # get distribution version
-        try:
-            # version at runtime from distribution/package info
-            version = get_distribution("qats").version
-        except DistributionNotFound:
-            # package is not installed
-            version = ""
-
         msg = "This is a low threshold tool for inspection of time series, power spectra and statistics. " \
               "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
               "Import qats Python package and use the <a href='https://qats.readthedocs.io/en/latest/'>API</a> " \
@@ -649,7 +690,7 @@ class Qats(QMainWindow):
         msgbox.setIcon(QMessageBox.Information)
         msgbox.setTextFormat(Qt.RichText)
         msgbox.setText(msg.strip())
-        msgbox.setWindowTitle(f"About QATS - version {version}")
+        msgbox.setWindowTitle(f"About QATS - version {__version__}")
         msgbox.exec_()
 
     def on_clear(self):
@@ -1182,6 +1223,11 @@ class Qats(QMainWindow):
 
     def save_settings(self):
         """Save settings to file."""
+        # create directory for settings file if it doesn't exist
+        settings_dir = os.path.dirname(self.settings_file)
+        if not os.path.exists(settings_dir):
+            os.makedirs(settings_dir)
+        # dump settings to file
         with open(self.settings_file, "w") as fp:
             json.dump(self.settings, fp, indent=2)
 
@@ -1205,7 +1251,14 @@ class Qats(QMainWindow):
         if not msecs:
             msecs = 0       # statusbar.showMessage() does not accept NoneType
 
-        self.statusBar().showMessage(message, msecs=msecs)
+        # self.statusBar().showMessage(message, msecs=msecs)
+
+        # pyside6 uses 'timeout' keyword, pyqt6 uses 'msecs' keyword
+        # solve pragmatically by try-except
+        try:
+            self.statusBar().showMessage(message, timeout=msecs)
+        except TypeError:
+            self.statusBar().showMessage(message, msecs=msecs)
 
     def selected_series(self):
         """
@@ -1347,7 +1400,7 @@ class Qats(QMainWindow):
         try:
             self.db.update(newdb)
         except KeyError:
-            logging.error(f"The time series are not unique. You have probably loaded this file already.")
+            logging.error("The time series are not unique. You have probably loaded this file already.")
             return
 
         # fill item model with time series by unique id (common path is removed)

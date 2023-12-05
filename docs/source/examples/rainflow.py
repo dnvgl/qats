@@ -2,6 +2,7 @@
 Example on working with cycle range and range-mean distributions.
 """
 import os
+
 from qats import TsDB
 
 # locate time series file

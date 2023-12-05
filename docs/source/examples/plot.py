@@ -2,6 +2,7 @@
 Example of using the time series database class
 """
 import os
+
 from qats import TsDB
 
 db = TsDB()

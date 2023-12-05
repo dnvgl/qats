@@ -4,13 +4,13 @@
 :class:`Weibull` class and functions related to Weibull distribution.
 """
 
-import numpy as np
-from scipy.special import gamma, binom
-from scipy.optimize import leastsq, fsolve, brentq
 import matplotlib.pyplot as plt
-from .empirical import empirical_cdf
-from ..signal import find_maxima
+import numpy as np
+from scipy.optimize import brentq, fsolve, leastsq
+from scipy.special import binom, gamma
 
+from ..signal import find_maxima
+from .empirical import empirical_cdf
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples

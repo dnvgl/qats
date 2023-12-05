@@ -2,12 +2,13 @@
 """
 Module for testing TsDB class
 """
-from qats import TimeSeries, TsDB
-import unittest
 import os
-import numpy as np
 import sys
+import unittest
 
+import numpy as np
+
+from qats import TimeSeries, TsDB
 
 # todo: add tests for listing subset(s) based on specifying parameter `names` (with and wo param. `keys`)
 # todo: add test for getm() with fullkey=False (similar to test_get_many_correct_key, but with shorter key)

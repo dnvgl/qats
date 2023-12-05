@@ -2,9 +2,10 @@
 Module with functions for handling file operations and calculations. Made for multithreading.
 """
 import numpy as np
-from ..tsdb import TsDB
-from ..stats.gumbel import pwm as gumbel_pwm
+
 from ..fatigue.rainflow import rebin as rebin_cycles
+from ..stats.gumbel import pwm as gumbel_pwm
+from ..tsdb import TsDB
 
 
 def calculate_psd(container, twin, fargs, nperseg, normalize):

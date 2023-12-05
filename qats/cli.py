@@ -2,15 +2,17 @@
 """
 Command line interface to app (GUI).
 """
+import argparse
 import os
 import sys
-import argparse
 import sysconfig
-from qtpy.QtWidgets import QApplication
+
 from pkg_resources import resource_filename
-from .app.exceptions import handle_exception
-from .app.gui import Qats, LOGGING_LEVELS
+from qtpy.QtWidgets import QApplication
+
 from . import __version__
+from .app.exceptions import handle_exception
+from .app.gui import LOGGING_LEVELS, Qats
 
 
 def link_app():
