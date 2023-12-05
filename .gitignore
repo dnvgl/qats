@@ -109,5 +109,8 @@ code-snippets/
 # local test folders
 tmp*/*
 
+# version file written by poetry dynamic versioning
+*/_version.py
+
 # Poetry
 poetry.lock
