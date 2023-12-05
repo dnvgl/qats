@@ -59,22 +59,19 @@ Download = "https://pypi.org/project/qats/"
 Issues = "https://github.com/dnvgl/qats/issues"
 
 # enable dynamic versioning using Git tags
-# https://sam.hooke.me/note/2023/08/poetry-automatically-generated-package-version-from-git-commit/
 # https://pypi.org/project/poetry-dynamic-versioning/
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-pattern  = "^[vV](?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision>\\d+)?))?"
 format-jinja = """
     {%- if distance == 0 -%}
-        {{- base -}}
+        {{ serialize_pep440(base, stage, revision) }}
+    {%- elif revision is not none -%}
+        {{ serialize_pep440(base, stage, revision + 1, dev=distance, metadata=[commit]) }}
     {%- else -%}
-        {{- base }}.dev{{ distance }}+g{{commit}}
+        {{ serialize_pep440(bump_version(base), stage, revision, dev=distance, metadata=[commit]) }}
     {%- endif -%}
 """
-format-jinja-imports = [
-    { module = "datetime", item = "datetime" }
-]
 
 [tool.poetry-dynamic-versioning.files."qats/_version.py"]
 persistent-substitution = true
