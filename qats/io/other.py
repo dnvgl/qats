@@ -46,6 +46,96 @@ def read_dat_names(path):
     return names[1:]
 
 
+def read_ascii_names(path):
+    """
+    Read time series names from an ASCII file with data arranged column-wise.
+    
+    Parameters
+    ----------
+    path : str
+        File path
+
+    Returns
+    -------
+    list
+        Time series names
+        
+    Notes
+    -----
+    The names are extracted from the header row which is the first row with `time` in it. The comment character is '#'. Time is
+    assumed to be in the first column.
+    """
+    names = None
+    with open(path) as f:
+        for line in f:
+            if line.startswith("#"):
+                # skip commented lines
+                continue
+            elif len(fnmatch.filter(line.split(), "[Tt]ime*")) == 1:
+                # names in uncommented row that has a time entry
+                names = line.split()
+                return names[1:]
+            elif len(fnmatch.filter(line.split(), "[Tt]ime*")) > 1:
+                raise KeyError(f"The file '{path}' contains duplicate time vectors")
+            else:
+                continue
+            
+        # did not find a valid header line  
+        raise KeyError(f"The file '{path}' does not contain a time vector")
+
+
+def read_ascii_data(path, ind=None):
+    """
+    Read time series arranged column wise on ascii formatted file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+    ind : list of integers, optional
+        Defines which responses to include in returned array. Each of the indices in `ind` refer the sequence number
+        of the reponses. Note that `0` is the index of the time array.
+
+    Returns
+    -------
+    array
+        Time and data
+
+    Notes
+    -----
+    This functions accepts ascii files with an arbitrary number of commented lines (#), empty lines and text lines
+    prior to the data block.
+    
+    If ``ind`` is specified, time array is only included if `0` is included in the specified indices.
+
+    If ``ind`` is specified, the response arrays (1-D) are stored in the returned 2-D array in the same order as
+    specified. I.e. if ``ind=[0,10,2,3]``, then the response array with index `10` on .ts file is obtained from
+    ``data[1,:]``.
+
+    """
+    with open(path, 'r') as f:
+        for line in f:
+            if line.startswith("#"):
+                # skip commented lines
+                continue
+            elif not line:
+                # skip empty lines
+                continue
+            elif len(fnmatch.filter(line.split(), "[Tt]ime*")) == 1:
+                # names in uncommented row that has a time entry
+                names = line.split()
+                return names[1:]
+            elif len(fnmatch.filter(line.split(), "[Tt]ime*")) > 1:
+                raise KeyError(f"The file '{path}' contains duplicate time vectors")
+            else:
+                continue
+        
+        # load data, skipping commented lines and the header row with keys (first uncommented line)
+        data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
+
+    return data
+
+
 def read_dat_data(path, ind=None):
     """
     Read time series arranged column wise on ascii formatted file.
