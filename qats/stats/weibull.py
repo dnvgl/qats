@@ -854,7 +854,7 @@ def msm(x):
     return a, b, c
 
 
-def plot_fit(x: np.ndarray, params: tuple, path: str = None):
+def plot_fit(x: np.ndarray, params: tuple, path: str = None, p: list = None):
     """
     Plot data sample versus empirical and fitted cumulative distribution function on linearized Weibull scales
 
@@ -866,6 +866,8 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
         location, scale and shape parameter of the Weibull distribution
     path : str, optional
         Save figure to file instead of displaying it.
+    p : list, optional
+        Percentile levels, default [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999]
 
     """
     # unpack distribution parameters
@@ -877,7 +879,10 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
     y_norm = np.log(-np.log(1. - (np.arange(x.size) + 1.) / (x.size + 1.)))
 
     # labels and tick positions for weibull paper plot
-    p = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
+    if p is not None:
+        p = np.array(p)
+    else:
+        p = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
     p_norm = np.log(-np.log(1. - p))
 
     # normalize fitted distribution
@@ -885,7 +890,7 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
 
     # plot
     plt.figure()
-    plt.plot(x_norm, y_norm, "ko", label="Data")
+    plt.plot(x_norm[y_norm >= p_norm[0]], y_norm[y_norm >= p_norm[0]], "ko", label="Data")
     plt.plot(q_norm, p_norm, label="Fit")
     plt.yticks(p_norm, p)
     xticks = np.linspace(q_norm[0], q_norm[-1], 5)
