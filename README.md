@@ -33,10 +33,6 @@ perfect for inspecting, comparing and reporting:
 
 ![QATS GUI](https://raw.githubusercontent.com/dnvgl/qats/master/docs/source/demo.gif)
 
-## Python version support
-
-QATS supports Python 3.7, 3.8, 3.9 and 3.10.
-
 ## Getting started
 
 ### Installation
@@ -56,21 +52,20 @@ python -m pip install --upgrade qats
 You may now import qats in your own scripts:
 
 ```python
-from qats import TsDB, TimeSeries
+>>> from qats import TsDB, TimeSeries
 ```
 
-... or use the GUI to inspect time series. Note that as of version 4.2.0 you are quite free to choose which 
-[Qt](https://www.qt.io) binding you would like to use for the GUI: [PyQt5](https://pypi.org/project/PyQt5/) or 
-[PySide2](https://pypi.org/project/PySide2/), or even [PyQt4](https://pypi.org/project/PyQt4/) / 
-[PySide](https://pypi.org/project/PySide/).
+... or use the GUI to inspect time series. 
 
-Install the chosen binding (here PyQt5 as an example):
+_New in version 5.0.0._ 
+The [Qt](https://www.qt.io) binding [PySide6](https://pypi.org/project/PySide6/) is installed with `qats`. 
+If you would rather like to use [PyQt6](https://pypi.org/project/PyQt6/), run
 
 ```console
-python -m pip install pyqt5
+python -m pip install pyqt6
 ```
 
-If multiple Qt bindinds are installed, the one to use may be controlled by setting the environmental variable `QT_API` to the desired package. Accepted values include `pyqt5` (to use PyQt5) and `pyside2` (PySide2). For more details, see [README file for qtpy](https://github.com/spyder-ide/qtpy/blob/master/README.md).
+If multiple Qt bindinds are installed, the one to use may be controlled by setting the environmental variable `QT_API` to the desired package. Accepted values include `pyqt6` (to use PyQt6) and `pyside6` (PySide6). For more details, see [README file for qtpy](https://github.com/spyder-ide/qtpy/blob/master/README.md).
 
 The GUI may now be launched by:
 
@@ -97,7 +92,7 @@ python -m qats config --link-app
 
 * [**Source**](https://github.com/dnvgl/qats)
 * [**Issues**](https://github.com/dnvgl/qats/issues)
-* [**Changelog**](https://github.com/dnvgl/qats/blob/master/CHANGELOG.md)
+* [**Changelog**](https://github.com/dnvgl/qats/releases)
 * [**Documentation**](https://qats.readthedocs.io)
 * [**Download**](https://pypi.org/project/qats/)
 
@@ -108,7 +103,13 @@ purposes. See deployment for notes on how to deploy the project on a live system
 
 ### Prerequisites
 
-Install Python version 3.7 or later from either https://www.python.org or https://www.anaconda.com.
+Install Python version 3.8 or later from either https://www.python.org or https://www.anaconda.com.
+
+Install Poetry with [the official installer](https://python-poetry.org/docs/#installing-with-the-official-installer).
+
+Install the [poetry-dynamic-versioning](https://pypi.org/project/poetry-dynamic-versioning/) plugin:
+
+```poetry self add "poetry-dynamic-versioning[plugin]"```
 
 ### Clone the source code repository
 
@@ -118,35 +119,22 @@ At the desired location, run:
 
 ### Installing
 
-To get the development environment running:
-
-... create an isolated Python environment and activate it,
+To get the development environment running...
 
 ```console
-python -m venv /path/to/new/virtual/environment
-
-/path/to/new/virtual/environment/Scripts/activate
+poetry install
 ```
 
-... install the dev dependencies in [requirements.txt](requirements.txt),
-
-```console
-python -m pip install -r requirements.txt
-```
-
-.. and install the package in development ("editable") mode.
-
-```console
-python -m pip install -e .
-```
-
-_Note: This is similar to the "legacy" development installation command ``python setup.py develop``, see the [setuptools page on development mode](https://setuptools.pypa.io/en/latest/userguide/development_mode.html)._
+This will
+- create an isolated environment
+- install all dependencies including those required for development, testing and building documentation
+- and install the package in development ("editable") mode
 
 You should now be able to import the package in the Python console,
 
 ```python
-import qats
-help(qats)
+>>> import qats
+>>> help(qats)
 ```
 
 ... and use the command line interface (CLI).
@@ -171,13 +159,13 @@ python -m unittest discover
 
 ### Building the package
 
-Build tarball and wheel distributions by:
+Build tarball and wheel distributions by
 
 ```console
-python setup.py sdist bdist_wheel
+poetry build
 ```
 
-The distribution file names adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention) 
+The builds appear in the `.dist` folder. The distributions adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention) 
 convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl`.
 
 ### Building the documentation
@@ -194,16 +182,19 @@ To force a build to read/write all files (always read all files and don't use a 
 sphinx-build -a -E -b html docs\source docs\_build
 ```
 
-### Deployment
-Packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/) is automated using [GitHub Actions](https://docs.github.com/en/actions).
-
 ### Versioning
 
 We apply the "major.minor.micro" versioning scheme defined in [PEP 440](https://www.python.org/dev/peps/pep-0440/). See also [Scheme choices](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#scheme-choices) on https://packaging.python.org/.
 
-We cut a new version by applying a Git tag like `3.0.1` at the desired commit and then 
-[setuptools_scm](https://github.com/pypa/setuptools_scm/#setup-py-usage) takes care of the rest. For the versions 
-available, see the [tags on this repository](https://github.com/dnvgl/qats/tags). 
+Versions are tagged with Git tags like `v3.0.1`. See the [tags on this repository](https://github.com/dnvgl/qats/tags). 
+
+### Release and deployment
+
+We use the [release cycle in GitHub](https://github.com/dnvgl/qats/releases) to cut new releases.
+
+Once a new release is published, [GitHub Actions](https://docs.github.com/en/actions) takes care of the packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/).
+
+The workflows for continuous integration and deployment are found in [.github/workflows](.github/workflows/).
 
 ## Authors
 

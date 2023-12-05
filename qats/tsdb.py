@@ -3,52 +3,35 @@
 """
 Provides :class:`TsDB` class.
 """
-import os
-import glob
 import copy
 import fnmatch
+import glob
+import os
+from collections import OrderedDict, defaultdict
 from uuid import uuid4
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from collections import OrderedDict, defaultdict
-from .ts import TimeSeries
+
 from .fatigue.rainflow import rebin as rebin_cycles
-from .io.sima import (
-    read_names as read_sima_names,
-    read_ascii_data as read_sima_ascii_data,
-    read_bin_data as read_sima_bin_data,
-    read_sima_wind_names
-)
-from .io.sima_h5 import (
-    read_names as read_sima_h5_names,
-    read_data as read_sima_h5_data,
-    write_data as write_sima_h5_data
-)
-from .io.csv import (
-    read_names as read_csv_names,
-    read_data as read_csv_data
-)
-from .io.direct_access import (
-    read_ts_names,
-    read_tda_names,
-    read_ts_data,
-    read_tda_data,
-    write_ts_data
-)
-from .io.sintef_mat import (
-    read_names as read_mat_names,
-    read_data as read_mat_data
-)
-from .io.tdms import (
-    read_names as read_tdms_names,
-    read_data as read_tdms_data
-)
-from .io.other import (
-    read_dat_names,
-    read_dat_data,
-    write_dat_data
-)
+from .io.csv import read_data as read_csv_data
+from .io.csv import read_names as read_csv_names
+from .io.direct_access import (read_tda_data, read_tda_names, read_ts_data,
+                               read_ts_names, write_ts_data)
+from .io.other import read_dat_data, read_dat_names, write_dat_data
+from .io.sima import read_ascii_data as read_sima_ascii_data
+from .io.sima import read_bin_data as read_sima_bin_data
+from .io.sima import read_names as read_sima_names
+from .io.sima import read_sima_wind_names
+from .io.sima_h5 import read_data as read_sima_h5_data
+from .io.sima_h5 import read_names as read_sima_h5_names
+from .io.sima_h5 import write_data as write_sima_h5_data
+from .io.sintef_mat import read_data as read_mat_data
+from .io.sintef_mat import read_names as read_mat_names
+from .io.tdms import read_data as read_tdms_data
+from .io.tdms import read_names as read_tdms_names
+from .ts import TimeSeries
 
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
@@ -116,9 +99,7 @@ class TsDB(object):
             time series in database
         """
         for key in self.register_keys:
-            item = self.register[key]
-            if item is not None:
-                yield self.register[key]
+            yield self.get(name=key)
 
     def __len__(self):
         return self.n
@@ -429,7 +410,7 @@ class TsDB(object):
         container : dict
             Container with time series
         keep_basename : bool, optional
-            Keep only time series names e.g. 'tension' in key 'C:\data\results.ts\tension'. Default False.
+            Keep only time series names e.g. 'tension' in key 'C:\\data\\results.ts\\tension'. Default False.
 
         Returns
         -------

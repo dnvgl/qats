@@ -49,16 +49,15 @@ inspecting, quality assurance and reporting. Use the library for more advanced o
 Python version support
 **********************
 
-QATS currently supports Python version 3.7, 3.8, 3.9, and 3.10.
+QATS currently supports Python version 3.8 and later. Note that version 3.12 is not properly tested but should work.
+
 
 
 Source code, Issue tracker and Changelog
 ****************************************
 
 The `source code <https://github.com/dnvgl/qats>`_, `issue tracker <https://github.com/dnvgl/qats/issues>`_ and
-`changelog <https://github.com/dnvgl/qats/blob/master/CHANGELOG.md>`_ are hosted on GitHub.
-
-A copy of the changelog is rendered within this documentation, see :ref:`Changelog`.
+`changelog <https://github.com/dnvgl/qats/releases>`_ are hosted on GitHub.
 
 
 Downloads

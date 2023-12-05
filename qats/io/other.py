@@ -2,6 +2,7 @@
 Readers for various time series file formats
 """
 import fnmatch
+
 import numpy as np
 
 
@@ -39,7 +40,7 @@ def read_dat_names(path):
         if len(timekeys) < 1:
             raise KeyError(f"The file '{path}' does not contain a time vector")
         elif len(timekeys) > 1:
-            raise KeyError(f"The file '{path}' contain duplicate time vectors")
+            raise KeyError(f"The file '{path}' contains duplicate time vectors")
 
     # skip the time array name assumed to be in the first column
     return names[1:]
@@ -72,13 +73,13 @@ def read_dat_data(path, ind=None):
 
     """
     with open(path, 'r') as f:
-        # skip commmented lines at start of file
+        # skip commented lines at beginning of file
         for line in f:
+            # break at first uncommented line (which is the header row and should not be read here)
             if not line.startswith("#"):
-                # skip all comment lines
                 break
-
-        # load data from the remaining rows as an array, skip the header row with keys (first row after comments)
+        
+        # load data, skipping commented lines and the header row with keys (first uncommented line)
         data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
 
     return data

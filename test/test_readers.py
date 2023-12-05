@@ -4,19 +4,22 @@ Module for testing io.
 The module utilizes TsDB.fromfile and .get() to read at least one time series from the file, to check that this does not
 generate any exceptions.
 """
-from qats import TsDB
-import unittest
 import os
 import sys
+import unittest
+from pathlib import Path
+
+from qats import TsDB
 
 # todo: add test class for matlab
 
+ROOT = Path(__file__).resolve().parent
 
 class TestAllReaders(unittest.TestCase):
     def setUp(self):
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env
-        self.data_directory = os.path.join(os.path.dirname(__file__), '..', 'data')
+        self.data_directory = os.path.join(ROOT, '..', 'data')
         # file name, number of (time series) keys
         self.files = [
             # sima h5 files
@@ -50,6 +53,7 @@ class TestAllReaders(unittest.TestCase):
         ]
 
     def test_correct_number_of_timeseries(self):
+        """ Read key file, check number of keys (data not loaded) """
         failed = []
         for filename, nts in self.files:
             db = TsDB.fromfile(os.path.join(self.data_directory, filename))
@@ -60,6 +64,7 @@ class TestAllReaders(unittest.TestCase):
                         f"\n   *** ".join(failed))
 
     def test_correct_timeseries_size(self):
+        """ Load time series: check that it loads and that t.size matches x.size """
         failed = []
         for filename, _ in self.files:
             try:

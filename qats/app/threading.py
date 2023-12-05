@@ -1,6 +1,9 @@
 import sys
 import traceback
-from qtpy.QtCore import QRunnable, Signal as QSignal, QObject, Slot as QSlot
+
+from qtpy.QtCore import QObject, QRunnable
+from qtpy.QtCore import Signal as QSignal
+from qtpy.QtCore import Slot as QSlot
 
 
 class WorkerSignals(QObject):

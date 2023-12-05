@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# This workflow will lint, run unit tests, test CLI and build with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 name: Test Python package
@@ -10,47 +10,98 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-    
-    name: Test with Python ${{ matrix.python-version }} on Ubuntu
+  linting:
+    name: Linting
+    # linting has nothing to do with multiple versions of os and python
+    # (the result will be the same) and therefore separated to save time
     runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Load pip cache if cache exists
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip
+          restore-keys: ${{ runner.os }}-pip
+      - name: Install linters
+        run: python -m pip install black flake8 isort
+      - name: Lint code
+        run: |
+          flake8 ./qats/ --exit-zero --max-complexity=10 --statistics
+          black .
+          isort .
+
+  testing:
+    needs: linting
+    name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        os: ["ubuntu-latest"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
 
     steps:
-    - uses: actions/checkout@v2
-      with:
-          fetch-depth: 0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
+      # https://stackoverflow.com/questions/75549995/why-do-the-pyside6-qt-modules-cause-tox-to-fail-during-a-github-action
+    - name: Install missing libraries on GitHub agent
+      run: sudo apt update && sudo apt install -y libegl1-mesa-dev
+    - name: Check out repository
+      uses: actions/checkout@v4
+    - name: Set up python ${{ matrix.python-version }}
+      id: setup-python
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Load cached Poetry installation
+      id: cached-poetry
+      uses: actions/cache@v3
+      with:
+        path: ~/.local  # the path depends on the OS
+        key: poetry-0  # increment to reset cache
+    - name: Install and configure Poetry
+      # install if not cached. Create venv in project to simplify caching
+      if: steps.cached-poetry.outputs.cache-hit != 'true'
+      uses: snok/install-poetry@v1
+      with:
+        # Consider specifying version (version: 1.7.1 on Python 3.11)
+        virtualenvs-create: true
+        virtualenvs-in-project: true  #.venv in current directory
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Create venv and install project dependencies
+      # install if not cached
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+    - name: Install project
+      # required to test the CLI, show working directory for debugging
       run: |
-        python -m pip install --upgrade pip
-        python -m pip install flake8
-        # python -m pip install setuptools-scm flake8 wheel pyside2 h5py pymatreader matplotlib npTDMS numpy openpyxl pandas scipy
-        # changed 27.12.2023: install from requirements.txt, so that incompatibilities in requirements lead to failed tests
-        python -m pip install -r requirements.txt
-    - name: Lint with flake8
+        poetry install --no-interaction
+        ls -a
+    - name: Run unit tests
       run: |
-        # stop the build if there are Python syntax errors or undefined names
-        #   flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-    - name: Run tests
+        source .venv/bin/activate
+        pytest test/
+    - name: Test CLI
       env:
-        QT_API: pyside2
+        QT_API: pyside6
       run: |
-        python -m unittest discover
-        python setup.py install
-        # test running qats via entry points
+        source .venv/bin/activate
         qats -h
         qats app -h
         qats config -h
-        # test running qats via __main__ hook
         python -m qats -h
-        # test that building documentation does not fail
+    - name: Test building package
+      run: poetry build
+    - name: Test building documentation
+      run: |
+        source .venv/bin/activate
         sphinx-build -b html docs/source docs/_build
