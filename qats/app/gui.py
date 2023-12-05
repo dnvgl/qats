@@ -28,7 +28,6 @@ from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox, QDialog,
                             QMessageBox, QPushButton, QRadioButton, QSpinBox,
                             QSplitter, QTabBar, QVBoxLayout, QWidget)
 
-from .._version import __version__
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
 from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
@@ -37,6 +36,12 @@ from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
 from .logger import QLogger
 from .threading import Worker
 from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget
+# version string
+# from .._version import __version__
+try:
+    from .._version import __version__
+except ImportError:
+    __version__ = "0.0.0"
 
 LOGGING_LEVELS = dict(
     debug=logging.DEBUG,
