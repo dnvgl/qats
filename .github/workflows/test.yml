@@ -108,9 +108,10 @@ jobs:
         source .venv/bin/activate
         sphinx-build -b html docs/source docs/_build
     - name: Upload artifacts
+      if: ${{ matrix.python-version == '3.11' }}
       uses: actions/upload-artifact@v3
       with:
-        name: download-files
+        name: test-builds
         path: |
           dist/qats-*.tar.gz
           dist/qats-*.whl
