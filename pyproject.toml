@@ -14,10 +14,12 @@ include = [
 ]
 
 [tool.poetry.urls]
+Homepage = "https://github.com/dnvgl/qats"
 Source = "https://github.com/dnvgl/qats"
 Documentation = "https://qats.readthedocs.io"
 Download = "https://pypi.org/project/qats/"
 Issues = "https://github.com/dnvgl/qats/issues"
+Changelog = "https://github.com/dnvgl/qats/releases"
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<3.13"
