@@ -19,7 +19,7 @@ from .io.csv import read_data as read_csv_data
 from .io.csv import read_names as read_csv_names
 from .io.direct_access import (read_tda_data, read_tda_names, read_ts_data,
                                read_ts_names, write_ts_data)
-from .io.other import read_dat_data, read_dat_names, write_dat_data
+from .io.other import read_dat_data, read_dat_names, write_dat_data, read_ascii_data, read_ascii_names
 from .io.sima import read_ascii_data as read_sima_ascii_data
 from .io.sima import read_bin_data as read_sima_bin_data
 from .io.sima import read_names as read_sima_names
@@ -549,6 +549,11 @@ class TsDB(object):
 
             elif fext == '.dat':
                 data = read_dat_data(parent, ind=indices)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+            
+            elif fext == '.txt':
+                data = read_ascii_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
 
@@ -1317,6 +1322,10 @@ class TsDB(object):
             elif fext == '.dat':
                 # plain column wise ascii format
                 names = read_dat_names(thefile)
+            
+            elif fext == '.txt':
+                # plain column wise ascii format
+                names = read_ascii_names(thefile)
 
             elif fext == '.mat':
                 # SINTEF Ocean test data export format based on Matlab .mat files.

@@ -113,25 +113,37 @@ def read_ascii_data(path, ind=None):
     ``data[1,:]``.
 
     """
+    def all_floats(elements: list) -> bool:
+        """_summary_
+
+        Args:
+            elements (list): Strings
+
+        Returns:
+            bool: Can all elements be converted to floats.
+        """
+        try:
+            _ = list(map(float, elements))
+        except ValueError:
+            return False
+        else:
+            return True
+        
     with open(path, 'r') as f:
-        for line in f:
-            if line.startswith("#"):
-                # skip commented lines
-                continue
-            elif not line:
-                # skip empty lines
-                continue
-            elif len(fnmatch.filter(line.split(), "[Tt]ime*")) == 1:
-                # names in uncommented row that has a time entry
-                names = line.split()
-                return names[1:]
-            elif len(fnmatch.filter(line.split(), "[Tt]ime*")) > 1:
-                raise KeyError(f"The file '{path}' contains duplicate time vectors")
+        pos = 0
+        while True:
+            line = f.readline()
+            
+            if (len(line.split()) > 0) and all_floats(line.split()):
+                # found start of data block, assumes the data block is not interrupted
+                break
             else:
+                pos += 1
                 continue
         
         # load data, skipping commented lines and the header row with keys (first uncommented line)
-        data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
+        f.seek(0)   # rewind to start of file
+        data = np.loadtxt(f, skiprows=pos, usecols=ind, unpack=True)
 
     return data
 
