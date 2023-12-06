@@ -36,12 +36,7 @@ from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
 from .logger import QLogger
 from .threading import Worker
 from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget
-# version string
-# from .._version import __version__
-try:
-    from .._version import __version__
-except ImportError:
-    __version__ = "0.0.0"
+from .. import __version__
 
 LOGGING_LEVELS = dict(
     debug=logging.DEBUG,
