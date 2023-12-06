@@ -3,24 +3,56 @@
 # Consider moving the docs dependencies to dev to speed up (probably not a problem).
 # reference: https://github.com/marketplace/actions/publish-python-poetry-package
 
-name: Upload Python Package to PyPi
+name: Publish Python Package to PyPi
 
 on:
   release:
     types: [published]
 
 jobs:
-  deploy:
-
+  publishing:
+    name: Build and publish package on PyPi
     runs-on: ubuntu-latest
 
     steps:
+    - name: Install missing libraries on GitHub agent
+      run: sudo apt update && sudo apt install -y libegl1-mesa-dev
     - name: Check out repository
       uses: actions/checkout@v4
-    - name: Build and publish to pypi
-      uses: JRubics/poetry-publish@v1.17
+    - name: Set up python
+      id: setup-python
+      uses: actions/setup-python@v4
       with:
-        python_version: "3.11"
-        plugins: "poetry-dynamic-versioning[plugin]"
-        ignore_dev_requirements: "yes"
-        pypi_token: ${{ secrets.PYPI_API_TOKEN }}
+        python-version: "3.11"
+    - name: Load cached Poetry installation
+      id: cached-poetry
+      uses: actions/cache@v3
+      with:
+        path: ~/.local  # the path depends on the OS
+        key: poetry-publish-0  # increment to reset cache
+    - name: Install and configure Poetry
+      # install if not cached. Create venv in project to simplify caching
+      if: steps.cached-poetry.outputs.cache-hit != 'true'
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true  #.venv in current directory
+    - name: Install dynamic versioning plugin
+      run: poetry self add "poetry-dynamic-versioning[plugin]"
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    - name: Create venv and install project dependencies
+      # install if not cached
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+    - name: Install project
+      # required to test the CLI, show working directory for debugging
+      run: poetry install --no-interaction
+    - name: Build and publish to pypi
+      run: poetry publish --build
+      env:
+        POETRY_PYPI_TOKEN_PYPI : ${{ secrets.PYPI_API_TOKEN }}

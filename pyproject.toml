@@ -50,11 +50,6 @@ myst-parser = ">=2.0.0"
 
 [tool.poetry.scripts]
 qats = "qats.cli:main"
-qats-app = "qats.cli:launch_app"
-# I expected the below solution to work but it does not. I will find a solution to
-# launch the application without a console window.
-#qats-app = {source = "qats.cli:launch_app", type = "gui"}
-#qats = {source = "qats.cli:main", type = "console"}
 
 
 [tool.poetry.urls]
@@ -69,7 +64,7 @@ Issues = "https://github.com/dnvgl/qats/issues"
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
-pattern  = "^(?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision>\\d+)?))?"
+pattern  = "^[vV](?P<base>\\d+\\.\\d+\\.\\d+)(-?((?P<stage>[a-zA-Z]+)\\.?(?P<revision>\\d+)?))?"
 format-jinja = """
     {%- if distance == 0 -%}
         {{- base -}}
