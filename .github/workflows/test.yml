@@ -71,6 +71,8 @@ jobs:
         # Consider specifying version (version: 1.7.1 on Python 3.11)
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
+    - name: Install dynamic versioning plugin
+      run: poetry self add "poetry-dynamic-versioning[plugin]"
     - name: Load cached venv
       id: cached-poetry-dependencies
       uses: actions/cache@v3
@@ -105,3 +107,11 @@ jobs:
       run: |
         source .venv/bin/activate
         sphinx-build -b html docs/source docs/_build
+    - name: Upload artifacts
+      if: ${{ matrix.python-version == '3.11' }}
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-builds
+        path: |
+          dist/qats-*.tar.gz
+          dist/qats-*.whl

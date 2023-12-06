@@ -5,7 +5,6 @@ Command line interface to app (GUI).
 import argparse
 import os
 import sys
-import sysconfig
 
 from pkg_resources import resource_filename
 from qtpy.QtWidgets import QApplication
