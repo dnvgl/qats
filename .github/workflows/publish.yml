@@ -56,3 +56,11 @@ jobs:
       run: poetry publish --build
       env:
         POETRY_PYPI_TOKEN_PYPI : ${{ secrets.PYPI_API_TOKEN }}
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: builds
+        path: |
+          dist/qats-*.tar.gz
+          dist/qats-*.whl
+  
