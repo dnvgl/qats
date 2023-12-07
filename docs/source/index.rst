@@ -49,7 +49,13 @@ inspecting, quality assurance and reporting. Use the library for more advanced o
 Python version support
 **********************
 
-QATS currently supports Python version 3.8 and later. Note that version 3.12 is not properly tested but should work.
+.. QATS currently supports Python version 3.8 and later. Note that version 3.12 is not properly tested but should work.
+
+QATS currently supports Python version 3.8+. 
+
+.. note::
+    Python version <=3.11 is recommended, as version 3.12 is not yet formally tested.
+
 
 
 
@@ -63,7 +69,11 @@ The `source code <https://github.com/dnvgl/qats>`_, `issue tracker <https://gith
 Downloads
 *********
 
-You can download and install QATS from `PyPI <https://pypi.org/project/qats/>`_.
+.. You can download and install QATS from `PyPI <https://pypi.org/project/qats/>`_. 
+.. Or, see the :ref:`getting_started` for installation instructions.
+
+QATS may be downloaded from `PyPI/qats <https://pypi.org/project/qats/>`_. 
+See the :ref:`getting_started` section for installation instructions.
 
 Table of contents
 *****************
@@ -97,3 +107,4 @@ Table of contents
    PyPI Project <https://pypi.org/project/qats/>
    GitHub Repository <https://github.com/dnvgl/qats>
    Issue Tracker <https://github.com/dnvgl/qats/issues>
+   Changelog <https://github.com/dnvgl/qats/releases>
