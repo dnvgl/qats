@@ -12,11 +12,13 @@ include = [
     "LICENSE",
     "CHANGELOG.md"
 ]
+# some urls given here instead of ulrs section (affects listed order on PyPi)
+homepage = "https://github.com/dnvgl/qats"
+repository = "https://github.com/dnvgl/qats"
+documentation = "https://qats.readthedocs.io"
 
 [tool.poetry.urls]
-Homepage = "https://github.com/dnvgl/qats"
-Source = "https://github.com/dnvgl/qats"
-Documentation = "https://qats.readthedocs.io"
+# additional urls not listed under tool.poetry
 Download = "https://pypi.org/project/qats/"
 Issues = "https://github.com/dnvgl/qats/issues"
 Changelog = "https://github.com/dnvgl/qats/releases"
