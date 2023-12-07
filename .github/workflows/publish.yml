@@ -57,6 +57,7 @@ jobs:
       env:
         POETRY_PYPI_TOKEN_PYPI : ${{ secrets.PYPI_API_TOKEN }}
     - name: Upload artifacts
+      # https://github.com/actions/upload-artifact#upload-artifact-v3
       uses: actions/upload-artifact@v3
       with:
         name: builds
