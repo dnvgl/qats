@@ -4,7 +4,6 @@
 # qats documentation build configuration file, 
 # originally created by sphinx-quickstart
 #
-from importlib import metadata
 import os
 import sys
 # import the package to be documented
@@ -15,19 +14,7 @@ import qats
 THEME = 'furo'  # 'sphinx_rtd_theme'
 
 # determine qats version
-#
-# note: 
-#   As of v5.0.4, qats.__version__ returns "0.0.0" when in a an editable install 
-#   (e.g., if installed from repo using `poetry install` or `pip install -e .`). 
-#   This is, however, exactly the case when documentation is built for readthedocs.
-#   Therefore, qats version must be determined using importlib instead.
-# warning:
-#   importlib.metadata may be tricked if an old folder 'qats.egg-info' is present
-#   (e.g., originating from a previous call to `pip install -e .`). The version
-#   string obtained may then be outdated. However, it is safe to delete this old
-#   folder. Also, this should not be an issue when docs are built by readthedocs.
-__version__ = metadata.version("qats")
-
+__version__ = qats.__version__
 
 # print("Generating doc for QATS version {version} installed in {path}"
 #       .format(version=qats.__version__, path=qats.__path__))
