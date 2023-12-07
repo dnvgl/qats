@@ -762,14 +762,13 @@ class Qats(QMainWindow):
         # file save dialogue
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        # options = dlg.Options()  # raises expection in qt6 (pyside6) -- probably not needed 
         dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
         name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
                                       "Direct access file (*.ts);;"
                                       "ASCII file with header (*.dat);;"
                                       "SIMA H5 file (*.h5);;"
-                                      "All Files (*)")  # , options=options)
+                                      "All Files (*)")
 
         # get list of selected time series
         keys = self.selected_series()
@@ -800,8 +799,8 @@ class Qats(QMainWindow):
         """
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        # options = dlg.Options()  # raises expection in qt6 (pyside6) -- probably not needed 
         dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
+
         files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
                                         "Direct access files (*.ts);;"
                                         "SIMO S2X direct access files with info array (*.tda);;"
@@ -812,7 +811,7 @@ class Qats(QMainWindow):
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"
                                         "Technical Data Management Streaming files (*.tdms);;"
-                                        "All Files (*)")  #, options=options)
+                                        "All Files (*)")
 
         # load files into db and update application model and view
         self.load_files(files)
