@@ -1,4 +1,4 @@
-# Changelog
+# Changelog (deprecated)
 
 > **Note:**
 > After version 4.12.1 this changelog is deprecated. Releases will in future be documented in [Github's releases page](https://github.com/dnvgl/qats/releases). 
