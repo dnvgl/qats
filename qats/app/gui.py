@@ -638,7 +638,10 @@ class Qats(QMainWindow):
         # construct regexp string that may be used to initiate QRegularExpression instance
         if filter_type == "wildcard":
             # pad with wildcard ('*') to get expected behaviour
-            reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(f"*{pattern}*")
+            reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(
+                f"*{pattern}*", 
+                options=QRegularExpression.WildcardConversionOption.NonPathWildcardConversion
+                )
         elif filter_type == "regexp":
             # pattern string should be interpreted as a regexp pattern
             reg_exp_pattern = pattern
@@ -1397,7 +1400,6 @@ class Qats(QMainWindow):
         # fill item model with time series by unique id (common path is removed)
         names = self.db.list(names="*", relative=True, display=False)
         self.db_source_model.clear()    # clear before re-adding
-        # quickfix for Wildcard issue (#119): replace '\' by '/' 
         for name in names:
             # set each item as unchecked initially
             item = QStandardItem(name)
