@@ -638,7 +638,10 @@ class Qats(QMainWindow):
         # construct regexp string that may be used to initiate QRegularExpression instance
         if filter_type == "wildcard":
             # pad with wildcard ('*') to get expected behaviour
-            reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(f"*{pattern}*")
+            reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(
+                f"*{pattern}*", 
+                options=QRegularExpression.WildcardConversionOption.NonPathWildcardConversion
+                )
         elif filter_type == "regexp":
             # pattern string should be interpreted as a regexp pattern
             reg_exp_pattern = pattern
@@ -762,13 +765,13 @@ class Qats(QMainWindow):
         # file save dialogue
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        options = dlg.Options()
+        dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
         name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
                                       "Direct access file (*.ts);;"
                                       "ASCII file with header (*.dat);;"
                                       "SIMA H5 file (*.h5);;"
-                                      "All Files (*)", options=options)
+                                      "All Files (*)")
 
         # get list of selected time series
         keys = self.selected_series()
@@ -799,7 +802,8 @@ class Qats(QMainWindow):
         """
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        options = dlg.Options()
+        dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
+
         files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
                                         "Direct access files (*.ts);;"
                                         "SIMO S2X direct access files with info array (*.tda);;"
@@ -810,7 +814,7 @@ class Qats(QMainWindow):
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"
                                         "Technical Data Management Streaming files (*.tdms);;"
-                                        "All Files (*)", options=options)
+                                        "All Files (*)")
 
         # load files into db and update application model and view
         self.load_files(files)
@@ -1396,7 +1400,6 @@ class Qats(QMainWindow):
         # fill item model with time series by unique id (common path is removed)
         names = self.db.list(names="*", relative=True, display=False)
         self.db_source_model.clear()    # clear before re-adding
-
         for name in names:
             # set each item as unchecked initially
             item = QStandardItem(name)
