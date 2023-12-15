@@ -35,6 +35,10 @@ def reversals(series, endpoints=False):
     the first and the last points in the series, unless `endpoints` is set to True (in which case they are always
     included).
 
+    See Also
+    --------
+    qats.signal.find_reversals
+
     """
     series = iter(series)
 
