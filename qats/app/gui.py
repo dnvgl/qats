@@ -768,7 +768,7 @@ class Qats(QMainWindow):
         # file save dialogue
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        options = dlg.Options()
+        options = dlg.options()
 
         name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
                                       "Direct access file (*.ts);;"
