@@ -29,6 +29,8 @@ from .io.sima_h5 import read_names as read_sima_h5_names
 from .io.sima_h5 import write_data as write_sima_h5_data
 from .io.sintef_mat import read_data as read_mat_data
 from .io.sintef_mat import read_names as read_mat_names
+from .io.pickle_format import read_names as read_pickle_names
+from .io.pickle_format import read_data as read_pickle_data
 from .io.tdms import read_data as read_tdms_data
 from .io.tdms import read_names as read_tdms_names
 from .ts import TimeSeries
@@ -568,6 +570,11 @@ class TsDB(object):
                 data = read_csv_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
+
+            elif fext == '.pkl' or fext == '.pickle':
+                data = read_pickle_data(parent)
+                for i, name in enumerate(names):
+                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
 
             elif fext == '.tdms':
                 data = read_tdms_data(parent, names=names)
@@ -1330,6 +1337,10 @@ class TsDB(object):
             elif fext == '.csv':
                 # column wise csv
                 names = read_csv_names(thefile)
+
+            elif fext == '.pkl' or fext == '.pickle':
+                # column wise pickle
+                names = read_pickle_names(thefile)
 
             elif fext == '.tdms':
                 # National Instrument structured binary file format

@@ -805,6 +805,8 @@ class Qats(QMainWindow):
         dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
         files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
+                                        "DataFrame Pickle dump (*.pkl);;"
+                                        "DataFrame Pickle dump (*.pickle);;"
                                         "Direct access files (*.ts);;"
                                         "SIMO S2X direct access files with info array (*.tda);;"
                                         "RIFLEX SIMO binary files (*.bin);;"
