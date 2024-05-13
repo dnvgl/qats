@@ -27,7 +27,7 @@ def read_pickle_names(path):
         for name in df.columns:
             if isinstance(name, tuple):
                 # Convert tuple to string
-                newnames.append(" ".join(name))
+                newnames.append(" ".join(str(item) for item in name))
             else:
                 newnames.append(name)
     else:
