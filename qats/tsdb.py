@@ -29,7 +29,7 @@ from .io.sima_h5 import read_names as read_sima_h5_names
 from .io.sima_h5 import write_data as write_sima_h5_data
 from .io.sintef_mat import read_data as read_mat_data
 from .io.sintef_mat import read_names as read_mat_names
-from .io.pickle_format import read_names as read_pickle_names
+from .io.pickle_format import read_pickle_names as read_pickle_names
 from .io.pickle_format import read_data as read_pickle_data
 from .io.tdms import read_data as read_tdms_data
 from .io.tdms import read_names as read_tdms_names

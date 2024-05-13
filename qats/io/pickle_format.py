@@ -4,11 +4,10 @@ Readers pickle dataframe formatted time series files
 import pandas as pd
 
 
-def read_names(path):
+def read_pickle_names(path):
     """
     Read time series names from a pickle dumps of dataframes.
-
-
+    Converts multi index tuples to strings.
 
     Parameters
     ----------
@@ -23,17 +22,16 @@ def read_names(path):
 
     """
     df = pd.read_pickle(path)
-    names = list(df)
-    newnames = []
-    for name in names:
-        if isinstance(name, tuple):
-            if len(name) == 2:
-                newnames.append(name[0] + " " + name[1])
-            if len(name) == 3:
-                newnames.append(name[0] + " " + str(name[1]) + " " + name[2])
-
-        else:
-            newnames.append(name)
+    if isinstance(df, pd.DataFrame):
+        newnames = []
+        for name in df.columns:
+            if isinstance(name, tuple):
+                # Convert tuple to string
+                newnames.append(" ".join(name))
+            else:
+                newnames.append(name)
+    else:
+        raise ValueError("Input file is not a pandas dataframe.")
     return newnames
 
 
@@ -62,5 +60,8 @@ def read_data(path):
 
     """
     df = pd.read_pickle(path)
-    df.insert(0, "Time", df[df.keys()[0]].index.values)
+    if isinstance(df, pd.DataFrame):
+        df.insert(0, "Time", df[df.keys()[0]].index.values)
+    else:
+        raise ValueError("Input file is not a pandas dataframe.")
     return df.T.to_numpy()

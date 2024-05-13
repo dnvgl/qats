@@ -50,6 +50,8 @@ class TestAllReaders(unittest.TestCase):
             ("model_test_data.dat", 39),
             # # tdms files
             ("data.tdms", 4),
+            # # pickle files
+            ("df_dump.pkl", 36),
         ]
 
     def test_correct_number_of_timeseries(self):
