@@ -8,9 +8,9 @@ import os
 import sys
 import unittest
 from pathlib import Path
-
+import pandas as pd
 from qats import TsDB
-
+import numpy as np
 # todo: add test class for matlab
 
 ROOT = Path(__file__).resolve().parent
@@ -20,6 +20,10 @@ class TestAllReaders(unittest.TestCase):
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env
         self.data_directory = os.path.join(ROOT, '..', 'data')
+
+        #Make pickle file
+        self.make_pickle_file()
+
         # file name, number of (time series) keys
         self.files = [
             # sima h5 files
@@ -51,8 +55,32 @@ class TestAllReaders(unittest.TestCase):
             # # tdms files
             ("data.tdms", 4),
             # # pickle files
-            ("df_dump.pkl", 36),
+            ("df_dump.pkl", 4),
         ]
+
+
+    def make_pickle_file(self):
+        """ Create pickle file to be used in reader testing"""
+
+        # Generate range of seconds
+        seconds = np.linspace(0, 100,1000)
+
+        # Generate random data
+        data = np.random.randn(1000, 4)
+
+        # Create MultiIndex for columns
+        arrays = [
+            ["Category A", "Category A", "Category B", "Category B"],
+            ["Subcategory 1", "Subcategory 2", "Subcategory 1", "Subcategory 2"]
+        ]
+        index = pd.MultiIndex.from_arrays(arrays, names=('Category', 'Subcategory'))
+
+        # Create the DataFrame
+        df = pd.DataFrame(data, index=seconds, columns=index)
+
+        # Save the DataFrame to a pickle file
+        df.to_pickle(os.path.join(self.data_directory, "df_dump.pkl"))
+
 
     def test_correct_number_of_timeseries(self):
         """ Read key file, check number of keys (data not loaded) """
