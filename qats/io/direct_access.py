@@ -375,7 +375,7 @@ def write_ts_data(path, time: np.ndarray, data: dict):
             fts.write(array("f", arr[1]))
 
     except Exception:
-        raise RuntimeError("Exception encountered when writing data to file '%s'." % filename)
+        raise RuntimeError("Exception encountered when writing data to file '%s'." % path)
 
     finally:
         # end key file and close file pointers
