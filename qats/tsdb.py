@@ -710,18 +710,24 @@ class TsDB(object):
         """
         container = self.getm(names=names, fullkey=True, store=False)
         timecheck = self._check_time_arrays(container)
-        try:
-            start, end, dt = timecheck["common"]
-        except TypeError:
-            raise ValueError("Could not create common time array "
-                             "- check if earliest end time is before latest start time")
-        if maxdt is not None:
-            if dt > maxdt:
-                dt = maxdt
-        nt = int(round((end-start)/dt)) + 1
-        common_time, _dt = np.linspace(start, end, nt, retstep=True)
-        if strict is True and not round(dt - _dt, 4) == 0:
-            raise ValueError("obtained 'dt' (%f) deviates from specified 'dt' (%s)" % (_dt, dt))
+        if timecheck["is_common"] is True:
+            # time array is already common, extract from container instead of constructing new
+            common_time = container[list(container.keys())[0]].t
+        else:
+            # construct new common time array
+            try:
+                start, end, dt = timecheck["common"]
+            except TypeError:
+                raise ValueError("Could not create common time array "
+                                "- check if earliest end time is before latest start time")
+            if maxdt is not None:
+                if dt > maxdt:
+                    dt = maxdt
+            nt = int(round((end-start)/dt)) + 1
+            common_time, _dt = np.linspace(start, end, nt, retstep=True)
+            if strict is True and not round(dt - _dt, 4) == 0:
+                raise ValueError("obtained 'dt' (%f) deviates from specified 'dt' (%s)" % (_dt, dt))
+        # crop time array if specified
         if twin is not None:
             t_start, t_end = twin
             ind = (common_time >= t_start) & (common_time <= t_end)
@@ -729,7 +735,7 @@ class TsDB(object):
         return common_time
 
     def export(self, filename, names=None, delim="\t", skip_header=False, exist_ok=True, basename=True,
-               verbose=False, **kwargs):
+               verbose=False, force_common_time=False, **kwargs):
         """
         Export time series to file
 
@@ -745,12 +751,17 @@ class TsDB(object):
             For ascii files, skip header with keys? Default is to include them on first line. This parameter is ignored
             for other file formats.
         exist_ok : bool, optional
-            if false (the default), a FileExistsError is raised if target file already exists
+            If True (the default), any existing file is overwritten.
+            If False, a FileExistsError is raised if target file already exists.
         basename : bool, optional
-            If true (the default), basename (no path/file info) will be exported to key file. If false, the name/path
+            If True (the default), basename (no path/file info) will be exported to key file. If False, the name/path
             relative to common path is used. Also see notes below.
         verbose : bool, optional
             Print information
+        force_common_time: bool, optional
+            If True, a common time array is enforced by resampling the time series (unless time array is
+            already common). See notes below. If False (the default), a ValueError is raised if the time 
+            array is not common.
         kwargs : optional
             see documentation of :meth:`~qats.TimeSeries.get` method for available options
 
@@ -762,9 +773,9 @@ class TsDB(object):
          - SIMA hdf file (.h5).
          - pickle file (.pkl or .pickle) with time series stored in a pandas dataframe (index is the common time array).
 
-        The time series are resampled to a common time vector with a constant time step (sample rate). The minimum
-        average time step of all the selected time series is applied. This is done before enforcing the specified
-        time window.
+        If `force_common_time` is True and the time arrays of the specified time series are not equal, the time series are 
+        resampled to a common time vector with a constant time step (sample rate). The minimum average time step 
+        of all the selected time series is applied. This is done before enforcing the specified time window.
 
         If `basename` is true, an exception is raised if two or more time series share the same basename. The solution
         is then to specify ``basename=False``, so that only the common part of the paths/identifiers of the specified
@@ -796,7 +807,8 @@ class TsDB(object):
         1) Generate container of TimeSeries objects
         2) Modify container keys to export friendly keys
         3) Perform time array check (taking `dtg_ref` and  `**kwargs` into account)
-        4) Convert container to container of arrays (same as output from `getm()`, taking **kwargs into account)
+        4) Evaluate time check and take necessary actions in accordance with specifications
+        5) Convert container to container of arrays (same as output from `getm()`, taking **kwargs into account)
         '''
         # generate container, step 1 (generate container of TimeSeries objects)
         container = self.getm(names=names, fullkey=True, store=False)
@@ -804,17 +816,24 @@ class TsDB(object):
         container = self._make_export_friendly_names(container, keep_basename=basename)
         # generate container, step 3 (perform time array check
         timecheck = self._check_time_arrays(container, **kwargs)
-        # generate container, step 4 (convert to container of arrays)
+        # generate container, step 4 (evaluate outcome of time array check, take action in accordance with parameters given)
+        if timecheck["is_common"] is False:
+            if "resample" in kwargs:
+                # resampling has been specified => common time array will be enforced in next step
+                pass
+            elif force_common_time is True:
+                # enforce a common time array by adding resampling in spec for next step
+                common_time_array = self.create_common_time(names=names, twin=kwargs.get("twin"))
+                kwargs["resample"] = common_time_array
+            else:
+                # raise error if not common (time steps and time windows are not equal)
+                # inform the user that the time arrays are not equal and suggest how to mitigate
+                raise ValueError(timecheck["msg"])
+        # generate container, step 5 (convert to container of arrays)
         container = OrderedDict((k, v.get(**kwargs)) for k, v in container.items())
 
-        # evaluate outcome of time array check, raise error if not common (time steps and time windows are not equal)
-        if not timecheck["is_common"]:
-            # create error message (principle: error+advice rather than automagic solution)
-            # in other words; inform the user that the time arrays are not equal and suggest how to mitigate
-            raise ValueError(timecheck["msg"])
-        else:
-            # all time arrays are equal, just use the time array from one of the TimeSeries objects
-            common_time_array = container[list(container)[0]][0]
+        # all time arrays are equal by now, extract common time array from one of the container entries
+        common_time_array = container[list(container)[0]][0]
 
         # get file extension
         _, ext = os.path.splitext(filename)
@@ -981,7 +1000,7 @@ class TsDB(object):
             Time series name(s), supports wildcard.
         ind : int or list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
-            This parameter may not be combined with `keys` or `names`.
+            This parameter may not be combined with or `names`.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         fullkey : bool, optional
@@ -1010,7 +1029,7 @@ class TsDB(object):
             Time series names, supports wildcard.
         ind : int or list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
-            This parameter may not be combined with `keys` or `names`.
+            This parameter may not be combined with `names`.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         fullkey : bool, optional
@@ -1049,7 +1068,7 @@ class TsDB(object):
             Time series names, supports wildcard.
         ind : int or list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
-            This parameter may not be combined with `keys` or `names`.
+            This parameter may not be combined with `names`.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         Returns
@@ -1080,7 +1099,7 @@ class TsDB(object):
             Time series name(s), supports wildcard.
         ind : int or list, optional
             Index (or indices) of desired time series (index refers to index of key in list attribute `register_keys`).
-            This parameter may not be combined with `keys` or `names`.
+            This parameter may not be combined with `names`.
         store : bool, optional
             Disable time series storage. Default is to store the time series objects first time it is read.
         fullkey : bool, optional
@@ -1748,7 +1767,7 @@ class TsDB(object):
         df = pd.DataFrame(self.stats(statsdur=statsdur, names=names, ind=ind, store=store, fullkey=fullkey, **kwargs))
 
         return df
-
+    
     def update(self, tsdb, names=None, shallow=False):
         """
         Update TsDB with speicified keys/names from other TsDB instance.
