@@ -473,6 +473,7 @@ class TestTsDB(unittest.TestCase):
         # should not raise errors
 
     def test_export_reload(self):
+        # export and reload .ts, check that time series data is the same
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Sway"
         fnout = os.path.join(self.data_directory, '_test_export.ts')
@@ -501,7 +502,7 @@ class TestTsDB(unittest.TestCase):
             pass
 
         # check arrays
-        self.assertTrue(np.array_equal(ts1.x, ts2.x), "Export/reload did not yield same arrays")
+        self.assertTrue(np.array_equal(ts1.x, ts2.x), "Export/reload of .ts did not yield same arrays")
 
     def test_export_ascii(self):
         self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))
@@ -546,7 +547,38 @@ class TestTsDB(unittest.TestCase):
         os.remove(fnout)
 
         # check arrays
-        np.testing.assert_array_almost_equal(ts1.x, ts2.x, 6, "Export/reload did not yield same arrays")
+        np.testing.assert_array_almost_equal(ts1.x, ts2.x, 6, "Export/reload of ascii (.dat) did not yield same arrays")
+
+    def test_export_reload_pickle(self):
+        # export and reload .pkl, check that time series data is the same
+        self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
+        name = "Sway"
+        fnout = os.path.join(self.data_directory, '_test_export.pkl')
+        try:
+            # route screen dump from export to null
+            was_stdout = sys.stdout
+            f = open(os.devnull, 'w')
+            sys.stdout = f
+            # export, should not raise errors
+            self.db.export(fnout, names=name)
+        finally:
+            # reset sys.stdout
+            sys.stdout = was_stdout
+            f.close()
+        # reload
+        db2 = TsDB()
+        db2.load(fnout)
+        # compare ts
+        ts1 = self.db.get(name=name)
+        ts2 = db2.get(name=name)
+        # clean exported files
+        try:
+            os.remove(fnout)
+        except FileNotFoundError:
+            pass
+
+        # check arrays
+        self.assertTrue(np.array_equal(ts1.x, ts2.x), "Export/reload of pickle (.pkl) did not yield same arrays")
 
     def test_export_h5(self):
         self.db.load(os.path.join(self.data_directory, 'model_test_data.dat'))

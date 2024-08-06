@@ -21,8 +21,8 @@ class TestAllReaders(unittest.TestCase):
         # necessary to do it like this for the tests to work both locally and in virtual env
         self.data_directory = os.path.join(ROOT, '..', 'data')
 
-        #Make pickle file
-        self.make_pickle_file()
+        # make pickle file
+        self.make_pickle_file_multiindex()
 
         # file name, number of (time series) keys
         self.files = [
@@ -55,12 +55,22 @@ class TestAllReaders(unittest.TestCase):
             # # tdms files
             ("data.tdms", 4),
             # # pickle files
-            ("df_dump.pkl", 4),
+            ("df_multiindex.pkl", 4),
         ]
 
+        # files to delete after testing is completed
+        # (because they were generated for this test)
+        self.files_to_delete = ["df_multiindex.pkl"]
 
-    def make_pickle_file(self):
-        """ Create pickle file to be used in reader testing"""
+    def tearDown(self) -> None:
+        # cleanup after test completion
+        for fn in self.files_to_delete:
+            fp = os.path.join(self.data_directory, fn)
+            if os.path.exists(fp):
+                os.remove(fp)
+        
+    def make_pickle_file_multiindex(self):
+        """ Create pickle file with multiindex columns to be used in reader testing """
 
         # Generate range of seconds
         seconds = np.linspace(0, 100,1000)
@@ -79,8 +89,7 @@ class TestAllReaders(unittest.TestCase):
         df = pd.DataFrame(data, index=seconds, columns=index)
 
         # Save the DataFrame to a pickle file
-        df.to_pickle(os.path.join(self.data_directory, "df_dump.pkl"))
-
+        df.to_pickle(os.path.join(self.data_directory, "df_multiindex.pkl"))
 
     def test_correct_number_of_timeseries(self):
         """ Read key file, check number of keys (data not loaded) """
