@@ -1182,14 +1182,14 @@ class TimeSeries(object):
 
     def resample(self, dt=None, t=None):
         """
-        Resample with constant sampling interval dt
+        Resample to constant sampling interval dt or a specified time array.
 
         Parameters
         ----------
         dt : float, optional
-            Constant sampling interval
+            Constant sampling interval. Ignored if `t` is specified.
         t : array_like, optional
-            Time array to which the data is resampled
+            Time array to which the data is resampled.
 
         Returns
         -------
@@ -1198,7 +1198,7 @@ class TimeSeries(object):
 
         Notes
         -----
-        Either `dt` or `t` have to specified. If both are specified `t` overrules.
+        Either `dt` or `t` have to be specified. If both are specified `t` overrules.
 
         If `dt` is used the resampled data cover the period given by the objects `t` attribute, in other words from
         `start` to `end`.
