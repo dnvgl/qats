@@ -760,7 +760,8 @@ class Qats(QMainWindow):
 
     def on_export(self):
         """
-        Export selected time series to file
+        Export selected time series to file.
+        If none are selected, export all.
         """
         # file save dialogue
         dlg = QFileDialog()
@@ -771,10 +772,15 @@ class Qats(QMainWindow):
                                       "Direct access file (*.ts);;"
                                       "ASCII file with header (*.dat);;"
                                       "SIMA H5 file (*.h5);;"
+                                      "DataFrame Pickle file (*.pkl *.pickle);;"
                                       "All Files (*)")
 
         # get list of selected time series
         keys = self.selected_series()
+        
+        # if none are selected, export all
+        if not keys: 
+            keys = self.db.register_keys
 
         # get ui settings
         fargs = self.filter_settings()
@@ -805,8 +811,6 @@ class Qats(QMainWindow):
         dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
         files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
-                                        "DataFrame Pickle dump (*.pkl);;"
-                                        "DataFrame Pickle dump (*.pickle);;"
                                         "Direct access files (*.ts);;"
                                         "SIMO S2X direct access files with info array (*.tda);;"
                                         "RIFLEX SIMO binary files (*.bin);;"
@@ -816,6 +820,7 @@ class Qats(QMainWindow):
                                         "SIMA H5 files (*.h5);;"
                                         "CSV file with header (*.csv);;"
                                         "Technical Data Management Streaming files (*.tdms);;"
+                                        "DataFrame Pickle file (*.pkl *.pickle);;"
                                         "All Files (*)")
 
         # load files into db and update application model and view
