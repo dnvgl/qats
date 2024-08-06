@@ -31,6 +31,7 @@ from .io.sintef_mat import read_data as read_mat_data
 from .io.sintef_mat import read_names as read_mat_names
 from .io.pickle_format import read_pickle_names as read_pickle_names
 from .io.pickle_format import read_data as read_pickle_data
+from .io.pickle_format import write_data as write_pickle_data
 from .io.tdms import read_data as read_tdms_data
 from .io.tdms import read_names as read_tdms_names
 from .ts import TimeSeries
@@ -571,10 +572,10 @@ class TsDB(object):
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.pkl' or fext == '.pickle':
+            elif fext in ('.pkl', '.pickle'):
                 data = read_pickle_data(parent)
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
             elif fext == '.tdms':
                 data = read_tdms_data(parent, names=names)
@@ -757,7 +758,9 @@ class TsDB(object):
         -----
         Currently implemented file formats
          - direct access format (.ts)
-         - column-wise ascii file with single header line defining the keys(.dat) (comment character is #)
+         - column-wise ascii file with single header line defining the keys (.dat) (comment character is #)
+         - SIMA hdf file (.h5).
+         - pickle file (.pkl or .pickle) with time series stored in a pandas dataframe (index is the common time array).
 
         The time series are resampled to a common time vector with a constant time step (sample rate). The minimum
         average time step of all the selected time series is applied. This is done before enforcing the specified
@@ -824,6 +827,9 @@ class TsDB(object):
 
         elif ext == ".h5":
             write_sima_h5_data(filename, container)
+
+        elif ext in (".pkl", ".pickle"):
+            write_pickle_data(filename, common_time_array, container)
 
         else:
             raise NotImplementedError("File format/type '%s' is not yet implemented." % ext)
