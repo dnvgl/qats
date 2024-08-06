@@ -1121,7 +1121,7 @@ class TsDB(object):
         See also
         --------
         qats.TimeSeries
-        get, geta, getda, getl
+        get, geta, getda, getl, to_dataframe
         """
         # check that non-compatible parameters are not combined
         if ind is not None and names is not None:
@@ -1767,7 +1767,63 @@ class TsDB(object):
         df = pd.DataFrame(self.stats(statsdur=statsdur, names=names, ind=ind, store=store, fullkey=fullkey, **kwargs))
 
         return df
-    
+
+    def to_dataframe(self, names=None, **kwargs):
+        """
+        Get pandas DataFrame with time series data in columns.
+        
+        Parameters
+        ----------
+        names : str or list or tuple, optional
+            Time series names, supports wildcard.
+        kwargs : optional
+            See documentation of :meth:`~qats.TsDB.getm` and :meth:`~qats.TimeSeries.get` methods for available options.
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataframe with time series data in columns and time array as index.
+
+        Notes
+        -----
+        When working on a large time series database it is recommended to set ``store=False`` to avoid too high memory
+        usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
+
+        If specified time series do not have a common time array, the following code is an example of 
+        how to enforce it:
+        >>> db : TsDB
+        >>> names : list
+        >>> common_time_array = db.create_common_time(names=names)
+        >>> df = db.to_dataframe(names=names, resample=common_time_array)
+        
+        See also
+        --------
+        qats.TimeSeries.get
+        get, geta, getd, getda, getl, getm
+        """
+        # read time series and put in ordered dictionary (reuse getm() to avoid duplicating code)
+        store = kwargs.pop("store", True)
+        container = self.getm(names=names, store=store, fullkey=False)
+
+        # check that time array is common (unless resampling is specified)
+        if "resample" in kwargs:
+            pass
+        else:
+            timecheck = self._check_time_arrays(container)
+            if timecheck["is_common"] is False:
+                raise ValueError("Specified time series do not have a common time array - specify `resample=common_time_array` to enforce it")
+        
+        # convert dict of TimeSeries objects to dict of tuples (time, data)
+        container = {k: v.get(**kwargs) for k, v in container.items()}
+
+        # extract common time array
+        common_time_array = container[list(container)[0]][0]
+            
+        # create dataframe, store common time array as index
+        df = pd.DataFrame({k: v[1] for k, v in container.items()}, index=common_time_array)
+
+        return df
+
     def update(self, tsdb, names=None, shallow=False):
         """
         Update TsDB with speicified keys/names from other TsDB instance.

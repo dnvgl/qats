@@ -357,6 +357,18 @@ class TestTsDB(unittest.TestCase):
             self.assertIsInstance(ts.t, np.ndarray, "Attribute t of time series should be type numpy array.")
             self.assertIsInstance(ts.x, np.ndarray, "Attribute x of time series should be type numpy array.")
 
+    def test_create_dataframe(self):
+        # create dataframe, check that time series data is the same
+        self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
+        name = "Sway"
+        ts = self.db.get(name=name)
+        # create dataframe
+        df = self.db.to_dataframe()
+        # check that dataframe index equals time array
+        self.assertTrue((df.index == ts.t).all(), "time array of dataframe is incorrect")
+        # check that data array is the same
+        self.assertTrue((df[name] == ts.x).all(), "time series data array of dataframe is incorrect")
+
     def test_copy(self):
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         name = "Surge"
