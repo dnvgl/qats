@@ -1,6 +1,13 @@
 # .readthedocs.yaml
 # Read the Docs configuration file
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
+
+# Instructions/example on how to configure for projects managed by poetry:
 # https://docs.readthedocs.io/en/stable/build-customization.html#install-dependencies-with-poetry
+# Note:   these instructions were changed in Feb 2024 to fix an issue 
+#         introduced by changes in poetry 1.8, see
+#         https://github.com/readthedocs/readthedocs.org/pull/11152
+#         https://github.com/readthedocs/readthedocs.org/issues/11150
 
 version: 2
 
@@ -13,14 +20,15 @@ build:
       # Install poetry
       # https://python-poetry.org/docs/#installing-manually
       - pip install poetry
-      # Tell poetry to not use a virtual environment
-      - poetry config virtualenvs.create false
       # Install dynamic versioning plugin
+      # https://pypi.org/project/poetry-dynamic-versioning/
       - poetry self add "poetry-dynamic-versioning[plugin]" 
     post_install:
       # Install dependencies with 'docs' dependency group
       # https://python-poetry.org/docs/managing-dependencies/#dependency-groups
-      - poetry install --with docs
+      # VIRTUAL_ENV needs to be set manually for now.
+      # See https://github.com/readthedocs/readthedocs.org/pull/11152/
+      - VIRTUAL_ENV=$READTHEDOCS_VIRTUALENV_PATH poetry install --with docs
 
 sphinx:
   configuration: docs/source/conf.py
