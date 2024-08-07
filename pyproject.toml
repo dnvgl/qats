@@ -24,6 +24,12 @@ Download = "https://pypi.org/project/qats/"
 Issues = "https://github.com/dnvgl/qats/issues"
 Changelog = "https://github.com/dnvgl/qats/releases"
 
+[[tool.poetry.source]]
+# fix issue that causes `poetry install` to fail for python 3.12, see:
+# https://github.com/python-poetry/poetry/issues/9293#issuecomment-2048205226
+name = "pypi-public"
+url = "https://pypi.org/simple/"
+
 [tool.poetry.dependencies]
 python = ">=3.8.1,<3.13"
 h5py = ">=3.5.0"
@@ -35,7 +41,12 @@ numpy = [
     {version = ">=1.26.0", python = ">=3.12"}
 ]
 openpyxl = ">=3.0.5"
-pandas = ">=1.1.4"
+pandas = [
+    # force pandas >=2.2.0 for python 3.12
+    # (official support for python 3.12 is introduced in pandas 2.2.0, but poetry tries to install pandas 2.0.3)
+    {version = ">=1.1.4", python = "<3.12"},
+    {version = ">=2.2.0", python = ">=3.12"}
+]
 qtpy = ">=1.9.0"
 scipy = [
     {version = ">=1.9.0", python = "<3.12"},
