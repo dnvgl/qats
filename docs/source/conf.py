@@ -395,18 +395,14 @@ def setup(app):
 
                         if 'properties' in self.options:
                             _, props = self.get_class_members(cm, 'property')
-                            #
+
                             # NOTE: `fullname` replaced by `name` due to warning in Sphinx 8.0+. Example: 
                             #       WARNING: Summarised items should not include the current module. Replace 'qats.TimeSeries.average_frequency' with 'average_frequency'. [autosummary.import_cycle]
-                            #
-                            # self.content += ["~%s.%s" % (fullname, prop) for prop in props if not prop.startswith('_')]
                             self.content += ["~%s.%s" % (name, prop) for prop in props if not prop.startswith('_')]
 
                         if 'methods' in self.options:
                             _, methods = self.get_class_members(cm, 'method', ['__init__'])
 
-                            # self.content += ["~%s.%s" % (fullname, method) for method in methods if
-                            #                  not method.startswith('_')]
                             self.content += ["~%s.%s" % (name, method) for method in methods if
                                              not method.startswith('_')]
  
@@ -424,10 +420,10 @@ def setup(app):
                             typ.append('modules')
 
                         members = self.get_module_members(cm, typ=typ)
-                        # self.content = ["~%s.%s" % (fullname, member) for member in members
-                        #                 if not member.startswith('_')]
+
                         self.content = [member for member in members
                                         if not member.startswith('_')]
+                    
                     finally:
                         return super(AutoAutoSummary, self).run()
 
