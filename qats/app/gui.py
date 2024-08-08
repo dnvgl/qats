@@ -1462,12 +1462,12 @@ class SettingsDialog(QDialog):
         self.psdnpersegspinbox.setSingleStep(10)
         self.psdnpersegspinbox.setEnabled(True)
         self.psdnpersegspinbox.setValue(nperseg)
-        self.psdnpersegspinbox.setToolTip("When esimtating power spectral density using Welch's method the signal\n"
-                                          "is dived into overlapping segments and psd is estimated for each segment\n"
+        self.psdnpersegspinbox.setToolTip("When estimating power spectral density using Welch's method the signal\n"
+                                          "is divided into overlapping segments and psd is estimated for each segment\n"
                                           "and then averaged. The overlap is half of the segment length. The \n"
                                           "psd-estimate is smoother with shorter segments.")
         psdlayout = QHBoxLayout()
-        psdlayout.addWidget(QLabel("Length of segment used when estimating power spectral density"))
+        psdlayout.addWidget(QLabel("Length of segment used when estimating power spectral density *"))
         psdlayout.addStretch(1)
         psdlayout.addWidget(self.psdnpersegspinbox)
         layout.addLayout(psdlayout)
@@ -1494,14 +1494,15 @@ class SettingsDialog(QDialog):
         self.twindecspinbox.setValue(twindec)
         self.twindecspinbox.setToolTip("Number of decimals in the data processing time window from/to boxes.")
         twindeclayout = QHBoxLayout()
-        twindeclayout.addWidget(QLabel("Number of decimals in data processing time window *"))
+        twindeclayout.addWidget(QLabel("Number of decimals in data processing time window **"))
         twindeclayout.addStretch(1)
         twindeclayout.addWidget(self.twindecspinbox)
         layout.addLayout(twindeclayout)
 
         # help text
         helptext = QHBoxLayout()
-        helptext.addWidget(QLabel("* Close and re-open application for this setting to have effect"))
+        helptext.addWidget(QLabel("*  Parameter 'nperseg' in scipy.signal.welch \n    (signal length is used if smaller than specified value)\n"
+                                  "** Close and re-open application for this setting to have effect"))
         helptext.addStretch(1)
         layout.addLayout(helptext)
 

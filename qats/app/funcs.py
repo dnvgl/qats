@@ -21,7 +21,8 @@ def calculate_psd(container, twin, fargs, nperseg, normalize):
     fargs : tuple
         Filter arguments. Time series are filtered before estimating psd.
     nperseg : int
-        Size of segments used for ustimating PSD using Welch's method.
+        Size of segments used for estimating PSD using Welch's method.
+        NOTE: the minimum of specified `nperseg` and signal length is used.
     normalize : bool
         Normalize power spectral density on maximum density.
 
@@ -33,8 +34,14 @@ def calculate_psd(container, twin, fargs, nperseg, normalize):
     container_out = dict()
 
     for name, ts in container.items():
-        # resampling to average time step for robustness (necessary for series with varying time step)
-        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1, nperseg=nperseg, normalize=normalize)
+        # NOTE: nperseg passed on as minimum of specified value and signal input length
+        #       this is done in scipy anyway, which also issues a UserWArnings stating:
+        #       "nperseg = {nperseg} is greater than input length = {input_length:d}, using nperseg = {input_length:d}"
+        t, _ = ts.get(twin=twin, resample=ts.dt)
+        nperseg_ = np.min((nperseg, t.size))
+        # calculate power spectral density 
+        # (resampling to average time step for robustness, necessary for series with varying time step)
+        f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1, nperseg=nperseg_, normalize=normalize)
         container_out[name] = tuple([f, s])
 
     return container_out
