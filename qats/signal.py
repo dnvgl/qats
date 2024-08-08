@@ -11,6 +11,7 @@ from scipy.signal import butter
 from scipy.signal import coherence as spcoherence
 from scipy.signal import csd as spcsd
 from scipy.signal import filtfilt, sosfiltfilt, welch
+from typing import Tuple
 
 
 def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
@@ -122,7 +123,7 @@ def smooth(x: np.ndarray, window_len: int = 11, window: str = 'rectangular', mod
     return y
 
 
-def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> tuple[np.ndarray, float]:
+def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> Tuple[np.ndarray, float]:
     """
     Taper the input time serie using a window function
 
@@ -478,7 +479,7 @@ def average_frequency(t: np.ndarray, x: np.ndarray, up: bool = True) -> float:
     return freq
 
 
-def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True) -> tuple[np.ndarray, np.ndarray]:
+def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True) -> Tuple[np.ndarray, np.ndarray]:
     """
     Return sorted maxima
 
@@ -625,7 +626,7 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     return maxima, maxima_indices
 
 
-def psd(x: np.ndarray, dt: float, **kwargs) -> tuple[np.ndarray, np.ndarray]:
+def psd(x: np.ndarray, dt: float, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """
     Estimate power spectral density of discrete time signal X using Welch’s method.
 
@@ -662,7 +663,7 @@ def psd(x: np.ndarray, dt: float, **kwargs) -> tuple[np.ndarray, np.ndarray]:
     return f, p
 
 
-def csd(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> tuple[np.ndarray, np.ndarray]:
+def csd(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """
     Estimate cross power spectral density of discrete-time signals X and Y using Welch’s method.
 
@@ -702,7 +703,7 @@ def csd(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> tuple[np.ndarray, 
     return f, p
 
 
-def coherence(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> tuple[np.ndarray, np.ndarray]:
+def coherence(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """
     Estimate the magnitude squared coherence estimate of discrete-time signals X and Y using Welch’s method.
 
@@ -742,7 +743,7 @@ def coherence(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> tuple[np.nda
     return f, c
 
 
-def tfe(x: np.ndarray, y: np.ndarray, dt: float, clim: float = None, **kwargs) -> tuple[np.ndarray, np.ndarray]:
+def tfe(x: np.ndarray, y: np.ndarray, dt: float, clim: float = None, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     """
     Estimate the transfer function between two discrete-time signals X and Y using Welch’s method.
 
