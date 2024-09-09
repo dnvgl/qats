@@ -608,8 +608,12 @@ class Qats(QMainWindow):
         try:
             with open(self.settings_file) as fp:
                 self.settings = json.load(fp)
-        except FileNotFoundError:
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            # If settings file doesn't exist, create empty dict for settings 
+            # Do this also if JSONDecodeError (may occur if settings file is empty, and doesn't 
+            # even contain an empty json string, see issue 128: https://github.com/dnvgl/qats/issues/128)
             self.settings = dict()
+
 
     def model_view_filter_changed(self):
         """
