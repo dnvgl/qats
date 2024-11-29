@@ -463,7 +463,7 @@ def average_frequency(t: np.ndarray, x: np.ndarray, up: bool = True) -> float:
 
     crossings = np.diff(crossings)  # array with value=1 at position of each up-crossing and -1 at each down-crossing
     crossings[crossings != indicator] = 0   # remove crossings with opposite direction
-    ind  = np.where(crossings == indicator)[0] + 1  # indices for crossings
+    ind = np.nonzero(crossings == indicator)[0] + 1  # indices for crossings
     
     if ind.size > 1:
         # more than one crossing -> calculate frequency
@@ -553,8 +553,8 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
         crossings = np.diff(crossings)  # array with 1 at position of each up-crossing and -1 at each down-crossing
 
         # get array indices for up-/down-crossings
-        crossing_indices_up = np.where(crossings == 1)[0] + 1   # up-crossings
-        crossing_indices_do = np.where(crossings == -1)[0] + 1  # down-crossings
+        crossing_indices_up = np.nonzero(crossings == 1)[0] + 1   # up-crossings
+        crossing_indices_do = np.nonzero(crossings == -1)[0] + 1  # down-crossings
 
         # number of up-/downcrossings
         n_up = crossing_indices_up.size
@@ -604,7 +604,7 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
         d2s = np.diff(ds)             # equal to +/-1 at each turning point, +1 indicates maxima
         d2s = np.insert(d2s, 0, [0])  # lost data points when differentiating, close cycles by adding 0 at start
 
-        maxima_indices = np.where(d2s == 1)[0]  # unpack tuple returned from np.where
+        maxima_indices = np.nonzero(d2s == 1)[0]  # unpack tuple returned from np.nonzero
         maxima = x[maxima_indices]
 
     n_peaks = maxima.size
@@ -624,6 +624,75 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
         maxima_indices = maxima_indices[ascending]
 
     return maxima, maxima_indices
+
+
+def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Return reversals (signal turning points).
+
+    Parameters
+    ----------
+    x : array
+        Signal.
+
+    Returns
+    -------
+    array
+        Signal reversals.
+    array
+        Indices of reversals.
+
+    Notes
+    -----
+    .. versionadded :: 5.2.0
+
+    This function provides quick identification of signal reversals (turning points), as an alternative
+    to `qats.fatigue.rainflow.reversals()` which is slower for large signal arrays. Note that if the 
+    signal includes oscillations with high frequency compared to the frequency oscillations (e.g., due
+    to noise in the signal causing), the present function may in some cases include some very local 
+    turning points that are not identified by `qats.fatigue.rainflow.reversals()`. However, when the 
+    turning points obtained from `find_reversals()` are passed through `reversals()` 
+    (with `endpoints=True`), the resulting array will normally be the same as if the signal itself was 
+    passed through `reversals()`.
+    
+    Specifically, the following two code lines will **not** necessarily produce identical arrays:
+    >>> from qats.fatigue.rainflow import reversals
+    >>> rev1 = np.array(list(reversals(x)))
+    >>> rev2, _ = find_reversals(x)
+
+    ... but the following code lines will normally produce `rev3` identical to `rev1` above:
+    >>> rev3 = np.array(list(reversals(rev2, endpoints=True)))
+
+    Examples
+    --------
+    Extract reversals (turning points) from the time series signal `x`:
+
+    >>> rev, _ = find_reversals(x)
+
+    Extract reversals and corresponding indices:
+
+    >>> rev, indices = find_reversals(x)
+
+    Use `find_reversals()` to speed up cycle counting:
+    >>> from qats.fatigue.rainflow import count_cycles
+    >>> rev, _ = find_reversals(x)
+    >>> cycles = count_cycles(rev, endpoints=True)
+    
+    For large arrays, the latter example is practically equivalent to (but faster than)
+    the following code:
+    >>> cycles = count_cycles(x)
+    """
+    # local maxima and minima (all peaks, both positive and negative)
+    ds = 1 * (np.diff(x) < 0)     # zero while ascending (positive derivative) and 1 while descending
+    ds = np.append(ds, [0])       # lost data points when differentiating, close cycles by adding 0 at end
+    d2s = np.diff(ds)             # equal to +/-1 at each turning point, +1 indicates maxima
+    d2s = np.insert(d2s, 0, [0])  # lost data points when differentiating, close cycles by adding 0 at start
+
+    # identify turning points (both maxima and minima)
+    rev_indices = np.nonzero(np.abs(d2s) == 1)[0]  # unpack tuple returned from np.nonzero
+    rev = x[rev_indices]
+
+    return rev, rev_indices
 
 
 def psd(x: np.ndarray, dt: float, **kwargs) -> Tuple[np.ndarray, np.ndarray]:

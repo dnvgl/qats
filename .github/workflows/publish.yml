@@ -21,12 +21,12 @@ jobs:
       uses: actions/checkout@v4
     - name: Set up python
       id: setup-python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: "3.11"
     - name: Load cached Poetry installation
       id: cached-poetry
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.local  # the path depends on the OS
         key: poetry-publish-0  # increment to reset cache
@@ -41,7 +41,7 @@ jobs:
       run: poetry self add "poetry-dynamic-versioning[plugin]"
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
@@ -57,8 +57,8 @@ jobs:
       env:
         POETRY_PYPI_TOKEN_PYPI : ${{ secrets.PYPI_API_TOKEN }}
     - name: Upload artifacts
-      # https://github.com/actions/upload-artifact#upload-artifact-v3
-      uses: actions/upload-artifact@v3
+      # https://github.com/actions/upload-artifact
+      uses: actions/upload-artifact@v4
       with:
         name: builds
         path: |
@@ -66,7 +66,7 @@ jobs:
           dist/qats-*.whl
     - name: Upload builds to release
       # https://github.com/softprops/action-gh-release#%EF%B8%8F-uploading-release-assets
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
