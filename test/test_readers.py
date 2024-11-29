@@ -8,9 +8,9 @@ import os
 import sys
 import unittest
 from pathlib import Path
-
+import pandas as pd
 from qats import TsDB
-
+import numpy as np
 # todo: add test class for matlab
 
 ROOT = Path(__file__).resolve().parent
@@ -20,6 +20,10 @@ class TestAllReaders(unittest.TestCase):
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env
         self.data_directory = os.path.join(ROOT, '..', 'data')
+
+        # make pickle file
+        self.make_pickle_file_multiindex()
+
         # file name, number of (time series) keys
         self.files = [
             # sima h5 files
@@ -50,7 +54,42 @@ class TestAllReaders(unittest.TestCase):
             ("model_test_data.dat", 39),
             # # tdms files
             ("data.tdms", 4),
+            # # pickle files
+            ("df_multiindex.pkl", 4),
         ]
+
+        # files to delete after testing is completed
+        # (because they were generated for this test)
+        self.files_to_delete = ["df_multiindex.pkl"]
+
+    def tearDown(self) -> None:
+        # cleanup after test completion
+        for fn in self.files_to_delete:
+            fp = os.path.join(self.data_directory, fn)
+            if os.path.exists(fp):
+                os.remove(fp)
+        
+    def make_pickle_file_multiindex(self):
+        """ Create pickle file with multiindex columns to be used in reader testing """
+
+        # Generate range of seconds
+        seconds = np.linspace(0, 100,1000)
+
+        # Generate random data
+        data = np.random.randn(1000, 4)
+
+        # Create MultiIndex for columns
+        arrays = [
+            ["Category A", "Category A", "Category B", "Category B"],
+            ["Subcategory 1", "Subcategory 2", "Subcategory 1", "Subcategory 2"]
+        ]
+        index = pd.MultiIndex.from_arrays(arrays, names=('Category', 'Subcategory'))
+
+        # Create the DataFrame
+        df = pd.DataFrame(data, index=seconds, columns=index)
+
+        # Save the DataFrame to a pickle file
+        df.to_pickle(os.path.join(self.data_directory, "df_multiindex.pkl"))
 
     def test_correct_number_of_timeseries(self):
         """ Read key file, check number of keys (data not loaded) """
