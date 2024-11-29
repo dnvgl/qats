@@ -644,7 +644,7 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
 
     Notes
     -----
-    .. versionadded :: 5.1.0
+    .. versionadded :: 5.2.0
 
     This function provides quick identification of signal reversals (turning points), as an alternative
     to `qats.fatigue.rainflow.reversals()` which is slower for large signal arrays. Note that if the 
