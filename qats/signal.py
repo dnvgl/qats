@@ -463,7 +463,7 @@ def average_frequency(t: np.ndarray, x: np.ndarray, up: bool = True) -> float:
 
     crossings = np.diff(crossings)  # array with value=1 at position of each up-crossing and -1 at each down-crossing
     crossings[crossings != indicator] = 0   # remove crossings with opposite direction
-    ind  = np.where(crossings == indicator)[0] + 1  # indices for crossings
+    ind = np.nonzero(crossings == indicator)[0] + 1  # indices for crossings
     
     if ind.size > 1:
         # more than one crossing -> calculate frequency
@@ -553,8 +553,8 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
         crossings = np.diff(crossings)  # array with 1 at position of each up-crossing and -1 at each down-crossing
 
         # get array indices for up-/down-crossings
-        crossing_indices_up = np.where(crossings == 1)[0] + 1   # up-crossings
-        crossing_indices_do = np.where(crossings == -1)[0] + 1  # down-crossings
+        crossing_indices_up = np.nonzero(crossings == 1)[0] + 1   # up-crossings
+        crossing_indices_do = np.nonzero(crossings == -1)[0] + 1  # down-crossings
 
         # number of up-/downcrossings
         n_up = crossing_indices_up.size
@@ -604,7 +604,7 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
         d2s = np.diff(ds)             # equal to +/-1 at each turning point, +1 indicates maxima
         d2s = np.insert(d2s, 0, [0])  # lost data points when differentiating, close cycles by adding 0 at start
 
-        maxima_indices = np.where(d2s == 1)[0]  # unpack tuple returned from np.where
+        maxima_indices = np.nonzero(d2s == 1)[0]  # unpack tuple returned from np.nonzero
         maxima = x[maxima_indices]
 
     n_peaks = maxima.size
@@ -689,7 +689,7 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
     d2s = np.insert(d2s, 0, [0])  # lost data points when differentiating, close cycles by adding 0 at start
 
     # identify turning points (both maxima and minima)
-    rev_indices = np.where(np.abs(d2s) == 1)[0]  # unpack tuple returned from np.where
+    rev_indices = np.nonzero(np.abs(d2s) == 1)[0]  # unpack tuple returned from np.nonzero
     rev = x[rev_indices]
 
     return rev, rev_indices
