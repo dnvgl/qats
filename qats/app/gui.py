@@ -17,7 +17,7 @@ from matplotlib.backends.backend_qt5agg import \
 from matplotlib.backends.backend_qt5agg import \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-from pkg_resources import resource_filename
+import importlib_resources, contextlib, atexit
 from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -44,12 +44,20 @@ LOGGING_LEVELS = dict(
     warning=logging.WARNING,
     error=logging.ERROR,
 )
+# define path to settings file
 if sys.platform == "win32":
     SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")
 else:
     SETTINGS_FILE = os.path.join("~", ".config", "qats.settings")
-ICON_FILE = resource_filename("qats.app", "qats.ico")
 
+# create icon file handle
+# ref. https://importlib-resources.readthedocs.io/en/latest/migration.html#pkg-resources-resource-filename
+icofile_manager = contextlib.ExitStack()
+atexit.register(icofile_manager.close)
+icoref = importlib_resources.files("qats.app") / "qats.ico"
+ICON_FILE = icofile_manager.enter_context(importlib_resources.as_file(icoref))
+
+# define statistics to calculate
 STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
                "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]
 STATS_LABELS_TOOLTIPS = {

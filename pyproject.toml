@@ -54,6 +54,7 @@ scipy = [
 ]
 pywin32 = {version = "^306", markers = "platform_system == 'Windows'"} # MUST check the appropriate constraint
 pyside6 = "^6.6.0"
+importlib-resources = "*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
