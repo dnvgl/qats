@@ -79,15 +79,17 @@ jobs:
     #   with:
     #     path: .venv
     #     key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-    - name: Create venv and install project dependencies
+    - name: Create venv and install project
       # install if not cached
       # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    - name: Install project
-      # required to test the CLI, show working directory for debugging
-      run: |
+      run: 
         poetry install --no-interaction
         ls -a
+    # - name: Install project
+    #   # required to test the CLI, show working directory for debugging
+    #   run: |
+    #     poetry install --no-interaction
+    #     ls -a
     - name: Run unit tests
       run: |
         source .venv/bin/activate
