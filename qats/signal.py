@@ -630,6 +630,8 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
     """
     Return reversals (signal turning points).
 
+    .. versionadded :: 5.2.0
+
     Parameters
     ----------
     x : array
@@ -642,30 +644,32 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
     array
         Indices of reversals.
 
+        
     Notes
     -----
-    .. versionadded :: 5.2.0
-
+    
     This function provides quick identification of signal reversals (turning points), as an alternative
-    to `qats.fatigue.rainflow.reversals()` which is slower for large signal arrays. Note that if the 
+    to ``qats.fatigue.rainflow.reversals()`` which is slower for large signal arrays. Note that if the 
     signal includes oscillations with high frequency compared to the frequency oscillations (e.g., due
     to noise in the signal causing), the present function may in some cases include some very local 
-    turning points that are not identified by `qats.fatigue.rainflow.reversals()`. However, when the 
-    turning points obtained from `find_reversals()` are passed through `reversals()` 
-    (with `endpoints=True`), the resulting array will normally be the same as if the signal itself was 
-    passed through `reversals()`.
+    turning points that are not identified by ``qats.fatigue.rainflow.reversals()``. However, when the 
+    turning points obtained from ``find_reversals()`` are passed through ``reversals()`` 
+    (with ``endpoints=True``), the resulting array will normally be the same as if the signal itself was 
+    passed through ``reversals()``.
     
     Specifically, the following two code lines will **not** necessarily produce identical arrays:
+
     >>> from qats.fatigue.rainflow import reversals
     >>> rev1 = np.array(list(reversals(x)))
     >>> rev2, _ = find_reversals(x)
 
-    ... but the following code lines will normally produce `rev3` identical to `rev1` above:
+    ... but the following code lines will normally produce ``rev3`` identical to ``rev1`` above:
+
     >>> rev3 = np.array(list(reversals(rev2, endpoints=True)))
 
     Examples
     --------
-    Extract reversals (turning points) from the time series signal `x`:
+    Extract reversals (turning points) from the time series signal ``x``:
 
     >>> rev, _ = find_reversals(x)
 
@@ -673,13 +677,15 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
 
     >>> rev, indices = find_reversals(x)
 
-    Use `find_reversals()` to speed up cycle counting:
+    Use ``find_reversals()`` to speed up cycle counting:
+    
     >>> from qats.fatigue.rainflow import count_cycles
     >>> rev, _ = find_reversals(x)
     >>> cycles = count_cycles(rev, endpoints=True)
     
     For large arrays, the latter example is practically equivalent to (but faster than)
     the following code:
+
     >>> cycles = count_cycles(x)
     """
     # local maxima and minima (all peaks, both positive and negative)
