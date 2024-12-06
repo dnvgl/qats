@@ -185,7 +185,7 @@ def count_cycles(series, endpoints=False):
 
     See Also
     --------
-    reversals, cycles
+    reversals, cycles, qats.signal.find_reversals
 
     """
     full, half = cycles(series, endpoints=endpoints)
