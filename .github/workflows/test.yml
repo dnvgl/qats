@@ -1,6 +1,10 @@
 # This workflow will lint, run unit tests, test CLI and build with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
+# 06.12.2024: modified slightly with inspiration from:
+#   https://github.com/marketplace/actions/install-poetry-action#testing-using-a-matrix
+#   https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
+
 name: Test Python package
 
 on:
@@ -10,6 +14,9 @@ on:
     branches: [ master ]
 
 jobs:
+  #----------------------------------------------
+  # linting
+  #----------------------------------------------
   linting:
     name: Linting
     # linting has nothing to do with multiple versions of os and python
@@ -36,6 +43,9 @@ jobs:
           black .
           isort .
 
+  #----------------------------------------------
+  # test using a matrix
+  #----------------------------------------------
   testing:
     needs: linting
     name: Test with Python ${{ matrix.python-version }} on ${{ matrix.os }}
@@ -44,12 +54,14 @@ jobs:
       fail-fast: false
       matrix:
         os: ["ubuntu-latest"]
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
-
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
       # https://stackoverflow.com/questions/75549995/why-do-the-pyside6-qt-modules-cause-tox-to-fail-during-a-github-action
     - name: Install missing libraries on GitHub agent
       run: sudo apt update && sudo apt install -y libegl1-mesa-dev
+    #----------------------------------------------
+    # check-out repo and set-up python
+    #----------------------------------------------
     - name: Check out repository
       uses: actions/checkout@v4
     - name: Set up python ${{ matrix.python-version }}
@@ -57,37 +69,47 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Load cached Poetry installation
-      id: cached-poetry
-      uses: actions/cache@v4
-      with:
-        path: ~/.local  # the path depends on the OS
-        key: poetry-0  # increment to reset cache
-    - name: Install and configure Poetry
-      # install if not cached. Create venv in project to simplify caching
-      if: steps.cached-poetry.outputs.cache-hit != 'true'
+    #----------------------------------------------
+    # install & configure poetry
+    #----------------------------------------------
+    - name: Install Poetry
       uses: snok/install-poetry@v1
       with:
-        # Consider specifying version (version: 1.7.1 on Python 3.11)
         virtualenvs-create: true
-        virtualenvs-in-project: true  #.venv in current directory
+        virtualenvs-in-project: true
     - name: Install dynamic versioning plugin
       run: poetry self add "poetry-dynamic-versioning[plugin]"
+    #----------------------------------------------
+    # load (restore) cached venv if cache exists
+    #----------------------------------------------
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-    - name: Create venv and install project dependencies
-      # install if not cached
+    #----------------------------------------------
+    # install dependencies if cache does not exist
+    #----------------------------------------------
+    - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
+    #----------------------------------------------
+    # save cached venv 
+    #----------------------------------------------
+    - name: Save cached venv
+      uses: actions/cache/save@v4
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+    #----------------------------------------------
+    # install root project, if required
+    #----------------------------------------------
     - name: Install project
-      # required to test the CLI, show working directory for debugging
-      run: |
-        poetry install --no-interaction
-        ls -a
+      run: poetry install --no-interaction
+    #----------------------------------------------
+    # run tests
+    #----------------------------------------------
     - name: Run unit tests
       run: |
         source .venv/bin/activate
@@ -107,6 +129,10 @@ jobs:
       run: |
         source .venv/bin/activate
         sphinx-build -b html docs/source docs/_build
+    #----------------------------------------------
+    # upload artifacts 
+    # (only done for one of the python versions)
+    #----------------------------------------------
     - name: Upload artifacts
       if: ${{ matrix.python-version == '3.11' }}
       uses: actions/upload-artifact@v4

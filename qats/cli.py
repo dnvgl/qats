@@ -5,8 +5,8 @@ Command line interface to app (GUI).
 import argparse
 import os
 import sys
+import importlib_resources
 
-from pkg_resources import resource_filename
 from qtpy.QtWidgets import QApplication
 
 from . import __version__
@@ -27,8 +27,7 @@ def link_app():
     from win32com.client import Dispatch
 
     pkg_name = "qats"
-    ico_path = resource_filename("qats.app", "qats.ico")
-    # target = os.path.join(scripts_dir, f"{pkg_name}-app.exe")
+    ico_ref = importlib_resources.files("qats.app") / "qats.ico"
     lnk_name = pkg_name.upper() + ".lnk"
 
     # define target as pythonw.exe (or python.exe if needed)
@@ -48,16 +47,17 @@ def link_app():
     shell = Dispatch("WScript.Shell")
 
     # create shortcuts to gui in desktop folder and start-menu programs
-    for loc in ("Desktop", "Programs"):
-        location = shell.SpecialFolders(loc)
-        path_link = os.path.join(location, lnk_name)
-        shortcut = shell.CreateShortCut(path_link)
-        shortcut.Description = f"{pkg_name.upper()} v{__version__}"
-        shortcut.TargetPath = target
-        shortcut.Arguments = arguments
-        shortcut.WorkingDirectory = os.getenv("USERPROFILE")
-        shortcut.IconLocation = ico_path
-        shortcut.Save()
+    with importlib_resources.as_file(ico_ref) as ico_path:
+        for loc in ("Desktop", "Programs"):
+            location = shell.SpecialFolders(loc)
+            path_link = os.path.join(location, lnk_name)
+            shortcut = shell.CreateShortCut(path_link)
+            shortcut.Description = f"{pkg_name.upper()} v{__version__}"
+            shortcut.TargetPath = target
+            shortcut.Arguments = arguments
+            shortcut.WorkingDirectory = os.getenv("USERPROFILE")
+            shortcut.IconLocation = str(ico_path)
+            shortcut.Save()
 
 
 def unlink_app():
