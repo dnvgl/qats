@@ -5,7 +5,10 @@ Command line interface to app (GUI).
 import argparse
 import os
 import sys
-import importlib_resources
+try:
+    import importlib_resources
+except ImportError:
+    from importlib import resources as importlib_resources
 
 from qtpy.QtWidgets import QApplication
 
