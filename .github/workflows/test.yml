@@ -3,6 +3,7 @@
 
 # 06.12.2024: modified slightly with inspiration from:
 #   https://github.com/marketplace/actions/install-poetry-action#testing-using-a-matrix
+#   https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/
 
 name: Test Python package
 
@@ -79,11 +80,11 @@ jobs:
     - name: Install dynamic versioning plugin
       run: poetry self add "poetry-dynamic-versioning[plugin]"
     #----------------------------------------------
-    # load cached venv if cache exists
+    # load (restore) cached venv if cache exists
     #----------------------------------------------
     - name: Load cached venv
       id: cached-poetry-dependencies
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: .venv
         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
@@ -93,6 +94,14 @@ jobs:
     - name: Install dependencies
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
+    #----------------------------------------------
+    # save cached venv 
+    #----------------------------------------------
+    - name: Save cached venv
+      uses: actions/cache/save@v4
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
     #----------------------------------------------
     # install root project, if required
     #----------------------------------------------
