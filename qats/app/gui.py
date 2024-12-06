@@ -55,7 +55,8 @@ else:
 icofile_manager = contextlib.ExitStack()
 atexit.register(icofile_manager.close)
 icoref = importlib_resources.files("qats.app") / "qats.ico"
-ICON_FILE = icofile_manager.enter_context(importlib_resources.as_file(icoref))
+ICON_PATH = icofile_manager.enter_context(importlib_resources.as_file(icoref))
+ICON_FILE = str(ICON_PATH.absolute())
 
 # define statistics to calculate
 STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
