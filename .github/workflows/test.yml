@@ -82,7 +82,7 @@ jobs:
     - name: Create venv and install project
       # install if not cached
       # if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: 
+      run: |
         poetry install --no-interaction
         ls -a
     # - name: Install project
