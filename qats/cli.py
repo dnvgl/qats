@@ -59,7 +59,7 @@ def link_app():
             shortcut.TargetPath = target
             shortcut.Arguments = arguments
             shortcut.WorkingDirectory = os.getenv("USERPROFILE")
-            shortcut.IconLocation = ico_path
+            shortcut.IconLocation = str(ico_path)
             shortcut.Save()
 
 

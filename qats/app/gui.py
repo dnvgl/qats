@@ -17,12 +17,7 @@ from matplotlib.backends.backend_qt5agg import \
 from matplotlib.backends.backend_qt5agg import \
     NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
-try:
-    import importlib_resources
-except ImportError:
-    from importlib import resources as importlib_resources
-
-import contextlib, atexit
+import importlib_resources, contextlib, atexit
 from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -136,7 +131,7 @@ class Qats(QMainWindow):
 
         # window title and icon (assumed located in 'images' at same level)
         self.setWindowTitle("QATS")
-        self.icon = QIcon(str(ICON_FILE.absolute()))
+        self.icon = QIcon(ICON_FILE)
         self.setWindowIcon(self.icon)
 
         # create pool for managing threads
