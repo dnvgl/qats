@@ -6,10 +6,8 @@ Getting started
 Prerequisites
 *************
 
-You need Python version 3.8 or later. Versions up to and including 3.11 are tested, version 3.12 is not tested on deployment 
-with Github Actions but successfully tested locally.
-
-You can install Python from https://www.python.org or https://www.anaconda.com.
+You need Python, which may be installed from for instance https://www.python.org or https://www.anaconda.com.
+If not sure about which version to use, see supported python versions on https://pypi.org/project/qats/.
 
 Installation
 ************
