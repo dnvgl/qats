@@ -103,7 +103,7 @@ purposes. See deployment for notes on how to deploy the project on a live system
 
 ### Prerequisites
 
-Install Python version 3.8 or later from either https://www.python.org or https://www.anaconda.com.
+Install Python from https://www.python.org or https://www.anaconda.com. 
 
 Install Poetry with [the official installer](https://python-poetry.org/docs/#installing-with-the-official-installer).
 
