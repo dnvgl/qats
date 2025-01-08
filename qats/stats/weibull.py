@@ -782,7 +782,7 @@ def mlj(sample, l, j):
 
         M_{l,j,k} = E[X^l * F^j * (1-F)^k]
 
-    , where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function.
+    where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function.
     When `j=k=0` and `l` is a non-negative integer, then `M_{l,0,0}` represents the conventional moment of order `l`
     about the origin.
 
@@ -799,7 +799,7 @@ def mlj(sample, l, j):
     # todo: include pseudo-code (or Sphinx-friendly LaTex code) for M_{l,j,0} as included below
     '''
     .. math:: M_{l,j,k} = E[X^l F^j (1-F)^k]
-    .. math:: M_{l,j,0} = \frac{1}{n}\sum_{i=j+1}^{n}{X_{(i)}^l\frac{\binom{i-1}{j}}{\binom{n-1}{j}}}
+    .. math:: M_{l,j,0} = \\frac{1}{n}\\sum_{i=j+1}^{n}{X_{(i)}^l\\frac{\\binom{i-1}{j}}{\\binom{n-1}{j}}}
     '''
     n = float(sample.size)
     xi = np.sort(sample)[j:]  # (j+1)th subsample of sorted sample

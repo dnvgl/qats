@@ -825,24 +825,20 @@ def pwm(x):
 
         Notes
         -----
-        The probability weighted moment Mljk is defined by Greenwood and others (1979)
-
-        .. math::
+        The probability weighted moment Mljk is defined by Greenwood and others (1979)::
 
             M_{l,j,k} = E[X^l F^j (1-F)^k]
 
-        , where X(F) is the inverse form of the distribution and F is the cumulative distribution function.
+        where X(F) is the inverse form of the distribution and F is the cumulative distribution function.
         When j=k=0 and l is a non-negative integer then M_{l,0,0} represents the conventional moment of order l about
         the origin.
 
         PWMs can be applied either when the small observations are more important than the large observations (k=0), as in
         strength properties of materials, or when the large observations should have more influence than the smaller
         observations (k=0) as with three diameter distribution modelling. Here we have chose the former and derived
-        unbiased estimators for moments M_{1,0,k} (j=0), see eq. 16 in [6].
+        unbiased estimators for moments M_{1,0,k} (j=0), see eq. 16 in [6]::
 
-        .. math::
-
-            M_{1,0,k} = \frac{1}{n}\sum_{i=1}^{n}{X_{(i)}\frac{\binom{n-i}{k}}{\binom{n-1}{k}}}
+            M_{1,0,k} = \\frac{1}{n}\\sum_{i=1}^{n}{X_{(i)}\\frac{\\binom{n-i}{k}}{\\binom{n-1}{k}}}
 
         """
         n = float(z.size)
