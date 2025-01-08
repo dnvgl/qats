@@ -70,8 +70,14 @@ pywin32 = [ # MUST check the appropriate constraint
     {version = "^308", markers = "platform_system == 'Windows'", python = ">=3.13"},
  ] 
 pyside6 = [
-    {version = ">=6.6.0", python = "<3.13"},
-    {version = ">=6.8.1", python = ">=3.13"}
+    # temporary fix: avoid pyside6 version 6.8.1.1, which misses it companion shiboken6 6.8.1.1 on pypi
+    # see issue 134, https://github.com/dnvgl/qats/issues/134
+    # may allow for version >=6.8.1 again when this has been fixed on pyside/shiboken side, 
+    #   e.g.:
+    #       {version = "">=6.6.0,<6.9", python = "<3.13"},
+    #       {version = "~=6.8.1", python = ">3.13"}
+    {version = ">=6.6.0,<=6.8.1", python = "<3.13"},
+    {version = "6.8.1", python = ">=3.13"}
 ]
 importlib-resources = "*"
 
