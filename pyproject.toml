@@ -1,102 +1,88 @@
-[tool.poetry]
+[project]
 name = "qats"
-version = "0.0.0"   # overridden by dynamic versioning, must still be specified
+version = "0.0.0"
 description = "Library for efficient processing and visualization of time series"
 authors = [
-    "Per Voie <per.voie@gmail.com>", 
-    "Erling Lone <erling.lone@gmail.com>"
-    ]
-license = "MIT"
-readme = "README.md"
-include = [
-    "LICENSE",
-    "CHANGELOG.md",
-    "*/_version.py"
+    { name = "Per Voie", email = "per.voie@gmail.com" },
+    { name = "Erling Lone", email = "erling.lone@gmail.com" },
 ]
-# some urls given here instead of ulrs section (affects listed order on PyPi)
-homepage = "https://github.com/dnvgl/qats"
-repository = "https://github.com/dnvgl/qats"
-documentation = "https://qats.readthedocs.io"
+requires-python = ">=3.8.1,<3.14"
+readme = "README.md"
+license = "MIT"
+dependencies = [
+    "h5py>=3.5.0 ; python_version < '3.13'",
+    "h5py>=3.12.1 ; python_version >= '3.13'",
+    "contourpy>=1.0.1 ; python_version < '3.13'",
+    "contourpy>=1.3.1 ; python_version >= '3.13'",
+    "pymatreader>=0.0.24",
+    "matplotlib>=3.3.3 ; python_version < '3.13'",
+    "matplotlib>=3.9.1 ; python_version >= '3.13'",
+    "nptdms>=1.1.0",
+    "numpy>=1.21.6 ; python_version < '3.12'",
+    "numpy>=1.26.0 ; python_version >= '3.12' and python_version < '3.13'",
+    "numpy>=2.1.0 ; python_version >= '3.13'",
+    "openpyxl>=3.0.5",
+    "pandas>=1.1.4 ; python_version < '3.12'",
+    "pandas>=2.2.0 ; python_version >= '3.12'",
+    "qtpy>=1.9.0",
+    "scipy>=1.9.0 ; python_version < '3.12'",
+    "scipy>=1.11.1 ; python_version >= '3.12' and python_version < '3.13'",
+    "scipy>=1.14.1 ; python_version >= '3.13'",
+    "pywin32>=306,<307 ; python_version < '3.13' and platform_system == 'Windows'",
+    "pywin32>=308,<309 ; python_version >= '3.13' and platform_system == 'Windows'",
+    "pyside6>=6.6.0,<=6.8.1 ; python_version < '3.13'",
+    "pyside6==6.8.1 ; python_version >= '3.13'",
+    "importlib-resources",
+]
 
-[tool.poetry.urls]
-# additional urls not listed under tool.poetry
+[project.urls]
+Homepage = "https://github.com/dnvgl/qats"
+Repository = "https://github.com/dnvgl/qats"
+Documentation = "https://qats.readthedocs.io"
 Download = "https://pypi.org/project/qats/"
 Issues = "https://github.com/dnvgl/qats/issues"
 Changelog = "https://github.com/dnvgl/qats/releases"
 
-[[tool.poetry.source]]
-# fix issue that causes `poetry install` to fail for python 3.12, see:
-# https://github.com/python-poetry/poetry/issues/9293#issuecomment-2048205226
+[project.scripts]
+qats = "qats.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.3,<8",
+    "flake8>=6.1.0,<7",
+    "black>=23.11.0,<24",
+    "isort>=5.12.0,<6",
+]
+docs = [
+    "sphinx>=7.1.2",
+    "furo>=2023.9.10",
+    "myst-parser>=2.0.0",
+]
+
+[tool.uv]
+default-groups = [
+    "dev",
+    "docs",
+]
+
+[[tool.uv.index]]
 name = "pypi-public"
 url = "https://pypi.org/simple/"
 
-[tool.poetry.dependencies]
-python = ">=3.8.1,<3.14"
-# h5py = ">=3.5.0"
-h5py = [
-    {version = ">=3.5.0", python = "<3.13"},
-    {version = ">=3.12.1", python = ">=3.13"}
+[tool.hatch.build.targets.sdist]
+include = [
+    "LICENSE",
+    "CHANGELOG.md",
+    "*/_version.py",
 ]
-contourpy = [  # dependency of h5py, automatic version fails when installing for python 3.13
-    {version = ">=1.0.1", python = "<3.13"},
-    {version = ">=1.3.1", python = ">=3.13"},
-]
-pymatreader = ">=0.0.24"
-matplotlib = [
-    {version = ">=3.3.3", python = "<3.13"},
-    {version = ">=3.9.1", python = ">=3.13"}
-]
-nptdms = ">=1.1.0"
-numpy = [
-    {version = ">=1.21.6", python = "<3.12"},
-    {version = ">=1.26.0", python = ">=3.12,<3.13"},
-    {version = ">=2.1.0", python = ">=3.13"}
-]
-openpyxl = ">=3.0.5"
-pandas = [
-    # force pandas >=2.2.0 for python 3.12
-    # (official support for python 3.12 is introduced in pandas 2.2.0, but poetry tries to install pandas 2.0.3)
-    {version = ">=1.1.4", python = "<3.12"},
-    {version = ">=2.2.0", python = ">=3.12"}
-]
-qtpy = ">=1.9.0"
-scipy = [
-    {version = ">=1.9.0", python = "<3.12"},
-    {version = ">=1.11.1", python = ">=3.12,<3.13"},
-    {version = ">=1.14.1", python = ">=3.13"}
-]
-pywin32 = [ # MUST check the appropriate constraint
-    {version = "^306", markers = "platform_system == 'Windows'", python = "<3.13"},
-    {version = "^308", markers = "platform_system == 'Windows'", python = ">=3.13"},
- ] 
-pyside6 = [
-    # temporary fix: avoid pyside6 version 6.8.1.1, which misses it companion shiboken6 6.8.1.1 on pypi
-    # see issue 134, https://github.com/dnvgl/qats/issues/134
-    # may allow for version >=6.8.1 again when this has been fixed on pyside/shiboken side, 
-    #   e.g.:
-    #       {version = "">=6.6.0,<6.9", python = "<3.13"},
-    #       {version = "~=6.8.1", python = ">3.13"}
-    {version = ">=6.6.0,<=6.8.1", python = "<3.13"},
-    {version = "6.8.1", python = ">=3.13"}
-]
-importlib-resources = "*"
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.3"
-flake8 = "^6.1.0"
-black = "^23.11.0"
-isort = "^5.12.0"
+[tool.hatch.build.targets.wheel]
+include = [
+    "LICENSE",
+    "CHANGELOG.md",
+    "*/_version.py",
+]
 
-[tool.poetry.group.docs.dependencies]
-sphinx = ">=7.1.2"
-furo = ">=2023.9.10"
-myst-parser = ">=2.0.0"
-
-[tool.poetry.scripts]
-qats = "qats.cli:main"
-
-# enable dynamic versioning using Git tags
-# https://pypi.org/project/poetry-dynamic-versioning/
 [tool.poetry-dynamic-versioning]
 enable = true
 vcs = "git"
@@ -118,6 +104,7 @@ initial-content = """
 __version__ = "0.0.0"
 __version_tuple__ = (0, 0, 0)
 """
+
 [build-system]
 # https://pypi.org/project/poetry-dynamic-versioning/
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning>=1.1.1,<2.0.0"]
