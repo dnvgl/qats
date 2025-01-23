@@ -2283,7 +2283,7 @@ wheels = [
 
 [[package]]
 name = "qats"
-version = "5.2.1.dev20+geacc5d5.d20250122"
+version = "5.2.1.dev22+g0730ca8.d20250123"
 source = { editable = "." }
 dependencies = [
     { name = "h5py", version = "3.11.0", source = { registry = "https://pypi.org/simple/" }, marker = "python_full_version < '3.9'" },

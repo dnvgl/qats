@@ -63,29 +63,33 @@ name = "pypi-public"
 url = "https://pypi.org/simple/"
 
 
-[tool.hatch.build.targets.sdist]
-include = [
-    "LICENSE",
-    "CHANGELOG.md",
-    "*/_version.py",
-]
+# [tool.hatch.build.targets.sdist]
+# include = [
+#     "LICENSE",
+#     "CHANGELOG.md",
+#     "*/_version.py",
+# ]
 
 
-[tool.hatch.build.targets.wheel]
-include = [
-    "LICENSE",
-    "CHANGELOG.md",
-    "*/_version.py",
-]
+# [tool.hatch.build.targets.wheel]
+# include = [
+#     "LICENSE",
+#     "CHANGELOG.md",
+#     "*/_version.py",
+# ]
 
 [tool.setuptools.packages.find]
-# - All the following settings are optional:
+# https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html#setuptools-specific-configuration
 where = ["."]  # ["."] by default
 include = ["*"]  # ["*"] by default
-exclude = ["tests*", "data"]  # empty by default
+exclude = [
+    "docs*",
+    "data*",
+    "test*", 
+]  # empty by default
 # - additional excludes are included in MANIFEST.in, as a workaround for current limitations in pyproject.toml
 #   (ref. e.g. https://github.com/pypa/setuptools/issues/3341)
-# namespaces = false  # true by default
+# namespaces = false  # to disable scanning PEP 420 namespaces (true by default)
 
 [tool.setuptools_scm]
 # a version file can be written by setuptools_scm if specified
