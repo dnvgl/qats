@@ -3,6 +3,7 @@
 exclude \
     .env* \
     .git* \
+    .github\** \
     .vscode\* \
     .readthedocs.yaml \
     pytest.ini \
