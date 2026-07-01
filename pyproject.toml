@@ -53,7 +53,10 @@ scipy = [
     {version = ">=1.11.1", python = ">=3.12"}
 ]
 pywin32 = {version = "^306", markers = "platform_system == 'Windows'"} # MUST check the appropriate constraint
-pyside6 = "^6.6.0"
+pyside6 = [
+  { version = "<6.6", python = "<3.9" },
+  { version = "^6.6", python = ">=3.9" }
+]
 importlib-resources = "*"
 
 [tool.poetry.group.dev.dependencies]

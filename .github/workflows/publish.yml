@@ -35,6 +35,7 @@ jobs:
       if: steps.cached-poetry.outputs.cache-hit != 'true'
       uses: snok/install-poetry@v1
       with:
+        version: 1.8.3  # for python 3.8/3.9 compatibility, to be removed when we drop support for 3.8/3.9
         virtualenvs-create: true
         virtualenvs-in-project: true  #.venv in current directory
     - name: Install dynamic versioning plugin
@@ -44,7 +45,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
     - name: Create venv and install project dependencies
       # install if not cached
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
