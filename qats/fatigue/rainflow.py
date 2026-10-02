@@ -197,12 +197,13 @@ def count_cycles(series, endpoints=False):
 
     # initiate and populate array with cycle counts
     cycles_ = np.zeros((n, 3))
-    cycles_[:, :2] = full + half  # full and half are lists
-    cycles_[:nf, 2] = 1.0  # full cycles count 1.0
-    cycles_[nf:, 2] = 0.5  # half cycles count 0.5
+    if n > 0:
+        cycles_[:, :2] = full + half  # full and half are lists
+        cycles_[:nf, 2] = 1.0  # full cycles count 1.0
+        cycles_[nf:, 2] = 0.5  # half cycles count 0.5
 
-    # sort by increasing range, then mean
-    cycles_ = _sort_cycles(cycles_, copy=False)
+        # sort by increasing range, then mean
+        cycles_ = _sort_cycles(cycles_, copy=False)
 
     return cycles_
 
@@ -289,26 +290,30 @@ def mesh(cycles, nr=100, nm=100):
     cycles = _toarray(cycles)  # ensure array, not list
     ranges, means, counts = cycles.T
 
-    # create mesh
-    maxrange = ranges.max()
-    maxmean = means.max()
-    minmean = means.min()
+    if cycles.shape[0] == 0:
+        # empty
+        return np.zeros((nm, nr)), np.zeros((nm, nr)), np.zeros((nm, nr))
+    else:
+        # create mesh
+        maxrange = ranges.max()
+        maxmean = means.max()
+        minmean = means.min()
 
-    # xyrange = ([0., maxrange], [minmean, maxmean])
-    xyrange = ([0., maxrange], [minmean, maxmean])
-    hist2d, r_edges, m_edges = np.histogram2d(ranges, means, bins=[nr, nm], range=xyrange, weights=counts)
+        # xyrange = ([0., maxrange], [minmean, maxmean])
+        xyrange = ([0., maxrange], [minmean, maxmean])
+        hist2d, r_edges, m_edges = np.histogram2d(ranges, means, bins=[nr, nm], range=xyrange, weights=counts)
 
-    # 2D histogram from np.histogram2d must be transposed for consistency with np.meshgrid
-    cmesh = hist2d.T
+        # 2D histogram from np.histogram2d must be transposed for consistency with np.meshgrid
+        cmesh = hist2d.T
 
-    # arrays of bin mid points (sizes `nr` and `rm`)
-    rbins = 0.5 * (r_edges[:-1] + r_edges[1:])
-    mbins = 0.5 * (m_edges[:-1] + m_edges[1:])
+        # arrays of bin mid points (sizes `nr` and `rm`)
+        rbins = 0.5 * (r_edges[:-1] + r_edges[1:])
+        mbins = 0.5 * (m_edges[:-1] + m_edges[1:])
 
-    # mesh grids
-    rmesh, mmesh = np.meshgrid(rbins, mbins)
+        # mesh grids
+        rmesh, mmesh = np.meshgrid(rbins, mbins)
 
-    return rmesh, mmesh, cmesh
+        return rmesh, mmesh, cmesh
 
 
 def rebin(cycles, binby='range', n=None, w=None):
@@ -379,7 +384,11 @@ def rebin(cycles, binby='range', n=None, w=None):
     ranges, means, counts = cycles.T
 
     # rebin
-    if binby == 'range':
+    if cycles.shape[0] == 0:
+        # empty 
+        return np.zeros((0, 3))
+    
+    elif binby == 'range':
         # establish bin edges
         bins = _create_bins(0., ranges.max(), n=n, w=w)
         # nbins = bins.size - 1

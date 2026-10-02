@@ -77,6 +77,11 @@ def calculate_rfc(container, twin, fargs, nbins):
         if nbins is not None:
             cycles = rebin_cycles(cycles, binby='range', n=nbins)
 
+        # handle empty cycles
+        if len(cycles) == 0:
+            container_out[name] = ((), ())
+            continue
+        
         # unpack pairs (tuples) in list
         r, _, c = zip(*cycles)
         container_out[name] = tuple([r, c])
