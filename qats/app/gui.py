@@ -11,12 +11,10 @@ import os
 import sys
 from itertools import cycle
 
-import matplotlib
-import numpy as np
-from matplotlib.backends.backend_qt5agg import \
-    FigureCanvasQTAgg as FigureCanvas
-from matplotlib.figure import Figure
 import importlib.resources, contextlib, atexit
+import numpy as np
+# NOTE: import qtpy before the matplotlib Qt backend so that qtpy resolves the
+# Qt binding (and sets QT_API) first; matplotlib then uses the same binding.
 from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -26,6 +24,10 @@ from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox, QDialog,
                             QLabel, QLineEdit, QListView, QMainWindow,
                             QMessageBox, QPushButton, QRadioButton, QSpinBox,
                             QSplitter, QTabBar, QVBoxLayout, QWidget)
+import matplotlib
+from matplotlib.backends.backend_qtagg import \
+    FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
