@@ -1,7 +1,5 @@
 # This workflow will upload new releases to PyPi
-# Could write it explicitely ourself but this was neat.
-# Consider moving the docs dependencies to dev to speed up (probably not a problem).
-# reference: https://github.com/marketplace/actions/publish-python-poetry-package
+# reference: https://docs.astral.sh/uv/guides/package/#publishing-your-package
 
 name: Publish Python Package to PyPi
 
@@ -13,53 +11,42 @@ jobs:
   publishing:
     name: Build and publish package on PyPi
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to upload builds to the release
 
     steps:
     - name: Install missing libraries on GitHub agent
       run: sudo apt update && sudo apt install -y libegl1-mesa-dev
     - name: Check out repository
-      uses: actions/checkout@v4
-    - name: Set up python
-      id: setup-python
-      uses: actions/setup-python@v5
+      # full history and tags, required by setuptools-scm to derive the version
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Set up uv and python
+      uses: astral-sh/setup-uv@v10
       with:
         python-version: "3.11"
-    - name: Load cached Poetry installation
-      id: cached-poetry
-      uses: actions/cache@v4
-      with:
-        path: ~/.local  # the path depends on the OS
-        key: poetry-publish-0  # increment to reset cache
-    - name: Install and configure Poetry
-      # install if not cached. Create venv in project to simplify caching
-      if: steps.cached-poetry.outputs.cache-hit != 'true'
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.8.3  # for python 3.8/3.9 compatibility, to be removed when we drop support for 3.8/3.9
-        virtualenvs-create: true
-        virtualenvs-in-project: true  #.venv in current directory
-    - name: Install dynamic versioning plugin
-      run: poetry self add "poetry-dynamic-versioning[plugin]"
-    - name: Load cached venv
-      id: cached-poetry-dependencies
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
-    - name: Create venv and install project dependencies
-      # install if not cached
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-    - name: Install project
-      # required to test the CLI, show working directory for debugging
-      run: poetry install --no-interaction
-    - name: Build and publish to pypi
-      run: poetry publish --build
+    - name: Build package
+      run: uv build
+    - name: Check package version matches release tag
+      run: |
+        version="${GITHUB_REF_NAME#v}"
+        ls dist/
+        test -f "dist/qats-${version}-py3-none-any.whl" || { echo "::error::Built version does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+    - name: Test installing built wheel
       env:
-        POETRY_PYPI_TOKEN_PYPI : ${{ secrets.PYPI_API_TOKEN }}
+        QT_API: pyside6
+      run: |
+        wheel=$(ls "$GITHUB_WORKSPACE"/dist/qats-*.whl)
+        cd "$RUNNER_TEMP"
+        uv run --isolated --no-project --with "$wheel" qats -h
+    - name: Publish to pypi
+      run: uv publish
+      env:
+        UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
     - name: Upload artifacts
       # https://github.com/actions/upload-artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: builds
         path: |
@@ -67,7 +54,7 @@ jobs:
           dist/qats-*.whl
     - name: Upload builds to release
       # https://github.com/softprops/action-gh-release#%EF%B8%8F-uploading-release-assets
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
