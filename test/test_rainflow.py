@@ -96,6 +96,13 @@ class TestRainflowCounting(unittest.TestCase):
         # self.assertEqual(self.cycles, rainflow.count_cycles(reversals, endpoints=True))
         np.testing.assert_array_equal(self.cycles, rainflow.count_cycles(reversals, endpoints=True))
 
+    def test_rainflow_counting_constant_series(self):
+        """
+        Test that cycle counting of constant time series does not raise exeception.
+        Ref. issue https://github.com/dnvgl/qats/issues/138
+        """
+        _ = rainflow.count_cycles(np.zeros(100))
+
     def test_series_with_zero_derivatives(self):
         """
         Duplicate values in series to create zero derivatives (platou). Test that these are ignored by the cycle

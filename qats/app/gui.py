@@ -11,11 +11,10 @@ import os
 import sys
 from itertools import cycle
 
+import matplotlib
 import numpy as np
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import \
-    NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 import importlib_resources, contextlib, atexit
 from qtpy import API_NAME as QTPY_API_NAME
@@ -35,7 +34,8 @@ from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
                     import_from_file, read_timeseries)
 from .logger import QLogger
 from .threading import Worker
-from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget
+from .widgets import (CustomTableWidget, CustomTableWidgetItem,
+                      CustomTabWidget, WhiteSaveNavigationToolbar)
 from .. import __version__
 
 LOGGING_LEVELS = dict(
@@ -129,6 +129,10 @@ class Qats(QMainWindow):
         super(Qats, self).__init__(parent)
         assert logging_level in LOGGING_LEVELS, "invalid logging level: '%s'" % logging_level
 
+        # match plot colors to the Qt color scheme (e.g. Windows dark mode) before
+        # any figure/axes is created, so all plots pick up the theme
+        self._init_plot_theme()
+
         # window title and icon (assumed located in 'images' at same level)
         self.setWindowTitle("QATS")
         self.icon = QIcon(ICON_FILE)
@@ -174,7 +178,8 @@ class Qats(QMainWindow):
         self.history_canvas = FigureCanvas(self.history_fig)
         self.history_canvas.setParent(w)
         self.history_axes = self.history_fig.add_subplot(111)
-        self.history_mpl_toolbar = NavigationToolbar(self.history_canvas, self.upper_left_frame)
+        self.history_mpl_toolbar = WhiteSaveNavigationToolbar(self.history_canvas, self.upper_left_frame,
+                                                              dark_colors=self.dark_plot_colors)
         vbox = QVBoxLayout()
         vbox.addWidget(self.history_canvas)
         vbox.addWidget(self.history_mpl_toolbar)
@@ -189,7 +194,8 @@ class Qats(QMainWindow):
         self.spectrum_canvas = FigureCanvas(self.spectrum_fig)
         self.spectrum_canvas.setParent(w)
         self.spectrum_axes = self.spectrum_fig.add_subplot(111)
-        self.spectrum_mpl_toolbar = NavigationToolbar(self.spectrum_canvas, self.upper_left_frame)
+        self.spectrum_mpl_toolbar = WhiteSaveNavigationToolbar(self.spectrum_canvas, self.upper_left_frame,
+                                                               dark_colors=self.dark_plot_colors)
         vbox = QVBoxLayout()
         vbox.addWidget(self.spectrum_canvas)
         vbox.addWidget(self.spectrum_mpl_toolbar)
@@ -218,7 +224,8 @@ class Qats(QMainWindow):
         self.weibull_canvas = FigureCanvas(self.weibull_fig)
         self.weibull_canvas.setParent(w)
         self.weibull_axes = self.weibull_fig.add_subplot(111)
-        self.weibull_mpl_toolbar = NavigationToolbar(self.weibull_canvas, self.upper_left_frame)
+        self.weibull_mpl_toolbar = WhiteSaveNavigationToolbar(self.weibull_canvas, self.upper_left_frame,
+                                                              dark_colors=self.dark_plot_colors)
         vbox = QVBoxLayout()
         vbox.addWidget(self.weibull_canvas)
         vbox.addWidget(self.weibull_mpl_toolbar)
@@ -234,7 +241,8 @@ class Qats(QMainWindow):
         self.cycles_canvas = FigureCanvas(self.cycles_fig)
         self.cycles_canvas.setParent(w)
         self.cycles_axes = self.cycles_fig.add_subplot(111)
-        self.cycles_mpl_toolbar = NavigationToolbar(self.cycles_canvas, self.upper_left_frame)
+        self.cycles_mpl_toolbar = WhiteSaveNavigationToolbar(self.cycles_canvas, self.upper_left_frame,
+                                                             dark_colors=self.dark_plot_colors)
         vbox = QVBoxLayout()
         vbox.addWidget(self.cycles_canvas)
         vbox.addWidget(self.cycles_mpl_toolbar)
@@ -1004,8 +1012,9 @@ class Qats(QMainWindow):
         self.cycles_axes.set_xlabel('Cycle range')
         self.cycles_axes.set_ylabel('Cycle count (-)')
 
-        # cycle bar colors
-        barcolor = cycle("bgrcmyk")
+        # cycle bar colors through matplotlib's default color cycle
+        # (readable on both light and dark backgrounds)
+        barcolor = cycle(matplotlib.rcParams["axes.prop_cycle"].by_key()["color"])
 
         # draw
         for name, value in container.items():
@@ -1142,7 +1151,7 @@ class Qats(QMainWindow):
         canvas = FigureCanvas(fig)
         canvas.setParent(w)
         axes = fig.add_subplot(111)
-        toolbar = NavigationToolbar(canvas, self.upper_left_frame)
+        toolbar = WhiteSaveNavigationToolbar(canvas, self.upper_left_frame, dark_colors=self.dark_plot_colors)
         vbox = QVBoxLayout()
         vbox.addWidget(canvas)
         vbox.addWidget(toolbar)
@@ -1160,7 +1169,7 @@ class Qats(QMainWindow):
 
         # plot
         # TODO: Double check if sample should be multiplied with -1 or not.
-        axes.plot(sample, sample_dist, 'ko', label='Data')
+        axes.plot(sample, sample_dist, marker='o', linestyle='', label='Data')
         axes.plot(sample, fitted_dist, '-m', label='Fitted')
 
         # plotting positions and plot configurations
@@ -1193,6 +1202,51 @@ class Qats(QMainWindow):
     def twin_ndec(self):
         """int: Number of decimals in time window for data processing."""
         return self.settings.get("twin_ndec", 2)
+
+    def _init_plot_theme(self):
+        """
+        Match matplotlib plot colors to the Qt color scheme (e.g. Windows dark mode).
+
+        Reads the application palette (inherited by this window). In a dark color
+        scheme, sets matplotlib rcParams so that every figure and axes created
+        afterwards - including clears/redraws and the dynamically created Extremes
+        CDF tab - is themed without touching the individual plot methods. In light
+        mode this is a no-op and matplotlib keeps its (light) defaults.
+
+        Also stores `self.dark_plot_colors` (a color dict, or None in light mode)
+        used by `WhiteSaveNavigationToolbar` to restore the dark style after a
+        white-background image export.
+        """
+        palette = self.palette()    # inherits the QApplication palette
+        window = palette.color(QPalette.Window)
+        self.dark_mode = window.lightness() < 128   # robust light/dark test
+
+        if not self.dark_mode:
+            self.dark_plot_colors = None
+            return
+
+        fg = palette.color(QPalette.WindowText).name()      # '#rrggbb'
+        fig_bg = window.name()
+        axes_bg = palette.color(QPalette.Base).name()
+        self.dark_plot_colors = dict(fig_bg=fig_bg, axes_bg=axes_bg, fg=fg, grid=fg)
+
+        matplotlib.rcParams.update({
+            "figure.facecolor": fig_bg,
+            "figure.edgecolor": fig_bg,
+            "axes.facecolor":   axes_bg,
+            "axes.edgecolor":   fg,
+            "axes.labelcolor":  fg,
+            "axes.titlecolor":  fg,
+            "text.color":       fg,
+            "xtick.color":      fg,
+            "ytick.color":      fg,
+            "grid.color":       fg,
+            "grid.alpha":       0.25,   # subtle gridlines on dark background
+            "legend.facecolor": axes_bg,
+            "legend.edgecolor": fg,
+            # savefig.* deliberately left at (white) defaults; white exports are
+            # handled by WhiteSaveNavigationToolbar.
+        })
 
     def reset_axes(self):
         """
