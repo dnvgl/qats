@@ -51,10 +51,25 @@ Python version support
 
 .. QATS currently supports Python version 3.8 and later. Note that version 3.12 is not properly tested but should work.
 
-QATS currently supports Python version 3.8+. 
+.. QATS currently supports Python version 3.8+. 
+
+QATS aims to support Python versions in accordance with the official `Status of Python versions <https://devguide.python.org/versions>`_ (that is, versions with status **security** and **bugfix**).
+
+The Python versions suported by the latest version of QATS are: 
+
+.. image:: https://img.shields.io/pypi/pyversions/qats
+    :target: https://pypi.org/project/qats/
 
 .. note::
-    Python version <=3.11 is recommended, as version 3.12 is not yet formally tested.
+
+   The Python version support for a specific version of QATS is best seen from the metadata on `PyPi/qats <https://pypi.org/project/qats/>`_. 
+
+
+.. .. image:: https://img.shields.io/pypi/pyversions/qats
+..     :target: https://pypi.org/project/qats/
+
+.. .. note::
+..     Python version <=3.11 is recommended, as version 3.12 is not yet formally tested.
 
 
 
