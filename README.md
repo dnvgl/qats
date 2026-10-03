@@ -37,7 +37,7 @@ perfect for inspecting, comparing and reporting:
 
 ### Installation
 
-Run the below command in a Python environment to install the latest QATS release:
+QATS requires Python 3.11 or later. Run the below command in a Python environment to install the latest QATS release:
 
 ```console
 python -m pip install qats
@@ -103,34 +103,42 @@ purposes. See deployment for notes on how to deploy the project on a live system
 
 ### Prerequisites
 
-Install Python from https://www.python.org or https://www.anaconda.com. 
-
-Install Poetry with [the official installer](https://python-poetry.org/docs/#installing-with-the-official-installer).
-
-Install the [poetry-dynamic-versioning](https://pypi.org/project/poetry-dynamic-versioning/) plugin:
-
-```poetry self add "poetry-dynamic-versioning[plugin]"```
+Install [uv](https://docs.astral.sh/uv/) with [the official installer](https://docs.astral.sh/uv/getting-started/installation/).
+uv installs a suitable Python version automatically if you don't have one.
 
 ### Clone the source code repository
 
-At the desired location, run: 
+At the desired location, run:
 
-```git clone https://github.com/dnvgl/qats.git```
+```console
+git clone https://github.com/dnvgl/qats.git
+```
+
+The package version is derived from Git tags (using [setuptools-scm](https://setuptools-scm.readthedocs.io)), so clone
+the full repository with tags rather than downloading a source archive.
 
 ### Installing
 
-To get the development environment running...
+To get the development environment running, run from the repository root:
 
 ```console
-poetry install
+uv sync
 ```
 
 This will
-- create an isolated environment
-- install all dependencies including those required for development, testing and building documentation
+- create an isolated environment in `.venv`
+- install the locked dependencies from `uv.lock`, including those required for development, testing and building
+  documentation (the `dev` and `docs` dependency groups)
 - and install the package in development ("editable") mode
 
-You should now be able to import the package in the Python console,
+To use a specific Python version, e.g. 3.12, run `uv sync --python 3.12`.
+
+Prefix commands with `uv run` to run them in the environment (or activate `.venv` first). You should now be able to
+import the package in the Python console,
+
+```console
+uv run python
+```
 
 ```python
 >>> import qats
@@ -140,21 +148,24 @@ You should now be able to import the package in the Python console,
 ... and use the command line interface (CLI).
 
 ```console
-qats -h
+uv run qats -h
 ```
 
-_New in version 4.11.0._ The CLI is also available from 
+_New in version 4.11.0._ The CLI is also available from
 
 ```console
-python -m qats -h
+uv run python -m qats -h
 ```
+
+To add or update a dependency, use `uv add` (e.g. `uv add "numpy>=2"` or `uv add --dev pytest`) rather than editing
+`pyproject.toml` by hand, so that `uv.lock` is updated as well. Commit both files.
 
 ### Running the tests
 
-The automated tests are run using [unittest](https://docs.python.org/3/library/unittest.html/).
+The automated tests are run using [pytest](https://docs.pytest.org).
 
 ```console
-python -m unittest discover 
+uv run pytest test/
 ```
 
 ### Building the package
@@ -162,10 +173,10 @@ python -m unittest discover
 Build tarball and wheel distributions by
 
 ```console
-poetry build
+uv build
 ```
 
-The builds appear in the `.dist` folder. The distributions adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention) 
+The builds appear in the `dist` folder. The distributions adhere to the [PEP 0427](https://www.python.org/dev/peps/pep-0427/#file-name-convention)
 convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{platform tag}.whl`.
 
 ### Building the documentation
@@ -173,13 +184,13 @@ convention `{distribution}-{version}(-{build tag})?-{python tag}-{abi tag}-{plat
 The html documentation is built using [Sphinx](http://www.sphinx-doc.org/en/master)
 
 ```console
-sphinx-build -b html docs\source docs\_build
+uv run sphinx-build -b html docs/source docs/_build
 ```
 
 To force a build to read/write all files (always read all files and don't use a saved environment), include the `-a` and `-E` options:
 
 ```console
-sphinx-build -a -E -b html docs\source docs\_build
+uv run sphinx-build -a -E -b html docs/source docs/_build
 ```
 
 ### Versioning
@@ -192,7 +203,7 @@ Versions are tagged with Git tags like `v3.0.1`. See the [tags on this repositor
 
 We use the [release cycle in GitHub](https://github.com/dnvgl/qats/releases) to cut new releases.
 
-Once a new release is published, [GitHub Actions](https://docs.github.com/en/actions) takes care of the packaging, unit testing and deployment to [PyPi](https://pypi.org/project/qats/).
+Once a new release is published, [GitHub Actions](https://docs.github.com/en/actions) takes care of the packaging and deployment to [PyPi](https://pypi.org/project/qats/). Unit tests run on every push and pull request.
 
 The workflows for continuous integration and deployment are found in [.github/workflows](.github/workflows/).
 
