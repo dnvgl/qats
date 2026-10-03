@@ -5,7 +5,7 @@ Command line interface to app (GUI).
 import argparse
 import os
 import sys
-import importlib_resources
+import importlib.resources
 
 from qtpy.QtWidgets import QApplication
 
@@ -27,7 +27,7 @@ def link_app():
     from win32com.client import Dispatch
 
     pkg_name = "qats"
-    ico_ref = importlib_resources.files("qats.app") / "qats.ico"
+    ico_ref = importlib.resources.files("qats.app") / "qats.ico"
     lnk_name = pkg_name.upper() + ".lnk"
 
     # define target as pythonw.exe (or python.exe if needed)
@@ -47,7 +47,7 @@ def link_app():
     shell = Dispatch("WScript.Shell")
 
     # create shortcuts to gui in desktop folder and start-menu programs
-    with importlib_resources.as_file(ico_ref) as ico_path:
+    with importlib.resources.as_file(ico_ref) as ico_path:
         for loc in ("Desktop", "Programs"):
             location = shell.SpecialFolders(loc)
             path_link = os.path.join(location, lnk_name)
