@@ -16,7 +16,7 @@ import numpy as np
 from matplotlib.backends.backend_qt5agg import \
     FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-import importlib_resources, contextlib, atexit
+import importlib.resources, contextlib, atexit
 from qtpy import API_NAME as QTPY_API_NAME
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -54,8 +54,8 @@ else:
 # ref. https://importlib-resources.readthedocs.io/en/latest/migration.html#pkg-resources-resource-filename
 icofile_manager = contextlib.ExitStack()
 atexit.register(icofile_manager.close)
-icoref = importlib_resources.files("qats.app") / "qats.ico"
-ICON_PATH = icofile_manager.enter_context(importlib_resources.as_file(icoref))
+icoref = importlib.resources.files("qats.app") / "qats.ico"
+ICON_PATH = icofile_manager.enter_context(importlib.resources.as_file(icoref))
 ICON_FILE = str(ICON_PATH.absolute())
 
 # define statistics to calculate

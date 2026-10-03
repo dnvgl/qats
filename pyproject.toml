@@ -15,7 +15,6 @@ dynamic = ["version"]
 license.file = "LICENSE"
 dependencies = [
     "h5py>=3.11.0",
-    "importlib-resources>=6.4.5",
     "matplotlib>=3.7.5",
     "nptdms>=1.10.0",
     "numpy>=1.24.4",
@@ -67,10 +66,6 @@ Changelog = "https://github.com/dnvgl/qats/releases"
 
 [project.scripts]
 qats = "qats.cli:main"
-
-[[tool.uv.index]]
-name = "pypi-public"
-url = "https://pypi.org/simple/"
 
 [tool.setuptools.packages.find]
 # https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html#setuptools-specific-configuration
