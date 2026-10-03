@@ -9,7 +9,7 @@ authors = [
     { name = "Per Voie", email = "per.voie@gmail.com" },
     { name = "Erling Lone", email = "erling.lone@gmail.com" },
 ]
-requires-python = ">=3.8.1,<3.14"
+requires-python = ">=3.11"
 readme = "README.md"
 dynamic = ["version"]
 license.file = "LICENSE"
@@ -26,6 +26,16 @@ dependencies = [
     "pywin32>=308 ; sys_platform == 'win32'",
     "qtpy>=2.4.2",
     "scipy>=1.10.1",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: MIT License",   # check against LICENSE
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
 ]
 
 [dependency-groups]
