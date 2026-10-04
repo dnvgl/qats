@@ -360,7 +360,11 @@ class TsDB(object):
     def _path_relpath(key, start=os.curdir):
         """
         As os.path.relpath, but does not split on '/' or '\\' if they are within square brackets.
+
+        If `start` is empty (no common path, e.g. keys on different drives), the key is returned unchanged.
         """
+        if not start:
+            return key
         if "[" in key:
             i = key.index("[")
             return os.path.relpath(key[:i], start) + key[i:]
@@ -446,8 +450,11 @@ class TsDB(object):
         if keep_basename:
             key_count = defaultdict(int)
         else:
-            # common part of all selected keys
-            common_key = os.path.commonpath([str(k) for k in container.keys()])
+            # common part of all selected keys (none if the keys are on different drives)
+            try:
+                common_key = os.path.commonpath([str(k) for k in container.keys()])
+            except ValueError:
+                common_key = ""
 
         for key, ts in container.items():
             if keep_basename:
@@ -459,6 +466,10 @@ class TsDB(object):
             else:
                 # make
                 relkey = self._path_relpath(key, common_key)
+                if not common_key:
+                    # no common path: keep the drive in the name, but without ':' and leading separators
+                    drive, tail = os.path.splitdrive(relkey)
+                    relkey = drive.replace(":", "").strip("\\/") + tail
                 name = self._path_basename(relkey)
                 new_k = "_".join([os.path.splitext(self._path_dirname(relkey))[0].replace(os.path.sep, "_"), name])
 
@@ -1158,8 +1169,8 @@ class TsDB(object):
             except TypeError as err:
                 raise TypeError("Parameter `ind` must be integer or list of integers") from err
 
-        if fullkey:
-            # use full key in returned container
+        if fullkey or not self.common:
+            # use full key in returned container (also when there is no common path, e.g. keys on different drives)
             retkeys = keys
         else:
             # todo: consider including the '\\' in self.common (currently I am not sure what is the best)
