@@ -168,6 +168,30 @@ The automated tests are run using [pytest](https://docs.pytest.org).
 uv run pytest test/
 ```
 
+### Linting and formatting
+
+Code is linted and formatted with [ruff](https://docs.astral.sh/ruff/), configured in `pyproject.toml`. CI fails if
+either check finds a problem, so run them before pushing:
+
+```console
+uv run ruff check .
+uv run ruff format --check .
+```
+
+To fix what can be fixed automatically and reformat the code:
+
+```console
+uv run ruff check --fix .
+uv run ruff format .
+```
+
+The commit that first formatted the code base with ruff is listed in `.git-blame-ignore-revs`. To have `git blame`
+skip it locally (GitHub does this automatically), run once:
+
+```console
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ### Building the package
 
 Build tarball and wheel distributions by
