@@ -86,6 +86,10 @@ version_file = "qats/_version.py"
 [tool.ruff]
 # https://docs.astral.sh/ruff/configuration/
 line-length = 120
+force-exclude = true  # also respect excludes for files passed explicitly (editors, pre-commit)
+extend-exclude = [
+    "CHANGELOG.md",  # frozen; release notes are in GitHub Releases
+]
 
 [tool.ruff.lint]
 select = [
