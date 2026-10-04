@@ -39,10 +39,8 @@ classifiers = [
 
 [dependency-groups]
 dev = [
-    "black>=24.8.0",
-    "flake8>=7.1.1",
-    "isort>=5.13.2",
     "pytest>=8.3.4",
+    "ruff>=0.16.10",
 ]
 docs = [
     "furo>=2024.8.6",
@@ -84,6 +82,22 @@ exclude = [
 [tool.setuptools_scm]
 # a version file can be written by setuptools_scm if specified
 version_file = "qats/_version.py"
+
+[tool.ruff]
+# https://docs.astral.sh/ruff/configuration/
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "S",  # flake8-bandit (security)
+]
+ignore = [
+    "S101",  # assert is used for input validation in the library; to be replaced, see #148
+]
 
 [build-system]
 requires = [
