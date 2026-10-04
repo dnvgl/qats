@@ -1094,14 +1094,15 @@ class TimeSeries(object):
             Additional keyword arguments are passed to :meth:`rfc()`.
 
         """
-        # This import registers the 3D projection, but is otherwise unused.
-        # noinspection PyUnresolvedReferences
-
         cycles = self.rfc(**kwargs)
         ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
 
         fig = plt.figure(num=num)
-        ax = fig.gca(projection="3d")
+        # reuse the current axes if it is 3D (as the former `fig.gca(projection="3d")` did), otherwise add one
+        if fig.axes and fig.gca().name == "3d":
+            ax = fig.gca()
+        else:
+            ax = fig.add_subplot(projection="3d")
         ax.plot_surface(ranges, means, counts, cmap=cm.coolwarm)
         ax.set_xlabel("Cycle range")
         ax.set_ylabel("Cycle mean")
