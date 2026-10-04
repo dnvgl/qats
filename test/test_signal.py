@@ -34,7 +34,9 @@ class TestSignal(unittest.TestCase):
         self.assertAlmostEqual(average_frequency(self.t, self.x, up=False), 0.05, places=3)
 
     def test_smooth(self):
-        """Check that the noise is removed and that the average mean crossing frequency equals that of the base signal."""
+        """
+        Check that the noise is removed and that the average mean crossing frequency equals that of the base signal.
+        """
         self.assertAlmostEqual(average_frequency(self.t, smooth(self.xnoise, window_len=31), up=True), 0.05, places=3)
 
     def test_taper(self):
@@ -42,6 +44,42 @@ class TestSignal(unittest.TestCase):
         tapered, _ = taper(self.xnoise, alpha=0.02)
         self.assertAlmostEqual(tapered[0], 0.0, delta=0.01)
         self.assertAlmostEqual(tapered[-1], 0.0, delta=0.01)
+
+    def test_smooth_numpy_windows(self):
+        """Check that each numpy window name in `smooth()` uses the corresponding numpy window function."""
+        x = self.xnoise[:500]
+        n = 31
+        for name, func in (
+            ("hanning", np.hanning),
+            ("hamming", np.hamming),
+            ("bartlett", np.bartlett),
+            ("blackman", np.blackman),
+        ):
+            w = func(n)
+            # reference: convolution with the explicitly chosen window, as described in the smooth() docstring
+            s = np.r_[x[n - 1 : 0 : -1], x, x[-1:-n:-1]]
+            expected = np.convolve(w / w.sum(), s, mode="valid")
+            np.testing.assert_allclose(smooth(x, window_len=n, window=name, mode="valid"), expected, err_msg=name)
+
+    def test_taper_numpy_windows(self):
+        """Check that each numpy window name in `taper()` uses the corresponding numpy window function."""
+        x = self.xnoise[:500]
+        n = x.size
+        for name, w in (
+            ("hanning", np.hanning(n)),
+            ("hamming", np.hamming(n)),
+            ("bartlett", np.bartlett(n)),
+            ("blackman", np.blackman(n)),
+            ("kaiser", np.kaiser(n, 0.5)),
+        ):
+            tapered, wcorr = taper(x, window=name, alpha=0.5)
+            np.testing.assert_allclose(tapered, x * w, err_msg=name)
+            self.assertAlmostEqual(wcorr, np.sum(w**2) / n, msg=name)
+
+    def test_taper_window_name_is_not_evaluated(self):
+        """Check that the window name is looked up, not evaluated as code."""
+        with self.assertRaises(AttributeError):
+            taper(self.xnoise[:100], window="ones(3) + np.zeros")
 
     def test_reconstruct_signal_from_lowpass_and_higpass(self):
         """Check that the sum of the lowpassed signal and the highpassed signal equals the original signal."""

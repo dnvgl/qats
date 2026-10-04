@@ -5,14 +5,13 @@ Module with functions for signal processing.
 """
 
 import warnings
+from typing import Tuple
 
 import numpy as np
 from scipy.fftpack import fft, ifft, irfft, rfft
-from scipy.signal import butter
+from scipy.signal import butter, filtfilt, sosfiltfilt, welch
 from scipy.signal import coherence as spcoherence
 from scipy.signal import csd as spcsd
-from scipy.signal import filtfilt, sosfiltfilt, welch
-from typing import Tuple
 
 
 def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
@@ -114,7 +113,7 @@ def smooth(x: np.ndarray, window_len: int = 11, window: str = "rectangular", mod
     if window == "rectangular":  # moving average
         w = np.ones(window_len, "d")
     else:
-        w = eval("np." + window + "(window_len)")
+        w = getattr(np, window)(window_len)
 
     if mode == "valid":
         s = np.r_[x[window_len - 1 : 0 : -1], x, x[-1:-window_len:-1]]
@@ -169,7 +168,8 @@ def taper(x: np.ndarray, window: str = "tukey", alpha: float = 0.001) -> Tuple[n
     References
     ----------
     1. Wikipedia, http://en.wikipedia.org/wiki/Window_function
-    2. Melbourne G. Briscoe (1972), Energy loss in surface wave spectra due to data windowing, North Atlantic Treaty Organization (NATO), Saclant ASW Research Centre,
+    2. Melbourne G. Briscoe (1972), Energy loss in surface wave spectra due to data windowing, North Atlantic Treaty
+       Organization (NATO), Saclant ASW Research Centre,
 
     """
     window_len = np.size(x)
@@ -193,9 +193,9 @@ def taper(x: np.ndarray, window: str = "tukey", alpha: float = 0.001) -> Tuple[n
         n = np.arange(window_len)
         w = np.sin(np.pi * n / (window_len - 1))
     elif window == "kaiser":
-        w = eval("np." + window + "(window_len,alpha)")
+        w = np.kaiser(window_len, alpha)
     else:
-        w = eval("np." + window + "(window_len)")
+        w = getattr(np, window)(window_len)
 
     # calculate tapered time series
     y = x * w
