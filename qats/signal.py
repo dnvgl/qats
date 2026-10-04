@@ -3,6 +3,7 @@
 """
 Module with functions for signal processing.
 """
+
 import warnings
 
 import numpy as np
@@ -32,12 +33,12 @@ def extend_signal_ends(x: np.ndarray, n: int) -> np.ndarray:
 
     The original signal is retrieved as `x[n:-n:1]`.
     """
-    start = 2. * x[0] - 1. * x[n:0:-1]
-    end = 2. * x[-1] - 1. * x[-2:-(n + 2):-1]
+    start = 2.0 * x[0] - 1.0 * x[n:0:-1]
+    end = 2.0 * x[-1] - 1.0 * x[-2 : -(n + 2) : -1]
     return np.concatenate((start, x, end))
 
 
-def smooth(x: np.ndarray, window_len: int = 11, window: str = 'rectangular', mode: str = 'same') -> np.ndarray:
+def smooth(x: np.ndarray, window_len: int = 11, window: str = "rectangular", mode: str = "same") -> np.ndarray:
     """
     Smooth time serie based on convolution of a window function and the time serie.
 
@@ -103,27 +104,30 @@ def smooth(x: np.ndarray, window_len: int = 11, window: str = 'rectangular', mod
     if window_len < 3:
         return x
 
-    if window not in ('rectangular', 'hanning', 'hamming', 'bartlett', 'blackman'):
-        raise ValueError("Window is not one of '{0}', '{1}', '{2}', '{3}', '{4}'".format(
-                   *('rectangular', 'hanning', 'hamming', 'bartlett', 'blackman')))
+    if window not in ("rectangular", "hanning", "hamming", "bartlett", "blackman"):
+        raise ValueError(
+            "Window is not one of '{0}', '{1}', '{2}', '{3}', '{4}'".format(
+                *("rectangular", "hanning", "hamming", "bartlett", "blackman")
+            )
+        )
 
-    if window == 'rectangular':  # moving average
-        w = np.ones(window_len, 'd')
+    if window == "rectangular":  # moving average
+        w = np.ones(window_len, "d")
     else:
-        w = eval('np.' + window + '(window_len)')
+        w = eval("np." + window + "(window_len)")
 
-    if mode == 'valid':
-        s = np.r_[x[window_len - 1:0:-1], x, x[-1:-window_len:-1]]
+    if mode == "valid":
+        s = np.r_[x[window_len - 1 : 0 : -1], x, x[-1:-window_len:-1]]
         y = np.convolve(w / w.sum(), s, mode=mode)
     else:
         s = np.r_[2 * x[0] - x[window_len:1:-1], x, 2 * x[-1] - x[-1:-window_len:-1]]
         y = np.convolve(w / w.sum(), s, mode=mode)
-        y = y[window_len - 1:-window_len + 1]
+        y = y[window_len - 1 : -window_len + 1]
 
     return y
 
 
-def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> Tuple[np.ndarray, float]:
+def taper(x: np.ndarray, window: str = "tukey", alpha: float = 0.001) -> Tuple[np.ndarray, float]:
     """
     Taper the input time serie using a window function
 
@@ -172,9 +176,9 @@ def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> Tuple[n
     window = window.lower()
 
     # choice of window function
-    if window == 'rectangular':
+    if window == "rectangular":
         w = np.ones(window_len)
-    elif window == 'tukey':
+    elif window == "tukey":
         # alpha = 0 - rectangular window, alpha - Hann window
         w = np.zeros(window_len)
         for i in range(window_len):
@@ -184,21 +188,21 @@ def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> Tuple[n
                 w[i] = 1
             if (i > window_len * (1 - alpha / 2)) & (i <= window_len):
                 w[i] = 0.5 * (1 + np.cos(np.pi * (2 * i / (alpha * window_len) - 2 / alpha + 1)))
-    elif window == 'cosine':
+    elif window == "cosine":
         # also known as sine window
         n = np.arange(window_len)
         w = np.sin(np.pi * n / (window_len - 1))
-    elif window == 'kaiser':
-        w = eval('np.' + window + '(window_len,alpha)')
+    elif window == "kaiser":
+        w = eval("np." + window + "(window_len,alpha)")
     else:
-        w = eval('np.' + window + '(window_len)')
+        w = eval("np." + window + "(window_len)")
 
     # calculate tapered time series
     y = x * w
 
     # calculate weighting factor that should be applied so that the correct FFT signal amplitude level is recovered
     # after the windowing.
-    wcorr = np.sum(w ** 2) / window_len
+    wcorr = np.sum(w**2) / window_len
 
     return y, wcorr
 
@@ -206,7 +210,7 @@ def taper(x: np.ndarray, window: str = 'tukey', alpha: float = 0.001) -> Tuple[n
 def lowpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
     """
     Low pass filter data signal x at cut off frequency fc, blocking harmonic content above fc.
-    
+
     Parameters
     ----------
     x : array_like
@@ -217,7 +221,7 @@ def lowpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
         Cut off frequency (Hz)
     order : int, optional
         Butterworth filter order. Default 5.
-    
+
     Returns
     -------
     array
@@ -227,9 +231,9 @@ def lowpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
     --------
     scipy.signal.butter, scipy.signal.filtfilt
     """
-    nyq = 0.5 * 1. / dt         # nyquist frequency
-    normal_cutoff = fc / nyq    # normalized cut off frequency
-    b, a = butter(order, normal_cutoff, btype='lowpass', analog=False)
+    nyq = 0.5 * 1.0 / dt  # nyquist frequency
+    normal_cutoff = fc / nyq  # normalized cut off frequency
+    b, a = butter(order, normal_cutoff, btype="lowpass", analog=False)
     y = filtfilt(b, a, x)
     return y
 
@@ -237,7 +241,7 @@ def lowpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
 def highpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
     """
     High pass filter data signal x at cut off frequency fc, blocking harmonic content below fc.
-    
+
     Parameters
     ----------
     x : array_like
@@ -248,7 +252,7 @@ def highpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
         Cut off frequency (Hz)
     order : int, optional
         Butterworth filter order. Default 5.
-    
+
     Returns
     -------
     array
@@ -258,9 +262,9 @@ def highpass(x: np.ndarray, dt: float, fc: float, order: int = 5) -> np.ndarray:
     --------
     scipy.signal.butter, scipy.signal.filtfilt
     """
-    nyq = 0.5 * 1. / dt         # nyquist frequency
-    normal_cutoff = fc / nyq    # normalized cut off frequency
-    b, a = butter(order, normal_cutoff, btype='highpass', analog=False)
+    nyq = 0.5 * 1.0 / dt  # nyquist frequency
+    normal_cutoff = fc / nyq  # normalized cut off frequency
+    b, a = butter(order, normal_cutoff, btype="highpass", analog=False)
     y = filtfilt(b, a, x)
     return y
 
@@ -269,7 +273,7 @@ def bandpass(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5)
     """
     Band pass filter data signal x at cut off frequencies flow and fupp, blocking harmonic content outside the
     frequency band [flow, fupp]
-    
+
     Parameters
     ----------
     x : array_like
@@ -280,7 +284,7 @@ def bandpass(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5)
         Passing frequency band (Hz)
     order : int, optional
         Butterworth filter order. Default 5.
-    
+
     Returns
     -------
     array
@@ -290,9 +294,9 @@ def bandpass(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5)
     --------
     scipy.signal.butter, scipy.signal.sosfiltfilt
     """
-    nyq = 0.5 * 1. / dt  # nyquist frequency
+    nyq = 0.5 * 1.0 / dt  # nyquist frequency
     normal_cutoff = (flow / nyq, fupp / nyq)  # normalized cut off frequencies
-    sos = butter(order, normal_cutoff, btype='bandpass', analog=False, output='sos')
+    sos = butter(order, normal_cutoff, btype="bandpass", analog=False, output="sos")
     y = sosfiltfilt(sos, x)
     return y
 
@@ -301,7 +305,7 @@ def bandblock(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5
     """
     Band block filter data signal x at cut off frequencies flow and fupp, blocking harmonic content inside the
     frequency band [flow, fupp]
-    
+
     Parameters
     ----------
     x : array_like
@@ -312,7 +316,7 @@ def bandblock(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5
         Blocked frequency band (Hz)
     order : int, optional
         Butterworth filter order. Default 5.
-    
+
     Returns
     -------
     array
@@ -327,9 +331,9 @@ def bandblock(x: np.ndarray, dt: float, flow: float, fupp: float, order: int = 5
     --------
     scipy.signal.butter, scipy.signal.sosfiltfilt
     """
-    nyq = 0.5 * 1. / dt                         # nyquist frequency
-    normal_cutoff = (flow / nyq, fupp / nyq)    # normalized cut off frequencies
-    sos = butter(order, normal_cutoff, btype='bandstop', analog=False, output='sos')
+    nyq = 0.5 * 1.0 / dt  # nyquist frequency
+    normal_cutoff = (flow / nyq, fupp / nyq)  # normalized cut off frequencies
+    sos = butter(order, normal_cutoff, btype="bandstop", analog=False, output="sos")
     y = sosfiltfilt(sos, x)
     return y
 
@@ -338,14 +342,14 @@ def threshold(x: np.ndarray, thresholds: tuple) -> np.ndarray:
     """
     Allow only frequency components whose amplitudes are between the lower threshold value and the upper threshold
     value to pass.
-    
+
     Parameters
     ----------
     x : array_like
         input data signal
     thresholds : tuple
         passing amplitude range, thresholds as fraction of maximum frequency component amplitude
-    
+
     Returns
     -------
     array
@@ -362,17 +366,17 @@ def threshold(x: np.ndarray, thresholds: tuple) -> np.ndarray:
     real_signal = np.all(np.isreal(x))
     n = x.size
     nfft = int(pow(2, np.ceil(np.log(n) / np.log(2))))
-    lth, uth = thresholds   # unpack lower and upper thresholds of passing range
+    lth, uth = thresholds  # unpack lower and upper thresholds of passing range
 
     if real_signal:
         fa = rfft(x, nfft)
         h = np.zeros(np.shape(fa))
-        h[(lth*max(abs(fa)) < abs(fa)) & (abs(fa) <= uth*max(abs(fa)))] = 1.0
+        h[(lth * max(abs(fa)) < abs(fa)) & (abs(fa) <= uth * max(abs(fa)))] = 1.0
         x1 = irfft(fa * h, nfft)
     else:
         fa = fft(x, nfft)
         h = np.zeros(np.shape(fa))
-        h[(lth*max(abs(fa)) < abs(fa)) & (abs(fa) <= uth*max(abs(fa)))] = 1.0
+        h[(lth * max(abs(fa)) < abs(fa)) & (abs(fa) <= uth * max(abs(fa)))] = 1.0
         x1 = ifft(fa * h, nfft)
 
     return x1[:n]
@@ -423,7 +427,7 @@ def autocorrelation(series: np.ndarray) -> list:
            autocorrelation coefficients for lag *h*
 
         """
-        acf_lag = ((data[:n - h] - mean) * (data[h:] - mean)).sum() / float(n) / c0
+        acf_lag = ((data[: n - h] - mean) * (data[h:] - mean)).sum() / float(n) / c0
         return round(acf_lag, 3)
 
     x = np.arange(n)  # Avoiding lag 0 calculation
@@ -455,21 +459,21 @@ def average_frequency(t: np.ndarray, x: np.ndarray, up: bool = True) -> float:
     x_ = x - np.mean(x)
 
     if up:
-        crossings = 1 * (x_ > 0.)
+        crossings = 1 * (x_ > 0.0)
         indicator = 1
     else:
-        crossings = 1 * (x_ < 0.)
+        crossings = 1 * (x_ < 0.0)
         indicator = -1
 
     crossings = np.diff(crossings)  # array with value=1 at position of each up-crossing and -1 at each down-crossing
-    crossings[crossings != indicator] = 0   # remove crossings with opposite direction
+    crossings[crossings != indicator] = 0  # remove crossings with opposite direction
     ind = np.nonzero(crossings == indicator)[0] + 1  # indices for crossings
-    
+
     if ind.size > 1:
         # more than one crossing -> calculate frequency
         # duration between first and last crossing
-        dt = t[ind[-1]] - t[ind[0]] 
-        n_cycles = ind.size - 1     # no. of cycles = no. of crossings minus 1
+        dt = t[ind[-1]] - t[ind[0]]
+        n_cycles = ind.size - 1  # no. of cycles = no. of crossings minus 1
         # average frequency of up- or downcrossings
         freq = n_cycles / dt
     else:
@@ -540,8 +544,10 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     """
     # parameter `up` is deprecated and has no effect
     if up is not True:
-        warnings.warn("qats.signal.find_maxima: parameter `up` is deprecated and has no effect", category=DeprecationWarning)
-    
+        warnings.warn(
+            "qats.signal.find_maxima: parameter `up` is deprecated and has no effect", category=DeprecationWarning
+        )
+
     # remove mean value from time series to identify crossings
     x_ = x - np.mean(x)
 
@@ -549,17 +555,17 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     if not local:
         # global maxima (largest between mean-level crossings)
         # identify crossings
-        crossings = 1 * (x_ > 0.)
+        crossings = 1 * (x_ > 0.0)
         crossings = np.diff(crossings)  # array with 1 at position of each up-crossing and -1 at each down-crossing
 
         # get array indices for up-/down-crossings
-        crossing_indices_up = np.nonzero(crossings == 1)[0] + 1   # up-crossings
+        crossing_indices_up = np.nonzero(crossings == 1)[0] + 1  # up-crossings
         crossing_indices_do = np.nonzero(crossings == -1)[0] + 1  # down-crossings
 
         # number of up-/downcrossings
         n_up = crossing_indices_up.size
         n_do = crossing_indices_do.size
-        
+
         # no global maxima if the signal crosses mean only once
         if (n_up == 0) or (n_do == 0):
             maxima = np.array([])
@@ -599,9 +605,9 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
 
     else:
         # local maxima (all peaks)
-        ds = 1 * (np.diff(x) < 0)     # zero while ascending (positive derivative) and 1 while descending
-        ds = np.append(ds, [0])       # lost data points when differentiating, close cycles by adding 0 at end
-        d2s = np.diff(ds)             # equal to +/-1 at each turning point, +1 indicates maxima
+        ds = 1 * (np.diff(x) < 0)  # zero while ascending (positive derivative) and 1 while descending
+        ds = np.append(ds, [0])  # lost data points when differentiating, close cycles by adding 0 at end
+        d2s = np.diff(ds)  # equal to +/-1 at each turning point, +1 indicates maxima
         d2s = np.insert(d2s, 0, [0])  # lost data points when differentiating, close cycles by adding 0 at start
 
         maxima_indices = np.nonzero(d2s == 1)[0]  # unpack tuple returned from np.nonzero
@@ -612,7 +618,7 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
     if n_peaks > 0:
         # discard maxima lower than specified threshold
         if threshold is not None:
-            above_threshold = (maxima >= threshold)
+            above_threshold = maxima >= threshold
             maxima = maxima[above_threshold]
             maxima_indices = maxima_indices[above_threshold]
         else:
@@ -644,19 +650,19 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
     array
         Indices of reversals.
 
-        
+
     Notes
     -----
-    
+
     This function provides quick identification of signal reversals (turning points), as an alternative
-    to ``qats.fatigue.rainflow.reversals()`` which is slower for large signal arrays. Note that if the 
+    to ``qats.fatigue.rainflow.reversals()`` which is slower for large signal arrays. Note that if the
     signal includes oscillations with high frequency compared to the frequency oscillations (e.g., due
-    to noise in the signal causing), the present function may in some cases include some very local 
-    turning points that are not identified by ``qats.fatigue.rainflow.reversals()``. However, when the 
-    turning points obtained from ``find_reversals()`` are passed through ``reversals()`` 
-    (with ``endpoints=True``), the resulting array will normally be the same as if the signal itself was 
+    to noise in the signal causing), the present function may in some cases include some very local
+    turning points that are not identified by ``qats.fatigue.rainflow.reversals()``. However, when the
+    turning points obtained from ``find_reversals()`` are passed through ``reversals()``
+    (with ``endpoints=True``), the resulting array will normally be the same as if the signal itself was
     passed through ``reversals()``.
-    
+
     Specifically, the following two code lines will **not** necessarily produce identical arrays:
 
     >>> from qats.fatigue.rainflow import reversals
@@ -678,20 +684,20 @@ def find_reversals(x) -> Tuple[np.ndarray, np.ndarray]:
     >>> rev, indices = find_reversals(x)
 
     Use ``find_reversals()`` to speed up cycle counting:
-    
+
     >>> from qats.fatigue.rainflow import count_cycles
     >>> rev, _ = find_reversals(x)
     >>> cycles = count_cycles(rev, endpoints=True)
-    
+
     For large arrays, the latter example is practically equivalent to (but faster than)
     the following code:
 
     >>> cycles = count_cycles(x)
     """
     # local maxima and minima (all peaks, both positive and negative)
-    ds = 1 * (np.diff(x) < 0)     # zero while ascending (positive derivative) and 1 while descending
-    ds = np.append(ds, [0])       # lost data points when differentiating, close cycles by adding 0 at end
-    d2s = np.diff(ds)             # equal to +/-1 at each turning point, +1 indicates maxima
+    ds = 1 * (np.diff(x) < 0)  # zero while ascending (positive derivative) and 1 while descending
+    ds = np.append(ds, [0])  # lost data points when differentiating, close cycles by adding 0 at end
+    d2s = np.diff(ds)  # equal to +/-1 at each turning point, +1 indicates maxima
     d2s = np.insert(d2s, 0, [0])  # lost data points when differentiating, close cycles by adding 0 at start
 
     # identify turning points (both maxima and minima)
@@ -733,7 +739,7 @@ def psd(x: np.ndarray, dt: float, **kwargs) -> Tuple[np.ndarray, np.ndarray]:
     x = np.asarray(x)
 
     # estimate psd using welch's definition
-    f, p = welch(x, fs=1./dt, **kwargs)
+    f, p = welch(x, fs=1.0 / dt, **kwargs)
 
     return f, p
 
@@ -773,7 +779,7 @@ def csd(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> Tuple[np.ndarray, 
     y = np.asarray(y)
 
     # estimate csd using welch's definition
-    f, p = spcsd(x, y, fs=1./dt, **kwargs)
+    f, p = spcsd(x, y, fs=1.0 / dt, **kwargs)
 
     return f, p
 
@@ -813,7 +819,7 @@ def coherence(x: np.ndarray, y: np.ndarray, dt: float, **kwargs) -> Tuple[np.nda
     y = np.asarray(y)
 
     # estimate coherence using welch's definition
-    f, c = spcoherence(x, y, fs=1./dt, **kwargs)
+    f, c = spcoherence(x, y, fs=1.0 / dt, **kwargs)
 
     return f, c
 

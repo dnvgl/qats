@@ -3,6 +3,7 @@ Readers for SINTEF Ocean test data exhange format based on the Matlab .mat file.
 
 Works for matlab file format version <=7.2 and >=7.3.
 """
+
 import fnmatch
 from datetime import datetime, timedelta
 from typing import List, Tuple, Union
@@ -35,7 +36,7 @@ def read_names(path):
     data = read_data(path)
 
     # identify time key, check that there is only one
-    _tn = fnmatch.filter(data.keys(), '[Tt]ime*')
+    _tn = fnmatch.filter(data.keys(), "[Tt]ime*")
     if len(_tn) < 1:
         raise KeyError("File does not contain a time vector: %s" % path)
     elif len(_tn) > 1:
@@ -106,6 +107,7 @@ def _datenums_to_datetime(timearr):
     array
         Array of datetime objects, same shape as input array.
     """
+
     def convert(dn):
         # ref: https://stackoverflow.com/questions/13965740/converting-matlabs-datenum-format-to-python
         _dtg = datetime.fromordinal(int(dn)) + timedelta(days=dn % 1) - timedelta(days=366)
@@ -121,4 +123,3 @@ def _datenums_to_datetime(timearr):
     timearr = timearr.flatten()
     dtarray = np.array([convert(t) for t in timearr])
     return dtarray.reshape(was_shape)
-

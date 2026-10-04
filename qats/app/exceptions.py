@@ -2,6 +2,7 @@
 """
 Module for custom exceptions and exception handlers
 """
+
 import os
 import sys
 import traceback
@@ -30,13 +31,15 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     error = "%s: %s" % (exc_type.__name__, exc_value)
 
     # display critical message box
-    msg = "<html>A critical error has occured.<br/> <b>%s</b><br/><br/>It occurred at <b>line %d</b> of file " \
+    msg = (
+        "<html>A critical error has occured.<br/> <b>%s</b><br/><br/>It occurred at <b>line %d</b> of file "
         "<b>%s</b>.<br/>Press Yes to see the full error report<br/></html>" % (error, line, filename)
+    )
     message_box = QMessageBox().critical(None, "Error", msg.strip(), QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
 
     # pipe traceback to log file (env variable 'APPDATA' is assumed present on the computer)
     log_file = os.path.join(os.getenv("APPDATA"), "QATS.launch.pyw.log")
-    with open(log_file,"w") as f:
+    with open(log_file, "w") as f:
         f.write("".join(traceback.format_exception(exc_type, exc_value, exc_traceback)))
 
     # open log file in default editor if user pressed yes (trick using the webbrowser command)

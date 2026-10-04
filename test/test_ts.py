@@ -21,7 +21,7 @@ class TestTs(unittest.TestCase):
         self.db = TsDB()
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env for conda build
-        self.tsfile = os.path.join(os.path.dirname(__file__), '..', 'data', 'mooring.ts')
+        self.tsfile = os.path.join(os.path.dirname(__file__), "..", "data", "mooring.ts")
         self.db.load(self.tsfile)
         self.ts = self.db.get(name="Mooring line 4")
         # add datetime reference to ts for later testing
@@ -37,8 +37,10 @@ class TestTs(unittest.TestCase):
         """
         Test that the dtg_start attribute has correct type
         """
-        self.assertTrue(isinstance(self.ts._dtg_ref, datetime) or self.ts._dtg_ref is None,
-                        "Expected 'dtg_start' datetime object or None")
+        self.assertTrue(
+            isinstance(self.ts._dtg_ref, datetime) or self.ts._dtg_ref is None,
+            "Expected 'dtg_start' datetime object or None",
+        )
 
     def test_time_dtg_equals_time(self):
         """
@@ -50,9 +52,10 @@ class TestTs(unittest.TestCase):
 
         # test equality with relative tolerance, there are minor round off errors with datetime objects which
         # breaks numpy.array_equal()
-        self.assertTrue(np.allclose(np.array(time_from_datetime), self.ts.t, rtol=1.e-6, atol=0.), "The date-times are "
-                                                                                                   "not equal to the "
-                                                                                                   "time array.")
+        self.assertTrue(
+            np.allclose(np.array(time_from_datetime), self.ts.t, rtol=1.0e-6, atol=0.0),
+            "The date-times are not equal to the time array.",
+        )
 
     def test_specifying_both_resample_and_twin_raises_assertionerror(self):
         """
@@ -60,36 +63,42 @@ class TestTs(unittest.TestCase):
         cropping to a time window at the same time.
         """
         try:
-            _, _ = self.ts.get(twin=(0., 100.), resample=np.arange(0., 300., 0.01))
+            _, _ = self.ts.get(twin=(0.0, 100.0), resample=np.arange(0.0, 300.0, 0.01))
         except AssertionError:
             pass
         else:
-            self.fail("The TimeSeries.get() method does not raise AssertionError if one tries to specify both "
-                      "resampling to new time array and cropping to a time window at the same time.")
+            self.fail(
+                "The TimeSeries.get() method does not raise AssertionError if one tries to specify both "
+                "resampling to new time array and cropping to a time window at the same time."
+            )
 
     def test_resampling_beyond_original_time_array_raises_valueerror(self):
         """
         Test that a ValueError is raised if one tries to resample the time series beyond the original time array.
         """
         try:
-            _, _ = self.ts.get(resample=np.arange(-5., 300., 0.01))
+            _, _ = self.ts.get(resample=np.arange(-5.0, 300.0, 0.01))
         except ValueError:
             pass
         else:
-            self.fail("The TimeSeries.get() method does not raise ValueError if one tries to resample/extrapolate "
-                      "beyond the original time array.")
+            self.fail(
+                "The TimeSeries.get() method does not raise ValueError if one tries to resample/extrapolate "
+                "beyond the original time array."
+            )
 
     def test_resampling_beyond_original_time_array_raises_valueerror_2(self):
         """
         Test that a ValueError is raised if one tries to resample the time series beyond the original time array.
         """
         try:
-            _, _ = self.ts.get(resample=np.arange(0., 1.e6, 1000.))    # large step to avoid MemoryError
+            _, _ = self.ts.get(resample=np.arange(0.0, 1.0e6, 1000.0))  # large step to avoid MemoryError
         except ValueError:
             pass
         else:
-            self.fail("The TimeSeries.get() method does not raise ValueError if one tries to resample/extrapolate "
-                      "beyond the original time array.")
+            self.fail(
+                "The TimeSeries.get() method does not raise ValueError if one tries to resample/extrapolate "
+                "beyond the original time array."
+            )
 
     def test_filter_lp_hp(self):
         """
@@ -101,8 +110,8 @@ class TestTs(unittest.TestCase):
         freq = 0.03
         _, xtot = self.ts.get(twin=twin)
         # check 1: should not raise error
-        _, xlo = self.ts.filter('lp', freq, twin=twin)
-        _, xhi = self.ts.filter('hp', freq, twin=twin)
+        _, xlo = self.ts.filter("lp", freq, twin=twin)
+        _, xhi = self.ts.filter("hp", freq, twin=twin)
         # check 2: sum of components (almots) equals total signal
         deviation = np.max((xlo + xhi - xtot) / xtot)
         self.assertLessEqual(deviation, 0.02, "Sum of low- and high-pass components does not equal total signal")
@@ -126,14 +135,23 @@ class TestTs(unittest.TestCase):
         """
         new_ts = self.ts.copy()
 
-        self.assertIsInstance(new_ts, TimeSeries, "TimeSeries.copy() does not return a TimeSeries object, "
-                                                  "but type '%s'." % type(new_ts))
+        self.assertIsInstance(
+            new_ts, TimeSeries, "TimeSeries.copy() does not return a TimeSeries object, but type '%s'." % type(new_ts)
+        )
 
-        self.assertIsNot(self.ts.t, new_ts.t, "TimeSeries.copy() returns TimeSeries with time array which is bound "
-                                              "to the time array of the original TimeSeries object.")
+        self.assertIsNot(
+            self.ts.t,
+            new_ts.t,
+            "TimeSeries.copy() returns TimeSeries with time array which is bound "
+            "to the time array of the original TimeSeries object.",
+        )
 
-        self.assertIsNot(self.ts.x, new_ts.x, "TimeSeries.copy() returns TimeSeries with data array which is bound"
-                                              "to the data array of the original TimeSeries object.")
+        self.assertIsNot(
+            self.ts.x,
+            new_ts.x,
+            "TimeSeries.copy() returns TimeSeries with data array which is bound"
+            "to the data array of the original TimeSeries object.",
+        )
 
     def test_copycopy_returns_unique_ts(self):
         """
@@ -141,37 +159,54 @@ class TestTs(unittest.TestCase):
         """
         new_ts = copy.copy(self.ts)
 
-        self.assertIsInstance(new_ts, TimeSeries, "copy.copy(TimeSeries) does not return a TimeSeries object, "
-                                                  "but type '%s'." % type(new_ts))
-        self.assertIsNot(self.ts.t, new_ts.t, "copy.copy(TimeSeries) returns TimeSeries with time array which is bound "
-                                              "to the time array of the original TimeSeries object.")
+        self.assertIsInstance(
+            new_ts,
+            TimeSeries,
+            "copy.copy(TimeSeries) does not return a TimeSeries object, but type '%s'." % type(new_ts),
+        )
+        self.assertIsNot(
+            self.ts.t,
+            new_ts.t,
+            "copy.copy(TimeSeries) returns TimeSeries with time array which is bound "
+            "to the time array of the original TimeSeries object.",
+        )
 
-        self.assertIsNot(self.ts.x, new_ts.x, "copy.copy(TimeSeries) returns TimeSeries with data array which is bound "
-                                              "to the data array of the original TimeSeries object.")
+        self.assertIsNot(
+            self.ts.x,
+            new_ts.x,
+            "copy.copy(TimeSeries) returns TimeSeries with data array which is bound "
+            "to the data array of the original TimeSeries object.",
+        )
 
     def test_max_equals_largest_maxima(self):
         """
         Test that the value returned from max() method equals the largest value in the array returned from maxima() method
         """
-        twin = (500, 1.e12)
-        self.assertEqual(np.max(self.ts.maxima(twin=twin)), self.ts.max(twin=twin),
-                         "Method max() returns value which is different from the largest value from maxima() method")
+        twin = (500, 1.0e12)
+        self.assertEqual(
+            np.max(self.ts.maxima(twin=twin)),
+            self.ts.max(twin=twin),
+            "Method max() returns value which is different from the largest value from maxima() method",
+        )
 
     def test_min_equals_smallest_minima(self):
         """
         Test that the value returned from min() method equals the smalles value in the array returned from minima() method
         """
-        twin = (500, 1.e12)
-        self.assertEqual(np.min(self.ts.minima(twin=twin)), self.ts.min(twin=twin),
-                         "Method min() returns value which is different from the smallest value from minima() method")
+        twin = (500, 1.0e12)
+        self.assertEqual(
+            np.min(self.ts.minima(twin=twin)),
+            self.ts.min(twin=twin),
+            "Method min() returns value which is different from the smallest value from minima() method",
+        )
 
     def test_correct_number_of_maxima(self):
         """
         Test that the correct number of maxima/peaks are found
         """
         self.assertEqual(139, len(self.ts.maxima(twin=None, threshold=None)))
-        self.assertEqual(128, len(self.ts.maxima(twin=(500, 1.e12), threshold=None)))
-        self.assertEqual(128, len(self.ts.maxima(twin=(500, 1.e12), threshold=500.)))
+        self.assertEqual(128, len(self.ts.maxima(twin=(500, 1.0e12), threshold=None)))
+        self.assertEqual(128, len(self.ts.maxima(twin=(500, 1.0e12), threshold=500.0)))
 
     def test_correct_number_of_minima(self):
         """
@@ -181,9 +216,9 @@ class TestTs(unittest.TestCase):
         tsflip = copy.copy(self.ts)
         tsflip.x *= -1
         self.assertEqual(139, len(tsflip.minima(twin=None, threshold=None)))
-        self.assertEqual(128, len(tsflip.minima(twin=(500, 1.e12), threshold=None)))
-        self.assertEqual(128, len(tsflip.minima(twin=(500, 1.e12), threshold=-500.)))
+        self.assertEqual(128, len(tsflip.minima(twin=(500, 1.0e12), threshold=None)))
+        self.assertEqual(128, len(tsflip.minima(twin=(500, 1.0e12), threshold=-500.0)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

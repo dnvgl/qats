@@ -1,6 +1,7 @@
 """
 Readers pickle dataframe formatted time series files
 """
+
 import numpy as np
 import pandas as pd
 
@@ -94,7 +95,3 @@ def write_data(path, time: np.ndarray, data: dict):
     df.to_pickle(path)
 
     return
-
-
-
-

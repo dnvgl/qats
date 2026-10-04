@@ -5,6 +5,7 @@ Classes and functions for fatigue calculations:
     - SNCurve (class)
     - Fatigue damage calculation (functions)
 """
+
 import numpy as np
 from scipy.special import gamma as gammafunc
 from scipy.special import gammainc, gammaincc
@@ -86,8 +87,9 @@ class SNCurve(object):
             # thickness correction not specified
             pass
         elif t_exp is None or t_ref is None:
-            raise ValueError("if thickness correction is specified, both parameters `t_exp` and `t_ref` "
-                             "must be specified")
+            raise ValueError(
+                "if thickness correction is specified, both parameters `t_exp` and `t_ref` must be specified"
+            )
 
         # check and deduct intercept parameter(s), etc.
         a1 = kwargs.get("a1", None)
@@ -95,7 +97,7 @@ class SNCurve(object):
         if a1 is not None:
             loga1 = np.log10(a1)
         elif loga1 is not None:
-            a1 = 10 ** loga1
+            a1 = 10**loga1
         else:
             raise ValueError("either `a1` or `loga1` must be specified")
 
@@ -104,8 +106,8 @@ class SNCurve(object):
             nswitch = kwargs.get("nswitch", None)
             if nswitch is None:
                 raise ValueError("`nswitch` must be specified for bi-linear curves")
-            loga2 = m2 / m1 * loga1 + (1 - m2/m1) * np.log10(nswitch)
-            a2 = 10 ** loga2
+            loga2 = m2 / m1 * loga1 + (1 - m2 / m1) * np.log10(nswitch)
+            a2 = 10**loga2
             sswitch = 10 ** ((loga1 - np.log10(nswitch)) / m1)
         else:
             a2 = None
@@ -293,26 +295,29 @@ class SNCurve(object):
         return tcorr
 
     def print_parameters(self):
-        s = "%(name)s\n" \
-            "----------------------------------\n" \
-            "m1      : %(m1).1f\n" \
-            "a1      : %(a1).2e\n" \
+        s = (
+            "%(name)s\n"
+            "----------------------------------\n"
+            "m1      : %(m1).1f\n"
+            "a1      : %(a1).2e\n"
             "log(a1) : %(loga1).3f\n" % self.__dict__
+        )
         if self.bilinear is True:
-            s += "nswitch : %(nswitch).1e\n" \
-                 "m2      : %(m2).1f\n" \
-                 "a2      : %(a2).2e\n" \
-                 "log(a2) : %(loga2).3f\n" \
-                 "sswitch : %(sswitch).3f\n" % self.__dict__
+            s += (
+                "nswitch : %(nswitch).1e\n"
+                "m2      : %(m2).1f\n"
+                "a2      : %(a2).2e\n"
+                "log(a2) : %(loga2).3f\n"
+                "sswitch : %(sswitch).3f\n" % self.__dict__
+            )
 
-        s += "t_exp : %(t_exp)s\n" \
-             "t_ref   : %(t_ref)s\n" % self.__dict__
+        s += "t_exp : %(t_exp)s\nt_ref   : %(t_ref)s\n" % self.__dict__
 
         print(s)
         return
 
 
-def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), kwds=None):
+def minersum(srange, count, sn, td=1.0, scf=1.0, th=None, retbins=False, args=(), kwds=None):
     """
     Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
 
@@ -388,12 +393,14 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
             raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
         damage_per_bin = td * count / sn.n(srange * scf, t=th)
     else:
-        assert th is None, "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. " \
-                           "For other cases, use parameter 'args' or 'kwds'."
+        assert th is None, (
+            "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. "
+            "For other cases, use parameter 'args' or 'kwds'."
+        )
         if callable(sn):
             func = sn
         else:
-            func = getattr(sn, 'n', None)
+            func = getattr(sn, "n", None)
             assert callable(func), "Parameter 'sn' must be dict, callable or class instance with callable method 'n'"
         damage_per_bin = td * count / func(srange * scf, *args, **kwds)
 
@@ -406,7 +413,7 @@ def minersum(srange, count, sn, td=1., scf=1., th=None, retbins=False, args=(), 
         return d
 
 
-def minersum_weibull(q, h, sn, v0, td=None, scf=1., th=None):
+def minersum_weibull(q, h, sn, v0, td=None, scf=1.0, th=None):
     """
     Fatigue damage (Palmgren-Miner sum) calculation based on (2-parameter) Weibull stress cycle distribution and
     S-N curve. Ref. DNV-RP-C03 (2016) eq. F.12-1.
@@ -440,19 +447,20 @@ def minersum_weibull(q, h, sn, v0, td=None, scf=1., th=None):
     ValueError:
         If thickness is given but thickness correction not specified for S-N curve.
     """
+
     def cigf(a, x):
-        """ Complementary incomplete gamma function """
+        """Complementary incomplete gamma function"""
         return gammaincc(a, x) * gammafunc(a)
 
     def igf(a, x):
-        """ Incomplete gamma function """
+        """Incomplete gamma function"""
         return gammainc(a, x) * gammafunc(a)
 
     if not isinstance(sn, SNCurve):
         sn = SNCurve("", **sn)
 
     if td is None:
-        td = 3600. * 24 * 365
+        td = 3600.0 * 24 * 365
 
     if th is not None:
         try:
@@ -468,12 +476,11 @@ def minersum_weibull(q, h, sn, v0, td=None, scf=1., th=None):
     if sn.bilinear is True:
         # gamma functions
         g1 = cigf(1 + sn.m1 / h, (sn.sswitch / q) ** h)  # complementary incomplete gamma function
-        g2 = igf(1 + sn.m2 / h, (sn.sswitch / q) ** h)   # incomplete gamma function
+        g2 = igf(1 + sn.m2 / h, (sn.sswitch / q) ** h)  # incomplete gamma function
         # fatigue damage (for specified duration)
-        d = v0 * td * (q ** sn.m1 / sn.a1 * g1 + q ** sn.m2 / sn.a2 * g2)
+        d = v0 * td * (q**sn.m1 / sn.a1 * g1 + q**sn.m2 / sn.a2 * g2)
     else:
         # single slope S-N curve, fatigue damage for specified duration
-        d = v0 * td * (q ** sn.m1 / sn.a1) * gammafunc(1 + sn.m1 / h)
+        d = v0 * td * (q**sn.m1 / sn.a1) * gammafunc(1 + sn.m1 / h)
 
     return d
-

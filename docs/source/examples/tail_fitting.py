@@ -1,6 +1,7 @@
 """
 Example showing tail fitting with Weibull
 """
+
 import os
 
 from qats import TsDB

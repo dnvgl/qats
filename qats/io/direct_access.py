@@ -1,6 +1,7 @@
 """
 Readers for various direct access formatted time series files
 """
+
 import os
 from array import array
 from struct import pack, unpack
@@ -104,7 +105,7 @@ def _read_names(path):
     -----
     Keys are stored on ASCII file as one key per line. The file is terminated by END.
     """
-    with open(os.path.join(path, path), 'r') as f:
+    with open(os.path.join(path, path), "r") as f:
         names = [l.strip() for l in f if not l.startswith(("**", "'")) and not l.upper().strip() == "END"]
 
     return names
@@ -140,7 +141,7 @@ def read_ts_data(path, ind=None, verbose=False):
     `0` is included in the specified indices.
     """
     # the format specifier for decoding binary integers is 'i'
-    data = _read_data(path, ifmt='i', ind=ind, verbose=verbose)
+    data = _read_data(path, ifmt="i", ind=ind, verbose=verbose)
 
     return data
 
@@ -175,7 +176,7 @@ def read_tda_data(path, ind=None, verbose=False):
     `0` is included in the specified indices.
     """
     # the format specifier for decoding binary integers is 'i'
-    data = _read_data(path, ifmt='f', ind=ind, verbose=verbose)
+    data = _read_data(path, ifmt="f", ind=ind, verbose=verbose)
 
     return data
 
@@ -204,7 +205,7 @@ def read_dis_data(path, ind=None, verbose=False):
     `0` is included in the specified indices.
     """
     # the format specifier for decoding binary integers is 'i'
-    data = _read_data(path, ifmt='i', ind=ind, verbose=verbose)
+    data = _read_data(path, ifmt="i", ind=ind, verbose=verbose)
 
     return data
 
@@ -251,7 +252,7 @@ def _read_data(path, ifmt, ind=None, verbose=False):
         - .dis on Linux : ?
     """
     if verbose:
-        print('Reading %s ...' % path)
+        print("Reading %s ..." % path)
 
     # indices --> list or None
     if isinstance(ind, int):
@@ -262,7 +263,7 @@ def _read_data(path, ifmt, ind=None, verbose=False):
         raise ValueError(f"Invalid format for decoding binary integers: {ifmt}")
 
     try:
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             # read ts-file information (1st line)
             nbytes = 4
             s = f.read(nbytes)
@@ -288,24 +289,28 @@ def _read_data(path, ifmt, ind=None, verbose=False):
                 ind = list(range(nts + 1))  # (including time array)
             else:
                 # check number of keys (+1 is due to bug in some direct access files), if specified by user
-                assert max(ind) <= nts, "Requested time series no. %d, but there are only %d time series on file" % \
-                                        (max(ind), nts)
+                assert max(ind) <= nts, "Requested time series no. %d, but there are only %d time series on file" % (
+                    max(ind),
+                    nts,
+                )
 
             # define position
             pos = dict(zip(ind, range(len(ind))))
 
             # info
             if verbose:
-                print('------------------------------------')
-                print('nrec (no. of keys on .ts)   : %d' % nts)
-                print('ndat (no. of time steps)    : %d' % ndat)
-                print('number of keys to read      : %d  (%s)' % (len(ind), 'including time array index 0 is specified'))
+                print("------------------------------------")
+                print("nrec (no. of keys on .ts)   : %d" % nts)
+                print("ndat (no. of time steps)    : %d" % ndat)
+                print(
+                    "number of keys to read      : %d  (%s)" % (len(ind), "including time array index 0 is specified")
+                )
                 # minus 1 due to time array #len(keys)
 
             # initiate array
             arr = np.zeros((len(ind), ndat))
             # format string
-            fmtstr = 'f' * ndat
+            fmtstr = "f" * ndat
             # go to second "row"
             f.seek(nbytes * ndat)
             # read arrays
@@ -382,5 +387,3 @@ def write_ts_data(path, time: np.ndarray, data: dict):
         fkey.write("END\n")
         fkey.close()
         fts.close()
-
-

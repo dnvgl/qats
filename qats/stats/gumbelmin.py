@@ -3,9 +3,9 @@
 """
 :class:`GumbelMin` class and functions related to Gumbel (minima) distribution.
 """
+
 import numpy as np
-from matplotlib.pyplot import (figure, grid, legend, plot, savefig, show,
-                               xlabel, ylabel, ylim, yticks)
+from matplotlib.pyplot import figure, grid, legend, plot, savefig, show, xlabel, ylabel, ylim, yticks
 from scipy.optimize import fsolve, leastsq
 from scipy.special import zetac
 
@@ -115,7 +115,7 @@ class GumbelMin(object):
         on probability paper.
         """
         try:
-            p = empirical_cdf(self.data.size, kind='median')
+            p = empirical_cdf(self.data.size, kind="median")
             return p
         except TypeError:
             print("The sample is not defined.")
@@ -131,7 +131,7 @@ class GumbelMin(object):
             distribution kurtosis
         """
         try:
-            k = 12. / 5.
+            k = 12.0 / 5.0
             return k
         except TypeError:
             print("Distribution parameters are not defined.")
@@ -163,7 +163,7 @@ class GumbelMin(object):
             distribution median value
         """
         try:
-            m = self.location + self.scale * np.log(np.log(2.))
+            m = self.location + self.scale * np.log(np.log(2.0))
             return m
         except TypeError:
             print("Distribution parameters are not defined.")
@@ -213,12 +213,12 @@ class GumbelMin(object):
         try:
             # zetac is the complementary Riemann zeta function (zeta function minus 1)
             # http://docs.scipy.org/doc/scipy/reference/generated/scipy.special.zetac.html
-            s = -12. * np.sqrt(6.) * (1. + zetac(3)) / np.pi ** 3
+            s = -12.0 * np.sqrt(6.0) * (1.0 + zetac(3)) / np.pi**3
             return s
         except TypeError:
             print("Distribution parameters are not defined.")
 
-    def bootstrap(self, size=None, method='msm', N=100):
+    def bootstrap(self, size=None, method="msm", N=100):
         """
         Parametric bootstrapping of source distribution
 
@@ -257,8 +257,8 @@ class GumbelMin(object):
         See [5] about bootstrapping.
 
         """
-        options = {'msm': self._msm, 'lse': self._lse, 'mle': self._mle}
-        assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+        options = {"msm": self._msm, "lse": self._lse, "mle": self._mle}
+        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
         if size is None:
             assert self.data is not None, "Either size has to be specified or a sample has to be specified."
@@ -266,7 +266,7 @@ class GumbelMin(object):
 
         i = 0
         par = np.zeros((N, 2))
-        while (i < N):
+        while i < N:
             x = self.rnd(size=size)
             par[i, :] = options[method](x)
             i += 1
@@ -296,19 +296,19 @@ class GumbelMin(object):
         """
         try:
             if x is None:
-                x = np.linspace(self.loc, self.loc - 3. * self.std, 100)
+                x = np.linspace(self.loc, self.loc - 3.0 * self.std, 100)
             else:
                 x = np.array(x)
 
-            assert self.scale > 0., "The scale parameter must be larger than 0."
+            assert self.scale > 0.0, "The scale parameter must be larger than 0."
 
             z = (x - self.location) / self.scale
-            p = 1. - np.exp(-np.exp(z))
+            p = 1.0 - np.exp(-np.exp(z))
             return p
         except TypeError:
             print("Distribution parameters are not defined")
 
-    def fit(self, data=None, method='msm', verbose=False):
+    def fit(self, data=None, method="msm", verbose=False):
         """
         Determine distribution parameters by fit to sample.
 
@@ -330,8 +330,8 @@ class GumbelMin(object):
 
         """
 
-        options = {'msm': msm, 'lse': lse, 'mle': mle}
-        assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+        options = {"msm": msm, "lse": lse, "mle": mle}
+        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
         if data is not None:
             # update sample data
@@ -397,7 +397,7 @@ class GumbelMin(object):
 
         # sample
         z_data = -np.log(-np.log(self.ecdf))
-        plot(x, z_data, 'ko', label='Data')
+        plot(x, z_data, "ko", label="Data")
 
         # fit distributions
         a_msm, b_msm = msm(self.data)
@@ -408,18 +408,18 @@ class GumbelMin(object):
         z_mle = (x - a_mle) / b_mle
         z_lse = (x - a_lse) / b_lse
 
-        plot(x, z_msm, '-r', label='MSM')
-        plot(x, z_mle, '--g', label='MLE')
-        plot(x, z_lse, ':b', label='LSE')
+        plot(x, z_msm, "-r", label="MSM")
+        plot(x, z_mle, "--g", label="MLE")
+        plot(x, z_lse, ":b", label="LSE")
 
         # plotting positions and plot configurations
         p = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
         y = -np.log(-np.log(p))
         yticks(y, p)
-        legend(loc='upper left')
+        legend(loc="upper left")
         ylim(y[0], y[-1])
-        xlabel('X')
-        ylabel('Cumulative probability')
+        xlabel("X")
+        ylabel("Cumulative probability")
         grid(True)
 
         if showfig:
@@ -453,14 +453,14 @@ class GumbelMin(object):
             else:
                 p = np.array(p)
 
-            assert self.scale > 0., "The scale parameter must be larger than 0."
+            assert self.scale > 0.0, "The scale parameter must be larger than 0."
 
             x = np.zeros(np.shape(p))
 
-            x[p == 1.] = np.inf  # asymptotic
-            x[(p < 0.) | (p > 1.)] = np.nan  # probabilities out of bounds
-            z = (p >= 0.) & (p < 1.)  # valid quantile range
-            x[z] = self.location + self.scale * np.log(-np.log(1.-p[z]))
+            x[p == 1.0] = np.inf  # asymptotic
+            x[(p < 0.0) | (p > 1.0)] = np.nan  # probabilities out of bounds
+            z = (p >= 0.0) & (p < 1.0)  # valid quantile range
+            x[z] = self.location + self.scale * np.log(-np.log(1.0 - p[z]))
             return x
         except TypeError:
             print("Distribution parameters are not defined")
@@ -485,14 +485,14 @@ class GumbelMin(object):
         """
         try:
             if x is None:
-                x = np.linspace(self.loc, self.loc - 3. * self.std, 100)
+                x = np.linspace(self.loc, self.loc - 3.0 * self.std, 100)
             else:
                 x = np.array(x)
 
-            assert self.scale > 0., "The scale parameter must be larger than 0."
+            assert self.scale > 0.0, "The scale parameter must be larger than 0."
 
             z = (x - self.location) / self.scale
-            p = (1. / self.scale) * np.exp(z - np.exp(z))
+            p = (1.0 / self.scale) * np.exp(z - np.exp(z))
             return p
         except TypeError:
             print("Distribution parameters are not defined")
@@ -513,15 +513,15 @@ class GumbelMin(object):
         figure()
 
         if self.data is not None:
-            plot(np.sort(self.data), self.ecdf, 'ko', label='Data')
+            plot(np.sort(self.data), self.ecdf, "ko", label="Data")
 
         y = np.linspace(0.001, 0.9999, 1000)
         x = self.invcdf(p=y)
 
-        plot(x, y, '-r', label='Fitted')
-        xlabel('X')
-        ylabel('Cumulative probability')
-        legend(loc='upper left')
+        plot(x, y, "-r", label="Fitted")
+        xlabel("X")
+        ylabel("Cumulative probability")
+        legend(loc="upper left")
         grid(True)
 
         if showfig:
@@ -571,9 +571,9 @@ def lse(x):
     Uses an approximate median rank estimate for the empirical cdf.
     """
     x = np.sort(x)
-    f = empirical_cdf(x.size, kind='median')
-    fp = lambda v, z: 1. - np.exp(-np.exp((z - v[0]) / v[1]))  # parametric Gumbel function
-    e = lambda v, z, y: (fp(v, z) - y)  # error function to be minimized
+    f = empirical_cdf(x.size, kind="median")
+    fp = lambda v, z: 1.0 - np.exp(-np.exp((z - v[0]) / v[1]))  # parametric Gumbel function
+    e = lambda v, z, y: fp(v, z) - y  # error function to be minimized
     a0, b0 = msm(x)  # initial guess based on method of moments
 
     # least square fit
@@ -611,8 +611,10 @@ def mle(x):
         loc, scale = p  # unpack parameters
         n = z.size
 
-        out = [loc + scale * np.log(1. / n * np.sum(np.exp(z / scale))),
-               z.mean() - np.sum(z * np.exp(z / scale)) / np.sum(np.exp(z / scale)) - scale]
+        out = [
+            loc + scale * np.log(1.0 / n * np.sum(np.exp(z / scale))),
+            z.mean() - np.sum(z * np.exp(z / scale)) / np.sum(np.exp(z / scale)) - scale,
+        ]
 
         return out
 
@@ -638,7 +640,7 @@ def msm(x):
     """
     x = np.array(x)
 
-    b = np.sqrt(6.) * np.std(x, ddof=1) / np.pi  # using the unbiased sample standard deviation
+    b = np.sqrt(6.0) * np.std(x, ddof=1) / np.pi  # using the unbiased sample standard deviation
     a = x.mean() + em() * b
 
     return a, b

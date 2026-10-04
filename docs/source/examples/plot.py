@@ -1,6 +1,7 @@
 """
 Example of using the time series database class
 """
+
 import os
 
 from qats import TsDB
@@ -21,4 +22,3 @@ db.plot(names=["surge", "sway"])
 
 # plot the power spectral density for the same time series
 db.plot_psd(names=["surge", "sway"], resample=0.1)
-

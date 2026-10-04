@@ -15,30 +15,30 @@ class EulerMascheroniTest(unittest.TestCase):
 
 class GumbelTestCases(unittest.TestCase):
     def setUp(self):
-        self.loc = 1000.
-        self.scale = 150.
+        self.loc = 1000.0
+        self.scale = 150.0
 
         gd = Gumbel(loc=self.loc, scale=self.scale)
         self.x = gd.rnd(size=50, seed=13)
 
     def test_pwm(self):
         a, b = pwm(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
 
     def test_msm(self):
         a, b = msm(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
 
     def test_lse(self):
         a, b = lse(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
 
     def test_mle(self):
         a, b = mle(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
 
     def test_fit(self):
@@ -48,5 +48,5 @@ class GumbelTestCases(unittest.TestCase):
         self.assertEqual(gumb.scale, b)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

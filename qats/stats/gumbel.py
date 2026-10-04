@@ -3,6 +3,7 @@
 """
 :class:`Gumbel` class and functions related to Gumbel distribution.
 """
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import fsolve, leastsq
@@ -131,7 +132,7 @@ class Gumbel(object):
         on probability paper.
         """
         assert self.data is not None, "Requires data/sample to be specified."
-        return empirical_cdf(self.data.size, kind='median')
+        return empirical_cdf(self.data.size, kind="median")
 
     @property
     def kurt(self):
@@ -143,7 +144,7 @@ class Gumbel(object):
         float
             Distribution kurtosis
         """
-        return 12. / 5.
+        return 12.0 / 5.0
 
     @property
     def mean(self):
@@ -167,7 +168,7 @@ class Gumbel(object):
         float
             Distribution median value
         """
-        return self.loc - self.scale * np.log(np.log(2.))
+        return self.loc - self.scale * np.log(np.log(2.0))
 
     @property
     def mode(self):
@@ -196,7 +197,7 @@ class Gumbel(object):
         Requires data/sample to be specified.
 
         """
-        return np.sum((self.ecdf - self.cdf(np.sort(self.data))) ** 2.) / self.data.size
+        return np.sum((self.ecdf - self.cdf(np.sort(self.data))) ** 2.0) / self.data.size
 
     @property
     def params(self):
@@ -238,7 +239,7 @@ class Gumbel(object):
         See http://docs.scipy.org/doc/scipy/reference/generated/scipy.special.zetac.html
 
         """
-        return 12. * np.sqrt(6.) * (1. + zetac(3)) / np.pi ** 3
+        return 12.0 * np.sqrt(6.0) * (1.0 + zetac(3)) / np.pi**3
 
     def cdf(self, x=None):
         """
@@ -259,10 +260,10 @@ class Gumbel(object):
         A range of x values [loc, loc+3*std] are applied if x is not specified.
 
         """
-        assert self.scale > 0., "The scale parameter must be larger than 0."
+        assert self.scale > 0.0, "The scale parameter must be larger than 0."
 
         if x is None:
-            x = np.linspace(self.loc, self.loc + 3. * self.std, 100)
+            x = np.linspace(self.loc, self.loc + 3.0 * self.std, 100)
         else:
             x = np.array(x)
 
@@ -271,7 +272,7 @@ class Gumbel(object):
         return p
 
     @classmethod
-    def fit(cls, data, method='msm', verbose=False):
+    def fit(cls, data, method="msm", verbose=False):
         """
         Determine distribution parameters by fit to sample.
 
@@ -298,8 +299,8 @@ class Gumbel(object):
         >>> gumb = Gumbel.fit(data, method="msm")
 
         """
-        options = {'msm': msm, 'lse': lse, 'pwm': pwm, 'mle': mle}
-        assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+        options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
+        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
         data = np.array(data)  # ensure numpy array
 
@@ -348,8 +349,8 @@ class Gumbel(object):
         >>> gumb = Gumbel.fit_from_weibull_parameters(wa, wb, wc, n)
         """
 
-        loc = wa + wb * np.log(n) ** (1. / wc)  # eq. 11.41 on page 380 in [1]
-        scale = (wb / wc) * np.log(n) ** ((1.-wc) / wc)  # eq. 11.41 on page 380 in [1]
+        loc = wa + wb * np.log(n) ** (1.0 / wc)  # eq. 11.41 on page 380 in [1]
+        scale = (wb / wc) * np.log(n) ** ((1.0 - wc) / wc)  # eq. 11.41 on page 380 in [1]
 
         if verbose:
             print("Fitted parameters:\nloc = %5.3g\nscale = %5.3g" % (loc, scale))
@@ -377,7 +378,7 @@ class Gumbel(object):
         A range of quantiles from 0.001 to 0.999 are applied if quantiles are not specified
 
         """
-        assert self.scale > 0., "The scale parameter must be larger than 0."
+        assert self.scale > 0.0, "The scale parameter must be larger than 0."
 
         if p is None:
             p = np.linspace(0.001, 0.999, 100)
@@ -386,9 +387,9 @@ class Gumbel(object):
 
         x = np.zeros(np.shape(p))
 
-        x[p == 1.] = np.inf  # asymptotic
-        x[(p < 0.) | (p > 1.)] = np.nan  # probabilities out of bounds
-        z = (p >= 0.) & (p < 1.)  # valid quantile range
+        x[p == 1.0] = np.inf  # asymptotic
+        x[(p < 0.0) | (p > 1.0)] = np.nan  # probabilities out of bounds
+        z = (p >= 0.0) & (p < 1.0)  # valid quantile range
         x[z] = self.loc - self.scale * np.log(-np.log(p[z]))
 
         return x
@@ -412,15 +413,15 @@ class Gumbel(object):
         A range of x values [loc, loc+3*std] are applied if x is not specified.
 
         """
-        assert self.scale > 0., "The scale parameter must be larger than 0."
+        assert self.scale > 0.0, "The scale parameter must be larger than 0."
 
         if x is None:
-            x = np.linspace(self.loc, self.loc + 3. * self.std, 100)
+            x = np.linspace(self.loc, self.loc + 3.0 * self.std, 100)
         else:
             x = np.array(x)
 
         z = (x - self.loc) / self.scale
-        p = (1. / self.scale) * np.exp(-z - np.exp(-z))
+        p = (1.0 / self.scale) * np.exp(-z - np.exp(-z))
         return p
 
     def plot(self, filename=None):
@@ -437,16 +438,16 @@ class Gumbel(object):
 
         # plot sample versus empirical distribution
         if self.data is not None:
-            plt.plot(np.sort(self.data), self.ecdf, 'ko', label='Data')
+            plt.plot(np.sort(self.data), self.ecdf, "ko", label="Data")
 
         # plot fitted/specified distribution
         y = np.linspace(0.001, 0.9999, 1000)
         x = self.invcdf(p=y)
-        plt.plot(x, y, '-r', label='Fitted')
+        plt.plot(x, y, "-r", label="Fitted")
 
-        plt.xlabel('X')
-        plt.ylabel('Cumulative probability')
-        plt.legend(loc='upper left')
+        plt.xlabel("X")
+        plt.ylabel("Cumulative probability")
+        plt.legend(loc="upper left")
         plt.grid(True)
 
         if filename is not None:
@@ -474,21 +475,21 @@ class Gumbel(object):
         if self.data is not None:
             x = np.sort(self.data)
             z = -np.log(-np.log(self.ecdf))
-            plt.plot(x, z, 'ko', label='Data')
+            plt.plot(x, z, "ko", label="Data")
 
         # plot distribution
         x = self.invcdf(p=np.linspace(0.001, 0.9999, 1000))
         z = (x - self.loc) / self.scale
-        plt.plot(x, z, '-r', label='Fitted')
+        plt.plot(x, z, "-r", label="Fitted")
 
         # plotting positions and plot configurations
         p = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
         y = -np.log(-np.log(p))
         plt.yticks(y, p)
-        plt.legend(loc='upper left')
+        plt.legend(loc="upper left")
         plt.ylim(y[0], y[-1])
-        plt.xlabel('X')
-        plt.ylabel('Cumulative probability')
+        plt.xlabel("X")
+        plt.ylabel("Cumulative probability")
         plt.grid(True)
 
         if filename is not None:
@@ -558,7 +559,7 @@ def _euler_masceroni():
     return 0.57721566490153286060651209008240243104215933593992
 
 
-def bootstrap(loc, scale, size, repetitions, method='pwm'):
+def bootstrap(loc, scale, size, repetitions, method="pwm"):
     """
     Quantify mean and coefficient of variation of Gumbel distribution parameters using parametric bootstrapping
 
@@ -610,8 +611,8 @@ def bootstrap(loc, scale, size, repetitions, method='pwm'):
     >>> m, cv = bootstrap(10, 2.5, 5, 100)
 
     """
-    options = {'msm': msm, 'lse': lse, 'pwm': pwm, 'mle': mle}
-    assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
+    assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
     # initiate distribution
     distribution = Gumbel(loc, scale)
@@ -652,9 +653,9 @@ def lse(x):
     Uses an approximate median rank estimate for the empirical cdf.
     """
     x = np.sort(x)
-    f = empirical_cdf(x.size, kind='median')  # median rank cdf
+    f = empirical_cdf(x.size, kind="median")  # median rank cdf
     fp = lambda v, z: np.exp(-np.exp(-(z - v[0]) / v[1]))  # parametric Gumbel function
-    e = lambda v, z, y: (fp(v, z) - y)  # error function to be minimized
+    e = lambda v, z, y: fp(v, z) - y  # error function to be minimized
     a0, b0 = msm(x)  # initial guess based on method of moments
 
     # least square fit
@@ -697,8 +698,10 @@ def mle(x):
         loc, scale = p  # unpack parameters
         n = z.size
 
-        out = [loc + scale * np.log(1. / n * np.sum(np.exp(-z / scale))),
-               z.mean() - np.sum(z * np.exp(-z / scale)) / np.sum(np.exp(-z / scale)) - scale]
+        out = [
+            loc + scale * np.log(1.0 / n * np.sum(np.exp(-z / scale))),
+            z.mean() - np.sum(z * np.exp(-z / scale)) / np.sum(np.exp(-z / scale)) - scale,
+        ]
 
         return out
 
@@ -729,7 +732,7 @@ def msm(x):
     """
     x = np.array(x)
 
-    b = np.sqrt(6.) * np.std(x, ddof=1) / np.pi  # using the unbiased sample standard deviation
+    b = np.sqrt(6.0) * np.std(x, ddof=1) / np.pi  # using the unbiased sample standard deviation
     a = x.mean() - _euler_masceroni() * b
 
     return a, b
@@ -757,18 +760,18 @@ def plot_fits(data, filename=None, methods=None):
 
     # sort data, create empirical distribution function and plot
     x = np.sort(data)
-    z = -np.log(-np.log(empirical_cdf(x.size, kind='median')))
-    plt.plot(x, z, 'ko', label='Data')
+    z = -np.log(-np.log(empirical_cdf(x.size, kind="median")))
+    plt.plot(x, z, "ko", label="Data")
 
     # fit distributions and plot
-    options = {'msm': msm, 'lse': lse, 'pwm': pwm, 'mle': mle}
+    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
 
     # default if not specified
     if not methods:
         methods = options.keys()
 
     for method in methods:
-        assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
         # estimate location and scale parameter
         loc, scale = options[method](x)
@@ -781,10 +784,10 @@ def plot_fits(data, filename=None, methods=None):
     p = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
     y = -np.log(-np.log(p))
     plt.yticks(y, p)
-    plt.legend(loc='upper left')
+    plt.legend(loc="upper left")
     plt.ylim(y[0], y[-1])
-    plt.xlabel('data')
-    plt.ylabel('Cumulative probability')
+    plt.xlabel("data")
+    plt.ylabel("Cumulative probability")
     plt.grid(True)
 
     if filename is not None:
@@ -846,15 +849,14 @@ def pwm(x):
         ii = np.arange(1, n + 1)
 
         # ratio of binomial coefficients
-        bc = np.array([binom(n - i, k) / binom(n - 1., k) for i in ii])
+        bc = np.array([binom(n - i, k) / binom(n - 1.0, k) for i in ii])
 
-        return (1. / n) * np.sum(xi * bc)  # eq. 16 in [6]
+        return (1.0 / n) * np.sum(xi * bc)  # eq. 16 in [6]
 
-    m0 = mk(x, 0.)
-    m1 = mk(x, 1.)
+    m0 = mk(x, 0.0)
+    m1 = mk(x, 1.0)
 
-    b = (m0 - 2. * m1) / np.log(2.)
+    b = (m0 - 2.0 * m1) / np.log(2.0)
     a = m0 - _euler_masceroni() * b
 
     return a, b
-

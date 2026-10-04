@@ -21,6 +21,7 @@ class WorkerSignals(QObject):
     result
         `object` data returned from processing, anything
     """
+
     finished = QSignal()
     error = QSignal(tuple)
     result = QSignal(object)
@@ -39,6 +40,7 @@ class Worker(QRunnable):
     **kwargs
         Arbitrary keyword arguments passed to callback function.
     """
+
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
         # Store constructor arguments (re-used for processing)

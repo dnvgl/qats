@@ -2,10 +2,11 @@
 """
 Basic functions for statistical inference.
 """
+
 import numpy as np
 
 
-def empirical_cdf(n, kind='mean'):
+def empirical_cdf(n, kind="mean"):
     """
     Empirical cumulative distribution function given a sample size.
 
@@ -53,18 +54,17 @@ def empirical_cdf(n, kind='mean'):
 
     n = float(n)
     i = np.arange(n) + 1
-    if kind == 'mean':
-        f = i / (n + 1.)
-    elif kind == 'median':
+    if kind == "mean":
+        f = i / (n + 1.0)
+    elif kind == "median":
         f = (i - 0.3) / (n + 0.4)
-    elif kind == 'symmetrical':
+    elif kind == "symmetrical":
         f = (i - 0.5) / n
-    elif kind == 'beard':
+    elif kind == "beard":
         f = (i - 0.31) / (n + 0.38)
-    elif kind == 'gringorten':
+    elif kind == "gringorten":
         f = (i - 0.44) / (n + 0.12)
     else:
         raise ValueError("Distribution type must be either 'mean','median','symmetrical','beard','gringorten'")
 
     return f
-

@@ -1,6 +1,7 @@
 """
 Readers CSV formatted time series files
 """
+
 import pandas as pd
 
 
@@ -24,9 +25,9 @@ def read_names(path):
 
     """
     # pandas will infer the format e.g. delimiter.
-    df = pd.read_csv(path, nrows=1, sep=None, engine='python', encoding='utf-8')
+    df = pd.read_csv(path, nrows=1, sep=None, engine="python", encoding="utf-8")
     names = list(df)
-    _ = names.pop(0)    # remove time which is assumed to be in the first column
+    _ = names.pop(0)  # remove time which is assumed to be in the first column
     return names
 
 
@@ -48,5 +49,5 @@ def read_data(path, ind=None):
         Time and data
 
     """
-    df = pd.read_csv(path, usecols=ind, sep=None, engine='python')  # pandas will infer the format e.g. delimiter.
+    df = pd.read_csv(path, usecols=ind, sep=None, engine="python")  # pandas will infer the format e.g. delimiter.
     return df.T.to_numpy()

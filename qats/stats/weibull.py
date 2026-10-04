@@ -132,7 +132,7 @@ class Weibull(object):
         on probability paper.
 
         """
-        p = empirical_cdf(self.data.size, kind='mean')
+        p = empirical_cdf(self.data.size, kind="mean")
         return p
 
     @property
@@ -145,12 +145,12 @@ class Weibull(object):
         float
             distribution kurtosis
         """
-        r1 = gamma(1. + 1. / self.shape)
-        r2 = gamma(1. + 2. / self.shape)
-        r3 = gamma(1. + 3. / self.shape)
-        r4 = gamma(1. + 4. / self.shape)
+        r1 = gamma(1.0 + 1.0 / self.shape)
+        r2 = gamma(1.0 + 2.0 / self.shape)
+        r3 = gamma(1.0 + 3.0 / self.shape)
+        r4 = gamma(1.0 + 4.0 / self.shape)
 
-        k = (r4 + r1 * (-4.0 * r3 + r1 * (6.0 * r2 - 3.0 * r1 ** 2))) / (r2 - r1 * r1)
+        k = (r4 + r1 * (-4.0 * r3 + r1 * (6.0 * r2 - 3.0 * r1**2))) / (r2 - r1 * r1)
         return k
 
     @property
@@ -163,7 +163,7 @@ class Weibull(object):
         float
             distribution mean value
         """
-        return self.loc + self.scale * gamma(1. + 1. / self.shape)
+        return self.loc + self.scale * gamma(1.0 + 1.0 / self.shape)
 
     @property
     def mse(self):
@@ -176,7 +176,7 @@ class Weibull(object):
             mean squared error
 
         """
-        e = np.sum((self.ecdf - self.cdf(np.sort(self.data))) ** 2.)/self.data.size
+        e = np.sum((self.ecdf - self.cdf(np.sort(self.data))) ** 2.0) / self.data.size
         return e
 
     @property
@@ -201,10 +201,10 @@ class Weibull(object):
         float
             distribution skewness
         """
-        r1 = gamma(1. + 1. / self.shape)
-        r2 = gamma(1. + 2. / self.shape)
-        r3 = gamma(1. + 3. / self.shape)
-        s = (r3 + r1 * (2. * r1 ** 2. - 3. * r2)) / (r2 - r1 ** 2.) ** 1.5
+        r1 = gamma(1.0 + 1.0 / self.shape)
+        r2 = gamma(1.0 + 2.0 / self.shape)
+        r3 = gamma(1.0 + 3.0 / self.shape)
+        s = (r3 + r1 * (2.0 * r1**2.0 - 3.0 * r2)) / (r2 - r1**2.0) ** 1.5
         return s
 
     @property
@@ -217,9 +217,9 @@ class Weibull(object):
         float
             distribution standard deviation
         """
-        r1 = gamma(1. + 1. / self.shape)
-        r2 = gamma(1. + 2. / self.shape)
-        s = self.scale * np.sqrt(r2 - r1 ** 2.)
+        r1 = gamma(1.0 + 1.0 / self.shape)
+        r2 = gamma(1.0 + 2.0 / self.shape)
+        s = self.scale * np.sqrt(r2 - r1**2.0)
         return s
 
     def gumbel_parameters(self, n=None):
@@ -283,17 +283,17 @@ class Weibull(object):
         A range of x values are applied if x is not specified.
         """
         if x is None:
-            x = np.linspace(self.loc, self.loc + 3. * self.std, 100)
+            x = np.linspace(self.loc, self.loc + 3.0 * self.std, 100)
         else:
             x = np.array(x)
 
         assert np.all(x >= self.loc), "The location parameter must be less than all items in data set"
 
-        p = 1. - np.exp(-((x - self.loc) / self.scale) ** self.shape)
+        p = 1.0 - np.exp(-(((x - self.loc) / self.scale) ** self.shape))
         return p
 
     @classmethod
-    def fit(cls, data, method='msm', verbose=False):
+    def fit(cls, data, method="msm", verbose=False):
         """
         Establish Weibull class instance by fit to sample.
 
@@ -330,8 +330,8 @@ class Weibull(object):
         >>> weib = Weibull.fit(data, method="msm")
 
         """
-        options = {'msm': msm, 'lse': lse, 'mle': mle, 'pwm': pwm, 'pwm2': pwm2}
-        assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+        options = {"msm": msm, "lse": lse, "mle": mle, "pwm": pwm, "pwm2": pwm2}
+        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
         data = np.array(data)  # ensure numpy array
 
@@ -339,21 +339,17 @@ class Weibull(object):
         if len(params) == 2:  # 2-parameter distribution
             loc = 0
             scale, shape = params
-        else:                 # 3-parameter distribution
+        else:  # 3-parameter distribution
             loc, scale, shape = params
 
         if verbose:
-            print("Fitted parameters:\n"
-                  "location = %5.3g\n"
-                  "scale = %5.3g\n"
-                  "shape = %5.3g" % (loc, scale, shape)
-                  )
+            print("Fitted parameters:\nlocation = %5.3g\nscale = %5.3g\nshape = %5.3g" % (loc, scale, shape))
 
         weib = cls(loc, scale, shape, data=data)
         return weib
 
     @classmethod
-    def fromsignal(cls, x, method='msm', verbose=False):
+    def fromsignal(cls, x, method="msm", verbose=False):
         """
         Establish Weibull class instance by fit to global maxima from time series signal.
 
@@ -418,10 +414,11 @@ class Weibull(object):
 
         x = np.zeros(np.shape(p))
 
-        x[p == 1.] = np.inf  # asymptotic
-        x[(p < 0.) | (p > 1.)] = np.nan  # probabilities out of bounds
-        x[(p >= 0.) & (p < 1.)] = self.loc + self.scale * \
-                                  (-np.log(1. - p[(p >= 0.) & (p < 1.)])) ** (1. / self.shape)
+        x[p == 1.0] = np.inf  # asymptotic
+        x[(p < 0.0) | (p > 1.0)] = np.nan  # probabilities out of bounds
+        x[(p >= 0.0) & (p < 1.0)] = self.loc + self.scale * (-np.log(1.0 - p[(p >= 0.0) & (p < 1.0)])) ** (
+            1.0 / self.shape
+        )
         return x
 
     def pdf(self, x=None):
@@ -443,14 +440,18 @@ class Weibull(object):
         A range of x values are applied if x is not specified.
         """
         if x is None:
-            x = np.linspace(self.loc, self.loc + 3. * self.std, 100)
+            x = np.linspace(self.loc, self.loc + 3.0 * self.std, 100)
         else:
             x = np.array(x)
 
         assert np.all(x >= self.loc), "The location parameter must be less than all items in data set"
 
-        p = self.shape / self.scale * ((x - self.loc) / self.scale) ** (self.shape - 1.) * np.exp(
-            -((x - self.loc) / self.scale) ** self.shape)
+        p = (
+            self.shape
+            / self.scale
+            * ((x - self.loc) / self.scale) ** (self.shape - 1.0)
+            * np.exp(-(((x - self.loc) / self.scale) ** self.shape))
+        )
         return p
 
     def plot(self, filename=None):
@@ -481,15 +482,15 @@ class Weibull(object):
 
         # plot data if that exist
         if self.data is not None:
-            plt.plot(np.sort(self.data), self.ecdf, 'ko', label='Data')
+            plt.plot(np.sort(self.data), self.ecdf, "ko", label="Data")
 
         # plot fitted/specified distribution
         y = np.linspace(0.001, 0.9999, 1000)
         x = self.invcdf(p=y)
-        plt.plot(x, y, '-r', label='Fitted')
-        plt.xlabel('X')
-        plt.ylabel('Cumulative probability')
-        plt.legend(loc='upper left')
+        plt.plot(x, y, "-r", label="Fitted")
+        plt.xlabel("X")
+        plt.ylabel("Cumulative probability")
+        plt.legend(loc="upper left")
         plt.grid(True)
 
         # show figure
@@ -531,24 +532,24 @@ class Weibull(object):
         # plot data if that exists
         if self.data is not None:
             x = np.log(np.sort(self.data - self.loc))
-            y = np.log(-np.log(1. - self.ecdf))
-            plt.plot(x, y, 'ko', label='Data')
+            y = np.log(-np.log(1.0 - self.ecdf))
+            plt.plot(x, y, "ko", label="Data")
 
         # plot fitted distribution
         yy = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-        y = np.log(-np.log(1. - yy))
+        y = np.log(-np.log(1.0 - yy))
         x = np.log(self.invcdf(p=yy) - self.loc)
-        plt.plot(x, y, label='Fitted')
+        plt.plot(x, y, label="Fitted")
 
         plt.xlim(x[0], x[-1])
         plt.ylim(y[0], y[-1])
-        plt.xlabel('X')
-        plt.ylabel('Cumulative probability')
+        plt.xlabel("X")
+        plt.ylabel("Cumulative probability")
         plt.yticks(y, yy)
         xloc = np.linspace(x[0], x[-1], 5)
         xlab = np.around(np.exp(xloc) + self.loc, decimals=2)
         plt.xticks(xloc, xlab)
-        plt.legend(loc='upper left')
+        plt.legend(loc="upper left")
         plt.grid(True)
 
         if filename is not None:
@@ -585,7 +586,7 @@ class Weibull(object):
         return x
 
 
-def bootstrap(loc, scale, shape, size, repetitions, method='pwm'):
+def bootstrap(loc, scale, shape, size, repetitions, method="pwm"):
     """
     Quantify mean and coefficient of variation of Weibull distribution parameters using parametric bootstrapping
 
@@ -641,8 +642,8 @@ def bootstrap(loc, scale, shape, size, repetitions, method='pwm'):
     >>> m, cv = bootstrap(10., 5., 2.5, 5, 100)
 
     """
-    options = {'msm': msm, 'lse': lse, 'pwm': pwm, 'mle': mle}
-    assert method.lower() in options.keys(), "Method must be either %s" % (' or '.join(options.keys()))
+    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
+    assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
 
     # initiate distribution
     distribution = Weibull(loc, scale, shape)
@@ -686,19 +687,19 @@ def lse(x, threshold: float = None):
     -----
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
     """
-    x = np.sort(x)                          # sorted dataset
-    f = empirical_cdf(x.size, kind='mean')  # mean rank empirical cdf according to Weibull [1]
-    weights = np.ones(np.shape(x))          # by default include all data points
+    x = np.sort(x)  # sorted dataset
+    f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf according to Weibull [1]
+    weights = np.ones(np.shape(x))  # by default include all data points
     if threshold is not None:
         # exclude data points below threshold (fit only to the tail)
-        weights[f < threshold] = 0.
+        weights[f < threshold] = 0.0
 
     # define error function
     # v: distribution parameters
     # z: data points
     # y: empirical cdf defined at data points x (z)
     # w: weights to exclude data points below threshold if tail fitting is requested
-    fp = lambda v, z: 1. - np.exp(-((z - v[0]) / v[1]) ** v[2])  # parametric weibull function
+    fp = lambda v, z: 1.0 - np.exp(-(((z - v[0]) / v[1]) ** v[2]))  # parametric weibull function
     e = lambda v, z, y, w: w * (fp(v, z) - y)  # error function to be minimized
     a0, b0, c0 = msm(x)  # initial guess based on method of moments
 
@@ -743,10 +744,13 @@ def mle(x):
         loc, scale, shape = p  # unpack parameters
         n = z.size
 
-        f1 = n / shape + np.sum(np.log((z - loc) / scale)) - np.sum(
-            ((z - loc) / scale) ** shape * np.log((z - loc) / scale))
+        f1 = (
+            n / shape
+            + np.sum(np.log((z - loc) / scale))
+            - np.sum(((z - loc) / scale) ** shape * np.log((z - loc) / scale))
+        )
         f2 = -n * shape / scale + shape / scale * np.sum(((z - loc) / scale) ** shape)
-        f3 = -(shape - 1.) * np.sum(1. / (z - loc)) + shape / scale * np.sum(((z - loc) / scale) ** (shape - 1.))
+        f3 = -(shape - 1.0) * np.sum(1.0 / (z - loc)) + shape / scale * np.sum(((z - loc) / scale) ** (shape - 1.0))
 
         return f1, f2, f3
 
@@ -797,19 +801,19 @@ def mlj(sample, l, j):
 
     """
     # todo: include pseudo-code (or Sphinx-friendly LaTex code) for M_{l,j,0} as included below
-    '''
+    """
     .. math:: M_{l,j,k} = E[X^l F^j (1-F)^k]
     .. math:: M_{l,j,0} = \\frac{1}{n}\\sum_{i=j+1}^{n}{X_{(i)}^l\\frac{\\binom{i-1}{j}}{\\binom{n-1}{j}}}
-    '''
+    """
     n = float(sample.size)
     xi = np.sort(sample)[j:]  # (j+1)th subsample of sorted sample
     ii = np.arange(j + 1, n + 1)
 
     # ratio of binomial coefficients, probability that xi is the largest observation in a subsample of size (j+1)
     # drawn from n.
-    bc = np.array([binom(i - 1., j) / binom(n - 1., j) for i in ii])
+    bc = np.array([binom(i - 1.0, j) / binom(n - 1.0, j) for i in ii])
 
-    return (1. / n) * np.sum(xi ** l * bc)  # eq. 32 in [8]
+    return (1.0 / n) * np.sum(xi**l * bc)  # eq. 32 in [8]
 
 
 def msm(x):
@@ -833,22 +837,24 @@ def msm(x):
     x = np.array(x)
     a1 = x.mean()  # first sample raw moment aka. mean
     m2 = x.var()  # second sample central moment aka. variance
-    m3 = np.mean((x - a1) ** 3.)  # third sample central moment
-    c1 = m3 / m2 ** (3. / 2.)  # coefficient of sample skewness
+    m3 = np.mean((x - a1) ** 3.0)  # third sample central moment
+    c1 = m3 / m2 ** (3.0 / 2.0)  # coefficient of sample skewness
 
     # solve for shape parameter using root search, see [1, eq. 68 on p.11]
     def f(shape, shape0):
-        eq = (gamma((shape + 3.) / shape) - 3. * gamma((shape + 1.) / shape) * gamma((shape + 2.) / shape) +
-              2 * gamma((shape + 1.) / shape) ** 3.) / (gamma((shape + 2.) / shape) -
-                                                        gamma((shape + 1.) / shape) ** 2.) ** (3. / 2.) - shape0
+        eq = (
+            gamma((shape + 3.0) / shape)
+            - 3.0 * gamma((shape + 1.0) / shape) * gamma((shape + 2.0) / shape)
+            + 2 * gamma((shape + 1.0) / shape) ** 3.0
+        ) / (gamma((shape + 2.0) / shape) - gamma((shape + 1.0) / shape) ** 2.0) ** (3.0 / 2.0) - shape0
         return eq
 
-    c = brentq(f, args=(c1,), a=0.1, b=1000., maxiter=1000)
+    c = brentq(f, args=(c1,), a=0.1, b=1000.0, maxiter=1000)
 
     # calculate location and scale parameters, see [1, eq. 67 on p. 11]
-    g1 = gamma((c + 1.) / c)
-    g2 = gamma((c + 2.) / c)
-    b = np.sqrt(m2 / (g2 - g1 ** 2.))
+    g1 = gamma((c + 1.0) / c)
+    g2 = gamma((c + 2.0) / c)
+    b = np.sqrt(m2 / (g2 - g1**2.0))
     a = a1 - g1 * b
 
     return a, b, c
@@ -874,14 +880,14 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
     # normalize data and empirical CDF
     x = np.sort(x)
     x_norm = np.log(x - a)
-    y_norm = np.log(-np.log(1. - (np.arange(x.size) + 1.) / (x.size + 1.)))
+    y_norm = np.log(-np.log(1.0 - (np.arange(x.size) + 1.0) / (x.size + 1.0)))
 
     # labels and tick positions for weibull paper plot
     p = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-    p_norm = np.log(-np.log(1. - p))
+    p_norm = np.log(-np.log(1.0 - p))
 
     # normalize fitted distribution
-    q_norm = np.log(b * (-np.log(1. - p)) ** (1. / c))
+    q_norm = np.log(b * (-np.log(1.0 - p)) ** (1.0 / c))
 
     # plot
     plt.figure()
@@ -892,9 +898,9 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
     xlabel = np.around(np.exp(xticks) + a, decimals=2)
     plt.xticks(xticks, xlabel)
     plt.title(f"a={a:5.3f}, b={b:5.3f}, c={c:5.3f}")
-    plt.xlabel('X')
-    plt.ylabel('Cumulative probability')
-    plt.legend(loc='upper left')
+    plt.xlabel("X")
+    plt.ylabel("Cumulative probability")
+    plt.legend(loc="upper left")
     plt.grid(True)
     if path is not None:
         plt.savefig(path)
@@ -933,9 +939,9 @@ def pwm(x):
     m130 = mlj(x, 1, 3)
 
     # parameter estimates
-    c = np.log(2.) / np.log((2. * m110 - m100) / (2. * (5. * m110 - m100 - 6. * m120 + 2. * m130)))
-    a = 4. * (m100 * (3. * m120 - m130 - m110) - m110 ** 2.) / (m100 - 8. * m110 + 12. * m120 - 4. * m130)
-    b = (m100 - a) / gamma(1. + 1. / c)
+    c = np.log(2.0) / np.log((2.0 * m110 - m100) / (2.0 * (5.0 * m110 - m100 - 6.0 * m120 + 2.0 * m130)))
+    a = 4.0 * (m100 * (3.0 * m120 - m130 - m110) - m110**2.0) / (m100 - 8.0 * m110 + 12.0 * m120 - 4.0 * m130)
+    b = (m100 - a) / gamma(1.0 + 1.0 / c)
 
     return a, b, c
 
@@ -970,8 +976,8 @@ def pwm2(x):
     m110 = mlj(x, 1, 1)
 
     # parameter estimates
-    c = np.log(2.) / np.log(m100 / (2.*(m100 - m110)))
-    b = m100 / gamma(1. + 1. / c)
+    c = np.log(2.0) / np.log(m100 / (2.0 * (m100 - m110)))
+    b = m100 / gamma(1.0 + 1.0 / c)
 
     return b, c
 
@@ -1012,7 +1018,7 @@ def weibull2gumbel(loc, scale, shape, n):
     1. Bury, K.V. (1975), "Statistical models in applied science"
 
     """
-    gloc = loc + scale * np.log(n) ** (1. / shape)
-    gscale = 1. / (shape / scale * np.log(n) ** ((shape - 1.) / shape))
+    gloc = loc + scale * np.log(n) ** (1.0 / shape)
+    gscale = 1.0 / (shape / scale * np.log(n) ** ((shape - 1.0) / shape))
 
     return gloc, gscale
