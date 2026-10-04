@@ -26,10 +26,12 @@ jobs:
         with:
           python-version: "3.11"
       - name: Lint code
-        run: |
-          uv run --locked --only-group dev flake8 ./qats/ --exit-zero --max-complexity=10 --statistics
-          uv run --locked --only-group dev black .
-          uv run --locked --only-group dev isort .
+        # annotates findings in the pull request diff
+        run: uv run --locked --only-group dev ruff check --output-format=github .
+      - name: Check code formatting
+        # run even if linting failed, so that both results are reported
+        if: success() || failure()
+        run: uv run --locked --only-group dev ruff format --check --diff .
 
   #----------------------------------------------
   # test using a matrix
