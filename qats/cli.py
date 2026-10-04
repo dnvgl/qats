@@ -4,9 +4,9 @@ Command line interface to app (GUI).
 """
 
 import argparse
+import importlib.resources
 import os
 import sys
-import importlib.resources
 
 from qtpy.QtWidgets import QApplication
 

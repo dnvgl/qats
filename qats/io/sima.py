@@ -107,7 +107,7 @@ def read_names(path):
     i_start = 1 + lines.index(fnmatch.filter(lines, "*------------------------------------------------------*")[0])
     # extract storage info lines
     p = re.compile(r"ignore*")
-    key_lines = [l for l in lines[i_start:] if l.strip() and not p.search(l)]
+    key_lines = [line for line in lines[i_start:] if line.strip() and not p.search(line)]
 
     # determine number of keys on each line, and in total
     nkeys = [int(line.split()[3]) for line in key_lines]
@@ -117,16 +117,16 @@ def read_names(path):
     keys = [""] * nkeystot
     i = 0
     for nk, kl in zip(nkeys, key_lines):
-        l = kl.split()
+        fields = kl.split()
         # Line id.
-        if l[0].isdigit():
-            a = linid + str(l[0]).zfill(nlin)
+        if fields[0].isdigit():
+            a = linid + str(fields[0]).zfill(nlin)
         else:
-            a = l[0]
+            a = fields[0]
         # Segment id.
-        b = "Seg" + str(l[1]).zfill(nseg)
+        b = "Seg" + str(fields[1]).zfill(nseg)
         # El./Node id.
-        c = elkey + str(l[2]).zfill(nnod)
+        c = elkey + str(fields[2]).zfill(nnod)
         # define key entries
         for suff in suffices[:nk]:
             keys[i] = "_".join([a, b, c, suff])

@@ -70,9 +70,11 @@ class Weibull(object):
 
     References
     ----------
-    1. Moment estimators for Weibull parameters and their asymptotic efficiencies, Waloddi Weibull, April 1969, Lausanne Switzerland, Technical report AFML-TR-69-135
+    1. Moment estimators for Weibull parameters and their asymptotic efficiencies, Waloddi Weibull, April 1969, Lausanne
+       Switzerland, Technical report AFML-TR-69-135
 
-    2. Continuous univariate distributions, Volume 1, N.L.Johnson, S.Kotz and N.Balakrishnan, 1994,  John Wiley and sons inc.
+    2. Continuous univariate distributions, Volume 1, N.L.Johnson, S.Kotz and N.Balakrishnan, 1994,  John Wiley and sons
+       inc.
 
     3. `weibull.com <http://www.weibull.com/hotwire/issue15/relbasics15.htm>`_, About location parameter
 
@@ -80,15 +82,20 @@ class Weibull(object):
 
     5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
-    6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking, J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
+    6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
+       J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
 
-    7. Estimating the three-parameter Weibull distribution by the method of probability weighted moments with application to medical survival data, Bortolucci, A. A. et.al.
+    7. Estimating the three-parameter Weibull distribution by the method of probability weighted moments with
+       application to medical survival data, Bortolucci, A. A. et.al.
 
-    8. Theory and derivation for Weibull parameter probability weighted moment estimators, Grender, J.M., Dell, T.R., Reich, R.M., 1991 United Sates Department of Agriculture
+    8. Theory and derivation for Weibull parameter probability weighted moment estimators, Grender, J.M., Dell, T.R.,
+       Reich, R.M., 1991 United Sates Department of Agriculture
 
-    9. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research. 15(5): 1049-1054.
+    9. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water
+       Resources Research. 15(5): 1049-1054.
 
-    10. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
+    10. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
+        quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
 
     """
 
@@ -699,8 +706,14 @@ def lse(x, threshold: float = None):
     # z: data points
     # y: empirical cdf defined at data points x (z)
     # w: weights to exclude data points below threshold if tail fitting is requested
-    fp = lambda v, z: 1.0 - np.exp(-(((z - v[0]) / v[1]) ** v[2]))  # parametric weibull function
-    e = lambda v, z, y, w: w * (fp(v, z) - y)  # error function to be minimized
+    def fp(v, z):
+        # parametric weibull function
+        return 1.0 - np.exp(-(((z - v[0]) / v[1]) ** v[2]))
+
+    def e(v, z, y, w):
+        # error function to be minimized
+        return w * (fp(v, z) - y)
+
     a0, b0, c0 = msm(x)  # initial guess based on method of moments
 
     # least square fit (x corresponds to z in lambdas, f corresponds to y and w corresponds to weights)
@@ -761,7 +774,7 @@ def mle(x):
     return a, b, c
 
 
-def mlj(sample, l, j):
+def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
     """
     Probability weighted moment `Mljk` of observation order l, order of cdf j, with emphasize on the
     right/upper tail (k=0).

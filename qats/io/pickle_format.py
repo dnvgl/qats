@@ -23,7 +23,7 @@ def read_pickle_names(path):
 
 
     """
-    df = pd.read_pickle(path)
+    df = pd.read_pickle(path)  # noqa: S301 (reading pickle files is the purpose; files must be trusted)
     if isinstance(df, pd.DataFrame):
         newnames = []
         for name in df.columns:
@@ -63,7 +63,7 @@ def read_data(path):
         Time and data
 
     """
-    df = pd.read_pickle(path)
+    df = pd.read_pickle(path)  # noqa: S301 (reading pickle files is the purpose; files must be trusted)
     if isinstance(df, pd.DataFrame):
         df.insert(0, "Time", df.index.values)
     else:

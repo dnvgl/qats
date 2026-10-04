@@ -9,9 +9,12 @@ import os
 import sys
 import unittest
 from pathlib import Path
-import pandas as pd
-from qats import TsDB
+
 import numpy as np
+import pandas as pd
+
+from qats import TsDB
+
 # todo: add test class for matlab
 
 ROOT = Path(__file__).resolve().parent
@@ -103,7 +106,7 @@ class TestAllReaders(unittest.TestCase):
         self.assertTrue(
             len(failed) == 0,
             f"Failed to identify correct number of time series on {len(failed)} file(s):\n   *** "
-            + f"\n   *** ".join(failed),
+            + "\n   *** ".join(failed),
         )
 
     def test_correct_timeseries_size(self):
@@ -123,7 +126,7 @@ class TestAllReaders(unittest.TestCase):
                 failed.append(f"{filename}: {exctypestr}: {excvalue}")
         self.assertTrue(
             len(failed) == 0,
-            f"Failed to read time series from {len(failed)} file(s):\n   *** " + f"\n   *** ".join(failed),
+            f"Failed to read time series from {len(failed)} file(s):\n   *** " + "\n   *** ".join(failed),
         )
 
 

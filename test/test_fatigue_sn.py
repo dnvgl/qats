@@ -200,7 +200,6 @@ class TestFatigueSn(unittest.TestCase):
         scf = 1.15
         life = 100.0
         dyear_scf = (1 / life) * scf**sn.m  # only correct for linear (single slope) S-N curves
-        life_scf = life / scf**sn.m
         v0 = 0.1  # mean stress cycle frequency
         h = 1.0
         q = _q_calc_single_slope(life, h, v0, sn)

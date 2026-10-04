@@ -65,7 +65,8 @@ def read_tda_names(path):
 
 def read_dis_names(path):
     """
-    Read time series names from key-file associated with the direct access (binary) cycle distribution file format '.dis'.
+    Read time series names from key-file associated with the direct access (binary) cycle distribution file format
+    '.dis'.
 
     Parameters
     ----------
@@ -106,7 +107,7 @@ def _read_names(path):
     Keys are stored on ASCII file as one key per line. The file is terminated by END.
     """
     with open(os.path.join(path, path), "r") as f:
-        names = [l.strip() for l in f if not l.startswith(("**", "'")) and not l.upper().strip() == "END"]
+        names = [line.strip() for line in f if not line.startswith(("**", "'")) and not line.upper().strip() == "END"]
 
     return names
 

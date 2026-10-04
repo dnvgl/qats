@@ -9,8 +9,8 @@ import unittest
 import numpy as np
 
 from qats import TsDB
-from qats.signal import find_reversals
 from qats.fatigue.rainflow import reversals
+from qats.signal import find_reversals
 
 
 class TestReversals(unittest.TestCase):

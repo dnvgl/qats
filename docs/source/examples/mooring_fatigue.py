@@ -5,8 +5,6 @@ Calculate mooring line fatigue.
 import os
 from math import pi
 
-import numpy as np
-
 from qats import TsDB
 from qats.fatigue.sn import SNCurve, minersum
 

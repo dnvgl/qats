@@ -881,7 +881,8 @@ class TimeSeries(object):
         Minima are found by multiplying the time series with -1, finding the maxima using the maxima() method and then
         multiplying the maxima with -1 again.
 
-        By default only 'global' minima are considered, that is the smallest minimum between each mean-level up-crossing.
+        By default only 'global' minima are considered, that is the smallest minimum between each mean-level
+        up-crossing.
         If local=True local minima are also considered.
 
         See Also
@@ -1095,7 +1096,6 @@ class TimeSeries(object):
         """
         # This import registers the 3D projection, but is otherwise unused.
         # noinspection PyUnresolvedReferences
-        from mpl_toolkits.mplot3d import Axes3D
 
         cycles = self.rfc(**kwargs)
         ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
@@ -1410,13 +1410,13 @@ class TimeSeries(object):
             n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             try:
                 gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
-            except (AssertionError, ZeroDivisionError) as e:
+            except (AssertionError, ZeroDivisionError):
                 # invalid distribution parameters or bad combinations
                 gloc = gscale = np.nan
 
             try:
                 g = Gumbel(loc=gloc, scale=gscale)
-            except AssertionError as e:
+            except AssertionError:
                 # invalid distribution parameters
                 values = np.nan * np.ones(np.shape(quantiles))
             else:

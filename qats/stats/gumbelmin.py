@@ -572,8 +572,15 @@ def lse(x):
     """
     x = np.sort(x)
     f = empirical_cdf(x.size, kind="median")
-    fp = lambda v, z: 1.0 - np.exp(-np.exp((z - v[0]) / v[1]))  # parametric Gumbel function
-    e = lambda v, z, y: fp(v, z) - y  # error function to be minimized
+
+    def fp(v, z):
+        # parametric Gumbel function
+        return 1.0 - np.exp(-np.exp((z - v[0]) / v[1]))
+
+    def e(v, z, y):
+        # error function to be minimized
+        return fp(v, z) - y
+
     a0, b0 = msm(x)  # initial guess based on method of moments
 
     # least square fit

@@ -10,6 +10,7 @@ Module with custom widgets
 # Qt binding (and sets QT_API) first; matplotlib then uses the same binding.
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QTableWidget, QTableWidgetItem, QTabWidget
+
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 # colors used to flip a figure to a light style for image export

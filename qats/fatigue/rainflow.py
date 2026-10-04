@@ -243,7 +243,8 @@ def mesh(cycles, nr=100, nm=100):
 
     This function has been re-written for version 4.7.0. For versions <= 4.6.1, the mesh established was not correct.
 
-    Shape of the returned arrays is consistent with :func:`numpy.meshgrid`: ``(nm, nr)``, i.e. number of rows is `nm` and
+    Shape of the returned arrays is consistent with :func:`numpy.meshgrid`: ``(nm, nr)``, i.e. number of rows is `nm`
+    and
     number of columns is `nr`. This means that the array is transposed compared the output from
     :func:`numpy.histogram2d`, which is a 2D histogram of shape ``(nr, nm)``.
 

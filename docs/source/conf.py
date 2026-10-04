@@ -165,7 +165,7 @@ if THEME == "sphinx_rtd_theme":
 
 elif THEME == "furo":
     try:
-        import furo
+        import furo  # noqa: F401 (check that the theme is installed)
     except ImportError:
         raise ImportError("Could not import 'furo' -- install it through `python -m pip install furo` (or similar)")
 
@@ -405,7 +405,9 @@ def setup(app):
                             _, props = self.get_class_members(cm, "property")
 
                             # NOTE: `fullname` replaced by `name` due to warning in Sphinx 8.0+. Example:
-                            #       WARNING: Summarised items should not include the current module. Replace 'qats.TimeSeries.average_frequency' with 'average_frequency'. [autosummary.import_cycle]
+                            #       WARNING: Summarised items should not include the current module. Replace
+                            #       'qats.TimeSeries.average_frequency' with 'average_frequency'.
+                            #       [autosummary.import_cycle]
                             self.content += ["~%s.%s" % (name, prop) for prop in props if not prop.startswith("_")]
 
                         if "methods" in self.options:
@@ -447,7 +449,7 @@ def setup(app):
 # ... based on code and inspiration provided by:
 #   https://michaelgoerz.net/notes/extending-sphinx-napoleon-docstring-sections.html
 # ----------------------------------------------------------------------------------------------------------------------
-from sphinx.ext.napoleon.docstring import NumpyDocstring
+from sphinx.ext.napoleon.docstring import NumpyDocstring  # noqa: E402
 
 
 def parse_attributes_section(self, section):

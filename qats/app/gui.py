@@ -6,20 +6,20 @@ Module containing windows, widgets etc. to create the QATS application
 @author: perl
 """
 
+import atexit
+import contextlib
+import importlib.resources
 import json
 import logging
 import os
 import sys
 from itertools import cycle
 
-import importlib.resources, contextlib, atexit
-import numpy as np
-
 # NOTE: import qtpy before the matplotlib Qt backend so that qtpy resolves the
 # Qt binding (and sets QT_API) first; matplotlib then uses the same binding.
 from qtpy import API_NAME as QTPY_API_NAME
-from qtpy.QtCore import *
-from qtpy.QtGui import *
+from qtpy.QtCore import QRegularExpression, QSortFilterProxyModel, Qt, QThreadPool
+from qtpy.QtGui import QGuiApplication, QIcon, QPalette, QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import (
     QAction,
     QCheckBox,
@@ -45,10 +45,13 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 import matplotlib
+import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from .. import __version__
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
 from .funcs import (
@@ -64,7 +67,6 @@ from .funcs import (
 from .logger import QLogger
 from .threading import Worker
 from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget, WhiteSaveNavigationToolbar
-from .. import __version__
 
 LOGGING_LEVELS = dict(
     debug=logging.DEBUG,
@@ -726,15 +728,18 @@ class Qats(QMainWindow):
         case_sensitive = self.db_view_filter_casesensitivity.isChecked()
 
         # the code below works for python qt5 (pyside2/pyqt5) and qt6 (pyside6/pyqt6)
-        # pyside6: see the following links for documentation on QRegularExpression and the filter model (QSortFilterProxyModel)
+        # pyside6: see the following links for documentation on QRegularExpression and the filter model
+        # (QSortFilterProxyModel)
         #   https://doc.qt.io/qtforpython-6/PySide6/QtCore/QRegularExpression.html
         #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#filtering
         #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#PySide6.QtCore.QSortFilterProxyModel.filterAcceptsRow
 
         # notes on the methods available for self.db_proxy_model (type: QSortFilterProxyModel)
-        #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
+        #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with
+        #   .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
         #   .setFilterRegularExpression(QRegularExpression) may not be used with .setFilterCaseSensitivity(...)
-        #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks the binding to what previously set)
+        #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks
+        #           the binding to what previously set)
         #       * setting a filter case sensitivity afterwards breaks the binding to the regular expression
 
         # construct regexp string that may be used to initiate QRegularExpression instance
@@ -1672,7 +1677,8 @@ class SettingsDialog(QDialog):
         helptext = QHBoxLayout()
         helptext.addWidget(
             QLabel(
-                "*  Parameter 'nperseg' in scipy.signal.welch \n    (signal length is used if smaller than specified value)\n"
+                "*  Parameter 'nperseg' in scipy.signal.welch \n"
+                "    (signal length is used if smaller than specified value)\n"
                 "** Close and re-open application for this setting to have effect"
             )
         )

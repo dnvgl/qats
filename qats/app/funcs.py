@@ -174,7 +174,7 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False):
         Sample and fitted gumbel distribution parameters
     """
     if len(container.keys()) < 2:
-        raise ValueError(f"Select more than 1 time series to fit Gumbel CDF to extremes sample.")
+        raise ValueError("Select more than 1 time series to fit Gumbel CDF to extremes sample.")
 
     # create sample of extremes
     sample = list()

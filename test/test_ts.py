@@ -180,7 +180,8 @@ class TestTs(unittest.TestCase):
 
     def test_max_equals_largest_maxima(self):
         """
-        Test that the value returned from max() method equals the largest value in the array returned from maxima() method
+        Test that the value returned from max() method equals the largest value in the array returned from maxima()
+        method
         """
         twin = (500, 1.0e12)
         self.assertEqual(
@@ -191,7 +192,8 @@ class TestTs(unittest.TestCase):
 
     def test_min_equals_smallest_minima(self):
         """
-        Test that the value returned from min() method equals the smalles value in the array returned from minima() method
+        Test that the value returned from min() method equals the smalles value in the array returned from minima()
+        method
         """
         twin = (500, 1.0e12)
         self.assertEqual(

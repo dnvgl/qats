@@ -34,7 +34,8 @@ class Worker(QRunnable):
     Parameters
     ----------
     callback: function
-        The function callback to run on this worker thread. Supplied args and kwargs will be passed through to the runner.
+        The function callback to run on this worker thread. Supplied args and kwargs will be passed through to the
+        runner.
     *args
         Variable length argument list passed to callback function.
     **kwargs
@@ -57,7 +58,7 @@ class Worker(QRunnable):
         # Retrieve args/kwargs here; and fire processing using them
         try:
             result = self.fn(*self.args, **self.kwargs)
-        except:
+        except BaseException:
             # catch exception and return traceback
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))

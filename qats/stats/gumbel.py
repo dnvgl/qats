@@ -341,7 +341,8 @@ class Gumbel(object):
 
         References
         ----------
-        1. Bury, Karl V., 1975, "Statistical Models in Applied Science", University of British Columbia, John Wiley & Sons
+        1. Bury, Karl V., 1975, "Statistical Models in Applied Science", University of British Columbia, John Wiley &
+           Sons
 
         Examples
         --------
@@ -654,8 +655,15 @@ def lse(x):
     """
     x = np.sort(x)
     f = empirical_cdf(x.size, kind="median")  # median rank cdf
-    fp = lambda v, z: np.exp(-np.exp(-(z - v[0]) / v[1]))  # parametric Gumbel function
-    e = lambda v, z, y: fp(v, z) - y  # error function to be minimized
+
+    def fp(v, z):
+        # parametric Gumbel function
+        return np.exp(-np.exp(-(z - v[0]) / v[1]))
+
+    def e(v, z, y):
+        # error function to be minimized
+        return fp(v, z) - y
+
     a0, b0 = msm(x)  # initial guess based on method of moments
 
     # least square fit
@@ -836,7 +844,8 @@ def pwm(x):
         When j=k=0 and l is a non-negative integer then M_{l,0,0} represents the conventional moment of order l about
         the origin.
 
-        PWMs can be applied either when the small observations are more important than the large observations (k=0), as in
+        PWMs can be applied either when the small observations are more important than the large observations (k=0), as
+        in
         strength properties of materials, or when the large observations should have more influence than the smaller
         observations (k=0) as with three diameter distribution modelling. Here we have chose the former and derived
         unbiased estimators for moments M_{1,0,k} (j=0), see eq. 16 in [6]::

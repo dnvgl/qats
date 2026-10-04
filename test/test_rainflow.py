@@ -25,8 +25,8 @@ class TestRainflowCounting(unittest.TestCase):
 
     # raw cycles if end points are included
     """
-    Note: 
-    until qats version 4.6.1, matching cycles where aggregated in the count. For later versions, this is not done by 
+    Note:
+    until qats version 4.6.1, matching cycles where aggregated in the count. For later versions, this is not done by
     count_cycles(), hence for the series used here we get two identical entries instead; (2., -1., 0.5) x 2
     -- old code: --
     # (first and last half cycles match to form a full cycle -> (2, -1.0, 1.0))
@@ -197,12 +197,12 @@ class TestRainflowCounting(unittest.TestCase):
         np.testing.assert_array_equal(
             cycles_rebinned_range[:, 2],
             cmesh.sum(axis=0),
-            err_msg=f"Sum of counts along mean axis (constant ranges) are wrong",
+            err_msg="Sum of counts along mean axis (constant ranges) are wrong",
         )
         np.testing.assert_array_equal(
             cycles_rebinned_mean[:, 2],
             cmesh.sum(axis=1),
-            err_msg=f"Sum of counts along range axis (constant means) are wrong",
+            err_msg="Sum of counts along range axis (constant means) are wrong",
         )
         # (bins along respective axes should match bins obtained by rebinning by 'range' and 'mean', respectively)
         np.testing.assert_array_equal(
