@@ -3,6 +3,7 @@
 Module for testing TsDB class
 """
 
+import contextlib
 import os
 import sys
 import unittest
@@ -393,8 +394,7 @@ class TestTsDB(unittest.TestCase):
         self.assertIs(ts1, ts2, "Copy with shallow=True did not return source instance")
 
     def test_update(self):
-        pass
-        # todo: update db2 name and ts names
+        self.skipTest("todo: update db2 name and ts names")
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         n_before = self.db.n
@@ -409,8 +409,7 @@ class TestTsDB(unittest.TestCase):
         """
 
     def test_update_shallow(self):
-        pass
-        # todo: update db2 name and ts names
+        self.skipTest("todo: update db2 name and ts names")
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         n_before = self.db.n
@@ -425,8 +424,7 @@ class TestTsDB(unittest.TestCase):
         """
 
     def test_is_common_time_false(self):
-        pass
-        # todo: update db2 name and ts names
+        self.skipTest("todo: update db2 name and ts names")
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         self.db.load(os.path.join(self.data_directory, '....ts'))
@@ -436,8 +434,7 @@ class TestTsDB(unittest.TestCase):
         """
 
     def test_is_common_time_true(self):
-        pass
-        # todo: update db2 name and ts names
+        self.skipTest("todo: update db2 name and ts names")
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         self.db.load(os.path.join(self.data_directory, '....ts'))
@@ -447,8 +444,7 @@ class TestTsDB(unittest.TestCase):
         """
 
     def test_export_uncommon_timearray_error(self):
-        pass
-        # todo: update db2 name and ts names
+        self.skipTest("todo: update db2 name and ts names")
         """
         self.db.load(os.path.join(self.data_directory, 'mooring.ts'))
         self.db.load(os.path.join(self.data_directory, '....ts'))
@@ -483,11 +479,9 @@ class TestTsDB(unittest.TestCase):
             sys.stdout = was_stdout
             f.close()
             # clean (remove exported files)
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 os.remove(fnout)
                 os.remove(os.path.splitext(fnout)[0] + ".key")
-            except FileNotFoundError:
-                pass
         # should not raise errors
 
     def test_export_reload(self):
@@ -513,11 +507,9 @@ class TestTsDB(unittest.TestCase):
         ts1 = self.db.get(name=name)
         ts2 = db2.get(name=name)
         # clean exported files
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(fnout)
             os.remove(os.path.splitext(fnout)[0] + ".key")
-        except FileNotFoundError:
-            pass
 
         # check arrays
         self.assertTrue(np.array_equal(ts1.x, ts2.x), "Export/reload of .ts did not yield same arrays")
@@ -590,10 +582,8 @@ class TestTsDB(unittest.TestCase):
         ts1 = self.db.get(name=name)
         ts2 = db2.get(name=name)
         # clean exported files
-        try:
+        with contextlib.suppress(FileNotFoundError):
             os.remove(fnout)
-        except FileNotFoundError:
-            pass
 
         # check arrays
         self.assertTrue(np.array_equal(ts1.x, ts2.x), "Export/reload of pickle (.pkl) did not yield same arrays")

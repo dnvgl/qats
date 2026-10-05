@@ -3,6 +3,7 @@
 Module for testing io operations directly
 """
 
+import contextlib
 import os
 import sys
 import unittest
@@ -36,10 +37,8 @@ class TestTsDB(unittest.TestCase):
             sys.stdout = was_stdout
             f.close()
             # clean (remove exported files)
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 os.remove(fnout)
-            except FileNotFoundError:
-                pass
         # should not raise errors
 
     def test_write_simo_file_negative_time(self):
@@ -60,10 +59,8 @@ class TestTsDB(unittest.TestCase):
             sys.stdout = was_stdout
             f.close()
             # clean (remove exported files)
-            try:
+            with contextlib.suppress(FileNotFoundError):
                 os.remove(fnout)
-            except FileNotFoundError:
-                pass
         # should not raise errors
 
 
