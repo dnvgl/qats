@@ -634,5 +634,61 @@ class TestTsDB(unittest.TestCase):
         self.assertFalse(failed, "Statistics dataframe values don't match the statistics dict")
 
 
+class TestTsDBWithoutCommonPath(unittest.TestCase):
+    """
+    Keys without a common path, e.g. files loaded from different drives (#136). Mixing a relative key (from
+    `TsDB.add()` on an empty database) with absolute keys (from `TsDB.load()`) gives the same situation on any OS.
+    """
+
+    def setUp(self):
+        self.data_directory = os.path.join(os.path.dirname(__file__), "..", "data")
+        self.db = TsDB()
+        self.db.add(TimeSeries("added", np.arange(10.0), np.zeros(10)))
+        self.db.load(os.path.join(self.data_directory, "mooring.ts"))
+
+    def test_no_common_path(self):
+        self.assertEqual(self.db.common, "")
+
+    def test_list_relative_returns_full_keys(self):
+        self.assertEqual(self.db.list(relative=True), self.db.list())
+
+    def test_getm_without_fullkey_returns_full_keys(self):
+        keys = self.db.list(names="*Surge")
+        self.assertEqual(list(self.db.getm(names=keys, fullkey=False, store=False).keys()), keys)
+
+
+@unittest.skipUnless(sys.platform == "win32", "drives only exist on Windows")
+class TestTsDBDifferentDrives(unittest.TestCase):
+    """Files loaded from two different drives (#136). Skipped unless the temp directory is on another drive."""
+
+    def setUp(self):
+        import shutil
+        import tempfile
+
+        data_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        if os.path.splitdrive(tmp)[0].lower() == os.path.splitdrive(data_directory)[0].lower():
+            self.skipTest("the temp directory is on the same drive as the test data")
+        for f in ("mooring.ts", "mooring.key"):
+            shutil.copy(os.path.join(data_directory, f), tmp)
+        self.db = TsDB()
+        self.db.load(os.path.join(data_directory, "mooring.ts"))
+        self.db.load(os.path.join(tmp, "mooring.ts"))
+        self.export_file = os.path.join(tmp, "export.dat")
+
+    def test_list_relative(self):
+        self.assertEqual(self.db.common, "")
+        self.assertEqual(self.db.list(relative=True), self.db.list())
+
+    def test_export_without_basename(self):
+        keys = self.db.list(names="*Surge")
+        self.assertEqual(len(keys), 2)
+        self.db.export(self.export_file, names=keys, basename=False, verbose=False)
+        names = TsDB.fromfile(self.export_file).list(relative=True)
+        self.assertEqual(len(names), 2)
+        self.assertFalse(any(":" in n for n in names), names)
+
+
 if __name__ == "__main__":
     unittest.main()

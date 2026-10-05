@@ -222,5 +222,33 @@ class TestTs(unittest.TestCase):
         self.assertEqual(128, len(tsflip.minima(twin=(500, 1.0e12), threshold=-500.0)))
 
 
+class TestTsPlots(unittest.TestCase):
+    """Plot methods, run with the non-interactive Agg backend."""
+
+    def setUp(self):
+        import matplotlib.pyplot as plt
+
+        self.plt = plt
+        backend = plt.get_backend()
+        plt.switch_backend("Agg")
+        self.addCleanup(plt.switch_backend, backend)
+        self.addCleanup(plt.close, "all")
+        t = np.linspace(0.0, 1000.0, 20001)
+        self.ts = TimeSeries("x", t, np.sin(0.3 * t) + 0.2 * np.sin(2.1 * t))
+
+    def test_plot_cycle_rangemean3d(self):
+        """The 3D cycle range-mean plot is drawn on 3D axes (#150)."""
+        self.ts.plot_cycle_rangemean3d(nr=10, nm=10, show=False)
+        fig = self.plt.gcf()
+        self.assertEqual(len(fig.axes), 1)
+        self.assertEqual(fig.axes[0].name, "3d")
+
+    def test_plot_cycle_rangemean3d_reuses_figure_axes(self):
+        """Plotting twice to the same figure number reuses the 3D axes instead of adding new ones."""
+        self.ts.plot_cycle_rangemean3d(nr=10, nm=10, show=False, num=1)
+        self.ts.plot_cycle_rangemean3d(nr=10, nm=10, show=False, num=1)
+        self.assertEqual(len(self.plt.figure(num=1).axes), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
