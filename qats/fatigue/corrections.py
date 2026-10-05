@@ -6,10 +6,16 @@ Fatigue related corrections.
 
 import numpy as np
 
+from .._validation import QatsValueError
+
 
 def goodman_haigh(cycles, uts):
     """
     Effective alternating stress using the Goodman-Haigh mean stress correction for fully reversed loading (R=-1).
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -63,9 +69,8 @@ def goodman_haigh(cycles, uts):
     """
     # ensure array and assert 2d
     cycles = np.asarray(cycles)
-    assert cycles.ndim == 2 and cycles.shape[1] == 2, (
-        "Cycles must be specified as 2D array or shape (n, 2) (or: list of 2-tuples)"
-    )
+    if not (cycles.ndim == 2 and cycles.shape[1] == 2):
+        raise QatsValueError("Cycles must be specified as 2D array or shape (n, 2) (or: list of 2-tuples)")
 
     # unpack
     ranges, means = cycles.T

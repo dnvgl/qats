@@ -9,6 +9,7 @@ from matplotlib.pyplot import figure, grid, legend, plot, savefig, show, xlabel,
 from scipy.optimize import fsolve, leastsq
 from scipy.special import zetac
 
+from .._validation import QatsValueError
 from .empirical import empirical_cdf
 from .gumbel import _euler_masceroni as em
 
@@ -26,6 +27,10 @@ class GumbelMin(object):
         F(x) = 1 - exp{-exp[(x-a)/b]}
 
     where `a` is location parameter and `b` is the scale parameter.
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -258,10 +263,12 @@ class GumbelMin(object):
 
         """
         options = {"msm": self._msm, "lse": self._lse, "mle": self._mle}
-        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+        if method.lower() not in options.keys():
+            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
         if size is None:
-            assert self.data is not None, "Either size has to be specified or a sample has to be specified."
+            if self.data is None:
+                raise QatsValueError("Either size has to be specified or a sample has to be specified.")
             size = np.size(self.data)
 
         i = 0
@@ -300,7 +307,8 @@ class GumbelMin(object):
             else:
                 x = np.array(x)
 
-            assert self.scale > 0.0, "The scale parameter must be larger than 0."
+            if not (self.scale > 0.0):
+                raise QatsValueError("The scale parameter must be larger than 0.")
 
             z = (x - self.location) / self.scale
             p = 1.0 - np.exp(-np.exp(z))
@@ -331,7 +339,8 @@ class GumbelMin(object):
         """
 
         options = {"msm": msm, "lse": lse, "mle": mle}
-        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+        if method.lower() not in options.keys():
+            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
         if data is not None:
             # update sample data
@@ -453,7 +462,8 @@ class GumbelMin(object):
             else:
                 p = np.array(p)
 
-            assert self.scale > 0.0, "The scale parameter must be larger than 0."
+            if not (self.scale > 0.0):
+                raise QatsValueError("The scale parameter must be larger than 0.")
 
             x = np.zeros(np.shape(p))
 
@@ -489,7 +499,8 @@ class GumbelMin(object):
             else:
                 x = np.array(x)
 
-            assert self.scale > 0.0, "The scale parameter must be larger than 0."
+            if not (self.scale > 0.0):
+                raise QatsValueError("The scale parameter must be larger than 0.")
 
             z = (x - self.location) / self.scale
             p = (1.0 / self.scale) * np.exp(z - np.exp(z))

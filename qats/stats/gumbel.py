@@ -9,6 +9,7 @@ import numpy as np
 from scipy.optimize import fsolve, leastsq
 from scipy.special import binom, zetac
 
+from .._validation import QatsValueError
 from .empirical import empirical_cdf
 
 # todo: build documentation and check that docstrings behave as intended
@@ -26,6 +27,10 @@ class Gumbel(object):
         F(x) = exp{-exp[-(x-a)/b]}
 
     where `a` is location parameter and `b` is the scale parameter.
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -80,8 +85,10 @@ class Gumbel(object):
     """
 
     def __init__(self, loc, scale, data=None):
-        assert loc is not None, "Location parameter must be finite."
-        assert scale is not None and scale > 0, "Scale parameter must be finit and larger than 0."
+        if loc is None:
+            raise QatsValueError("Location parameter must be finite.")
+        if not (scale is not None and scale > 0):
+            raise QatsValueError("Scale parameter must be finit and larger than 0.")
         self.loc = loc
         self.scale = scale
 
@@ -131,7 +138,8 @@ class Gumbel(object):
         The empirical cdf is also used as plotting positions when plotting the sample
         on probability paper.
         """
-        assert self.data is not None, "Requires data/sample to be specified."
+        if self.data is None:
+            raise QatsValueError("Requires data/sample to be specified.")
         return empirical_cdf(self.data.size, kind="median")
 
     @property
@@ -260,7 +268,8 @@ class Gumbel(object):
         A range of x values [loc, loc+3*std] are applied if x is not specified.
 
         """
-        assert self.scale > 0.0, "The scale parameter must be larger than 0."
+        if not (self.scale > 0.0):
+            raise QatsValueError("The scale parameter must be larger than 0.")
 
         if x is None:
             x = np.linspace(self.loc, self.loc + 3.0 * self.std, 100)
@@ -300,7 +309,8 @@ class Gumbel(object):
 
         """
         options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+        if method.lower() not in options.keys():
+            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
         data = np.array(data)  # ensure numpy array
 
@@ -379,7 +389,8 @@ class Gumbel(object):
         A range of quantiles from 0.001 to 0.999 are applied if quantiles are not specified
 
         """
-        assert self.scale > 0.0, "The scale parameter must be larger than 0."
+        if not (self.scale > 0.0):
+            raise QatsValueError("The scale parameter must be larger than 0.")
 
         if p is None:
             p = np.linspace(0.001, 0.999, 100)
@@ -414,7 +425,8 @@ class Gumbel(object):
         A range of x values [loc, loc+3*std] are applied if x is not specified.
 
         """
-        assert self.scale > 0.0, "The scale parameter must be larger than 0."
+        if not (self.scale > 0.0):
+            raise QatsValueError("The scale parameter must be larger than 0.")
 
         if x is None:
             x = np.linspace(self.loc, self.loc + 3.0 * self.std, 100)
@@ -613,7 +625,8 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
 
     """
     options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-    assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+    if method.lower() not in options.keys():
+        raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
     # initiate distribution
     distribution = Gumbel(loc, scale)
@@ -779,7 +792,8 @@ def plot_fits(data, filename=None, methods=None):
         methods = options.keys()
 
     for method in methods:
-        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+        if method.lower() not in options.keys():
+            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
         # estimate location and scale parameter
         loc, scale = options[method](x)

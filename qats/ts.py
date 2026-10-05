@@ -15,6 +15,7 @@ from matplotlib import cm
 from scipy.interpolate import interp1d
 from scipy.stats import kurtosis, skew, tstd
 
+from ._validation import QatsTypeError, QatsValueError
 from .fatigue.rainflow import count_cycles, mesh
 from .fatigue.rainflow import rebin as rebin_cycles
 from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
@@ -39,6 +40,10 @@ from .stats.weibull import Weibull, pwm, weibull2gumbel
 class TimeSeries(object):
     """
     A class for storage, processing and presentation of time series.
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -82,13 +87,12 @@ class TimeSeries(object):
         # TODO: diagnose t series on initiation. check for nans, infs etc. before storing data on self.
 
         # check input parameters
-        assert t.size == x.size, "Time and data must be of equal length."
-        assert isinstance(dtg_ref, (datetime, np.datetime64)) or dtg_ref is None, (
-            "Expected 'dtg_ref' datetime object or None"
-        )
-        assert isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64)), (
-            f"Data (x) must be integers or floats not '{type(x[0])}'."
-        )
+        if not (t.size == x.size):
+            raise QatsValueError("Time and data must be of equal length.")
+        if not (isinstance(dtg_ref, (datetime, np.datetime64)) or dtg_ref is None):
+            raise QatsTypeError("Expected 'dtg_ref' datetime object or None")
+        if not (isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64))):
+            raise QatsTypeError(f"Data (x) must be integers or floats not '{type(x[0])}'.")
 
         self.name = name
         self.kind = kind
@@ -595,9 +599,8 @@ class TimeSeries(object):
         resample, interpolate, qats.signal.smooth
 
         """
-        assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), (
-            "Cannot specify both resampling to `newt` and cropping to time window `twin`."
-        )
+        if isinstance(resample, np.ndarray) and twin is not None:
+            raise QatsValueError("Cannot specify both resampling to `newt` and cropping to time window `twin`.")
 
         def new_timearray(t0, t1, d):
             """Establish time array from specified start (t0), end (t1) and time step (d)"""
@@ -643,31 +646,35 @@ class TimeSeries(object):
 
         # filtering
         if filterargs is not None:
-            assert isinstance(filterargs, tuple) or isinstance(filterargs, list), (
-                "Parameter filter should be either a list or tuple, not %s." % type(filterargs)
-            )
+            if not (isinstance(filterargs, tuple) or isinstance(filterargs, list)):
+                raise QatsTypeError("Parameter filter should be either a list or tuple, not %s." % type(filterargs))
 
             # time step for the filter calculation
             _dt = t[1] - t[0]
 
             if filterargs[0] == "lp":
-                assert len(filterargs) == 2, "Excepted 2 values in filterargs but got %d." % len(filterargs)
+                if not (len(filterargs) == 2):
+                    raise QatsValueError("Excepted 2 values in filterargs but got %d." % len(filterargs))
                 x = lowpass(x, _dt, filterargs[1])
 
             elif filterargs[0] == "hp":
-                assert len(filterargs) == 2, "Excepted 2 values in filterargs but got %d." % len(filterargs)
+                if not (len(filterargs) == 2):
+                    raise QatsValueError("Excepted 2 values in filterargs but got %d." % len(filterargs))
                 x = highpass(x, _dt, filterargs[1])
 
             elif filterargs[0] == "bp":
-                assert len(filterargs) == 3, "Excepted 3 values in filterargs but got %d." % len(filterargs)
+                if not (len(filterargs) == 3):
+                    raise QatsValueError("Excepted 3 values in filterargs but got %d." % len(filterargs))
                 x = bandpass(x, _dt, filterargs[1], filterargs[2])
 
             elif filterargs[0] == "bs":
-                assert len(filterargs) == 3, "Excepted 3 values in filterargs but got %d." % len(filterargs)
+                if not (len(filterargs) == 3):
+                    raise QatsValueError("Excepted 3 values in filterargs but got %d." % len(filterargs))
                 x = bandblock(x, _dt, filterargs[1], filterargs[2])
 
             elif filterargs[0] == "tp":
-                assert len(filterargs) == 2, "Excepted 2 values in filterargs but got %d." % len(filterargs)
+                if not (len(filterargs) == 2):
+                    raise QatsValueError("Excepted 2 values in filterargs but got %d." % len(filterargs))
                 x = thresholdpass(x, filterargs[1])
             else:
                 # invalid filter type
@@ -1006,9 +1013,10 @@ class TimeSeries(object):
         rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         # rebin cycles
-        assert (n is not None) or (w is not None), (
-            "Cycles must be rebinned for this plot - either 'n' or 'w' must be different from None"
-        )
+        if n is None and w is None:
+            raise QatsValueError(
+                "Cycles must be rebinned for this plot - either 'n' or 'w' must be different from None"
+            )
 
         cycles = self.rfc(**kwargs)
         cycles = rebin_cycles(cycles, binby="range", n=n, w=w)
@@ -1224,14 +1232,17 @@ class TimeSeries(object):
         `start` to `end`.
 
         """
-        assert dt is not None or t is not None, "Either new time step 'dt' or new time array 't' has to be specified."
+        if dt is None and t is None:
+            raise QatsValueError("Either new time step 'dt' or new time array 't' has to be specified.")
         if t is not None:
-            assert t.min() >= self.start and t.max() <= self.end, (
-                "The new specified time array exceeds the original time array. Extrapolation is not allowed."
-            )
+            if not (t.min() >= self.start and t.max() <= self.end):
+                raise QatsValueError(
+                    "The new specified time array exceeds the original time array. Extrapolation is not allowed."
+                )
             return self.interpolate(t)
         else:
-            assert dt > 0.0, "The specified time step is to small."
+            if not (dt > 0.0):
+                raise QatsValueError("The specified time step is to small.")
             return self.interpolate(np.arange(self.start, self.end, step=dt))
 
     def rfc(self, **kwargs):
@@ -1411,13 +1422,13 @@ class TimeSeries(object):
             n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             try:
                 gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
-            except (AssertionError, ZeroDivisionError):
+            except (QatsValueError, ZeroDivisionError):
                 # invalid distribution parameters or bad combinations
                 gloc = gscale = np.nan
 
             try:
                 g = Gumbel(loc=gloc, scale=gscale)
-            except AssertionError:
+            except QatsValueError:
                 # invalid distribution parameters
                 values = np.nan * np.ones(np.shape(quantiles))
             else:

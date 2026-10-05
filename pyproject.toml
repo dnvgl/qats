@@ -99,12 +99,10 @@ select = [
     "I",  # isort
     "S",  # flake8-bandit (security)
 ]
-ignore = [
-    "S101",  # assert is used for input validation in the library; to be replaced, see #148
-]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # imports in package __init__ files are the public API (re-exports)
+"test/*" = ["S101"]  # assert is fine in tests; the library raises exceptions instead (removed by python -O)
 
 [build-system]
 requires = [
