@@ -303,7 +303,7 @@ class GumbelMin(object):
         """
         try:
             if x is None:
-                x = np.linspace(self.loc, self.loc - 3.0 * self.std, 100)
+                x = np.linspace(self.location, self.location - 3.0 * self.std, 100)
             else:
                 x = np.array(x)
 
@@ -495,7 +495,7 @@ class GumbelMin(object):
         """
         try:
             if x is None:
-                x = np.linspace(self.loc, self.loc - 3.0 * self.std, 100)
+                x = np.linspace(self.location, self.location - 3.0 * self.std, 100)
             else:
                 x = np.array(x)
 
