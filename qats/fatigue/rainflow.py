@@ -3,6 +3,7 @@
 """
 Rainflow cycle counting algorithm according to ASTM E1049-85 (2011), section 5.4.4.
 """
+
 from collections import deque
 from itertools import chain
 
@@ -43,7 +44,7 @@ def reversals(series, endpoints=False):
     series = iter(series)
 
     x_last, x = next(series), next(series)
-    d_last = (x - x_last)
+    d_last = x - x_last
 
     if endpoints is True:
         yield x_last
@@ -106,8 +107,8 @@ def cycles(series, endpoints=False):
         while len(points) >= 3:
             # Form ranges X and Y from the three most recent points
             x = abs(points[-2] - points[-1])
-            y = abs(points[-3] - points[-2])        # cycle range
-            m = 0.5 * (points[-2] + points[-3])     # cycle mean
+            y = abs(points[-3] - points[-2])  # cycle range
+            m = 0.5 * (points[-2] + points[-3])  # cycle mean
             # fromto = (points[-2], points[-3])     # cycle start and end points (not currently in use)
 
             if x < y:
@@ -242,7 +243,8 @@ def mesh(cycles, nr=100, nm=100):
 
     This function has been re-written for version 4.7.0. For versions <= 4.6.1, the mesh established was not correct.
 
-    Shape of the returned arrays is consistent with :func:`numpy.meshgrid`: ``(nm, nr)``, i.e. number of rows is `nm` and
+    Shape of the returned arrays is consistent with :func:`numpy.meshgrid`: ``(nm, nr)``, i.e. number of rows is `nm`
+    and
     number of columns is `nr`. This means that the array is transposed compared the output from
     :func:`numpy.histogram2d`, which is a 2D histogram of shape ``(nr, nm)``.
 
@@ -300,7 +302,7 @@ def mesh(cycles, nr=100, nm=100):
         minmean = means.min()
 
         # xyrange = ([0., maxrange], [minmean, maxmean])
-        xyrange = ([0., maxrange], [minmean, maxmean])
+        xyrange = ([0.0, maxrange], [minmean, maxmean])
         hist2d, r_edges, m_edges = np.histogram2d(ranges, means, bins=[nr, nm], range=xyrange, weights=counts)
 
         # 2D histogram from np.histogram2d must be transposed for consistency with np.meshgrid
@@ -316,7 +318,7 @@ def mesh(cycles, nr=100, nm=100):
         return rmesh, mmesh, cmesh
 
 
-def rebin(cycles, binby='range', n=None, w=None):
+def rebin(cycles, binby="range", n=None, w=None):
     """
     Rebin cycles in specified bins by range or mean value
 
@@ -376,7 +378,7 @@ def rebin(cycles, binby='range', n=None, w=None):
     count_cycles
 
     """
-    if binby not in ('range', 'mean'):
+    if binby not in ("range", "mean"):
         raise ValueError(f"Invalid option for `binby`: '{binby}'. Must be either 'range' or 'mean'")
 
     # unpack
@@ -385,12 +387,12 @@ def rebin(cycles, binby='range', n=None, w=None):
 
     # rebin
     if cycles.shape[0] == 0:
-        # empty 
+        # empty
         return np.zeros((0, 3))
-    
-    elif binby == 'range':
+
+    elif binby == "range":
         # establish bin edges
-        bins = _create_bins(0., ranges.max(), n=n, w=w)
+        bins = _create_bins(0.0, ranges.max(), n=n, w=w)
         # nbins = bins.size - 1
 
         # establish bin mid points (size -1 compared to array with bin edges)
@@ -404,7 +406,7 @@ def rebin(cycles, binby='range', n=None, w=None):
         # done afterwards. For bins with no count, the weighted average is set to nan.
         weights = counts * means
         bin_secondary, _ = np.histogram(ranges, bins=bins, range=None, weights=weights)
-        bin_secondary[bin_n > 0] *= 1. / bin_n[bin_n > 0]
+        bin_secondary[bin_n > 0] *= 1.0 / bin_n[bin_n > 0]
         bin_secondary[bin_n == 0] = np.nan
 
         return np.array([bin_primary, bin_secondary, bin_n]).T
@@ -425,7 +427,7 @@ def rebin(cycles, binby='range', n=None, w=None):
         # done afterwards. For bins with no count, the weighted average is set to nan.
         weights = counts * ranges
         bin_secondary, _ = np.histogram(means, bins=bins, range=None, weights=weights)
-        bin_secondary[bin_n > 0] *= 1. / bin_n[bin_n > 0]
+        bin_secondary[bin_n > 0] *= 1.0 / bin_n[bin_n > 0]
         bin_secondary[bin_n == 0] = np.nan
 
         return np.array([bin_secondary, bin_primary, bin_n]).T
@@ -454,7 +456,7 @@ def _create_bins(start, stop, n=None, w=None):
 
     """
     if (not n) and (not w):
-        raise ValueError('Specify either the number of bins `n` or the bin width `w`.')
+        raise ValueError("Specify either the number of bins `n` or the bin width `w`.")
 
     if w is not None:
         # crate bins with specified w
@@ -529,6 +531,5 @@ def _sort_cycles(arr, copy=False):
         arr = np.array(arr)
     # using numpy.argsort(), ref. https://stackoverflow.com/a/38194077
     arr = arr[arr[:, 1].argsort()]  # first sort doesn't need to be stable
-    arr = arr[arr[:, 0].argsort(kind='mergesort')]
+    arr = arr[arr[:, 0].argsort(kind="mergesort")]
     return arr
-

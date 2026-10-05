@@ -39,10 +39,8 @@ classifiers = [
 
 [dependency-groups]
 dev = [
-    "black>=24.8.0",
-    "flake8>=7.1.1",
-    "isort>=5.13.2",
     "pytest>=8.3.4",
+    "ruff>=0.16.10",
 ]
 docs = [
     "furo>=2024.8.6",
@@ -85,6 +83,29 @@ exclude = [
 # a version file can be written by setuptools_scm if specified
 version_file = "qats/_version.py"
 
+[tool.ruff]
+# https://docs.astral.sh/ruff/configuration/
+line-length = 120
+force-exclude = true  # also respect excludes for files passed explicitly (editors, pre-commit)
+extend-exclude = [
+    "CHANGELOG.md",  # frozen; release notes are in GitHub Releases
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "S",  # flake8-bandit (security)
+]
+ignore = [
+    "S101",  # assert is used for input validation in the library; to be replaced, see #148
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # imports in package __init__ files are the public API (re-exports)
+
 [build-system]
 requires = [
   "setuptools>=64", 
@@ -92,3 +113,10 @@ requires = [
 ]
 build-backend = "setuptools.build_meta"
 
+
+[tool.ruff.lint.isort]
+# qtpy must be imported before matplotlib's Qt backend, so that matplotlib uses the binding selected by qtpy
+section-order = ["future", "standard-library", "qt", "third-party", "first-party", "local-folder"]
+
+[tool.ruff.lint.isort.sections]
+qt = ["qtpy"]

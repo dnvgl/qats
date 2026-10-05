@@ -1,6 +1,7 @@
 """
 Readers for various time series file formats
 """
+
 import fnmatch
 
 import numpy as np
@@ -20,7 +21,7 @@ def read_dat_names(path):
     -------
     list
         Time series names
-        
+
     Notes
     -----
     The names are extracted from the header row (the first non-commented row). The comment character is '#'. Time is
@@ -33,10 +34,10 @@ def read_dat_names(path):
                 # names in first row that is not a comment
                 names = line.split()
                 break
-    
+
     if names is not None:
         # identify time key, check that there is only one
-        timekeys = fnmatch.filter(names, '[Tt]ime*')
+        timekeys = fnmatch.filter(names, "[Tt]ime*")
         if len(timekeys) < 1:
             raise KeyError(f"The file '{path}' does not contain a time vector")
         elif len(timekeys) > 1:
@@ -72,13 +73,13 @@ def read_dat_data(path, ind=None):
     ``data[1,:]``.
 
     """
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         # skip commented lines at beginning of file
         for line in f:
             # break at first uncommented line (which is the header row and should not be read here)
             if not line.startswith("#"):
                 break
-        
+
         # load data, skipping commented lines and the header row with keys (first uncommented line)
         data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
 

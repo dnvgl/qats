@@ -24,17 +24,26 @@ class TestRainflowCounting(unittest.TestCase):
     cycles = [(3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
 
     # raw cycles if end points are included
-    '''
-    Note: 
-    until qats version 4.6.1, matching cycles where aggregated in the count. For later versions, this is not done by 
+    """
+    Note:
+    until qats version 4.6.1, matching cycles where aggregated in the count. For later versions, this is not done by
     count_cycles(), hence for the series used here we get two identical entries instead; (2., -1., 0.5) x 2
     -- old code: --
     # (first and last half cycles match to form a full cycle -> (2, -1.0, 1.0))
     cycles_endpoints = [(2, -1.0, 1.0), (3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5), (8, 0.0, 0.5),
                         (8, 1.0, 0.5), (9, 0.5, 0.5)]
-    '''
-    cycles_endpoints = [(2, -1.0, 0.5), (2, -1.0, 0.5), (3, -0.5, 0.5), (4, -1.0, 0.5), (4, 1.0, 1.0), (6, 1.0, 0.5),
-                        (8, 0.0, 0.5), (8, 1.0, 0.5), (9, 0.5, 0.5)]
+    """
+    cycles_endpoints = [
+        (2, -1.0, 0.5),
+        (2, -1.0, 0.5),
+        (3, -0.5, 0.5),
+        (4, -1.0, 0.5),
+        (4, 1.0, 1.0),
+        (6, 1.0, 0.5),
+        (8, 0.0, 0.5),
+        (8, 1.0, 0.5),
+        (9, 0.5, 0.5),
+    ]
 
     # cycles grouped in 2 bins
     # (not affected by change in behaviour after version 4.6.1)
@@ -55,8 +64,8 @@ class TestRainflowCounting(unittest.TestCase):
         Set up for some of the tests.
         """
         # load irregular 3-hour time series test rebin and mesh
-        tsfile = os.path.join(os.path.dirname(__file__), '..', 'data', 'simo_p_out.ts')
-        self.irreg_series = TsDB.fromfile(tsfile).get(name='Tension_2_qs').x
+        tsfile = os.path.join(os.path.dirname(__file__), "..", "data", "simo_p_out.ts")
+        self.irreg_series = TsDB.fromfile(tsfile).get(name="Tension_2_qs").x
 
     def test_reversals(self):
         """
@@ -118,15 +127,16 @@ class TestRainflowCounting(unittest.TestCase):
         """
         # self.assertEqual(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
         # np.testing.assert_array_equal(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.))
-        np.testing.assert_array_almost_equal(self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.),
-                                             decimal=6)
+        np.testing.assert_array_almost_equal(
+            self.cycles_bw2, rainflow.rebin(rainflow.count_cycles(self.series), w=2.0), decimal=6
+        )
 
     def test_rainflow_rebinning_binwidth5(self):
         """
         Test that values are correctly gathered to new bins of width 5
         """
         # self.assertEqual(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
-        np.testing.assert_array_equal(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.))
+        np.testing.assert_array_equal(self.cycles_bw5, rainflow.rebin(rainflow.count_cycles(self.series), w=5.0))
 
     def test_rainflow_rebinning_nbin2(self):
         """
@@ -140,7 +150,7 @@ class TestRainflowCounting(unittest.TestCase):
         Test that rebinning raises errors as it should do
         """
         try:
-            _ = rainflow.rebin(self.cycles, binby='nothing')
+            _ = rainflow.rebin(self.cycles, binby="nothing")
         except ValueError:
             pass
         else:
@@ -158,9 +168,10 @@ class TestRainflowCounting(unittest.TestCase):
         Test that rebinning does not alter total number of counts.
         """
         cycles = rainflow.count_cycles(self.irreg_series)
-        cycles_rebinned_range = rainflow.rebin(cycles, binby='range', n=50)
-        self.assertEqual(cycles[:, 2].sum(), cycles_rebinned_range[:, 2].sum(),
-                         msg="Total cycle counts changed after rebinning.")
+        cycles_rebinned_range = rainflow.rebin(cycles, binby="range", n=50)
+        self.assertEqual(
+            cycles[:, 2].sum(), cycles_rebinned_range[:, 2].sum(), msg="Total cycle counts changed after rebinning."
+        )
 
     def test_mesh(self):
         """
@@ -171,8 +182,8 @@ class TestRainflowCounting(unittest.TestCase):
         # raw cycles
         cycles = rainflow.count_cycles(self.irreg_series)
         # rebinned cycles - will be used to verify mesh
-        cycles_rebinned_range = rainflow.rebin(cycles, binby='range', n=nr)
-        cycles_rebinned_mean = rainflow.rebin(cycles, binby='mean', n=nm)
+        cycles_rebinned_range = rainflow.rebin(cycles, binby="range", n=nr)
+        cycles_rebinned_mean = rainflow.rebin(cycles, binby="mean", n=nm)
         # generate mesh
         rmesh, mmesh, cmesh = rainflow.mesh(cycles, nr=nr, nm=nm)
 
@@ -183,16 +194,24 @@ class TestRainflowCounting(unittest.TestCase):
         np.testing.assert_equal(cmesh.shape, mmesh.shape, err_msg="Shapes do not match: 'cmesh' and 'mmesh'")
         # (sum of counts; total and along each axis)
         np.testing.assert_equal(cycles[:, 2].sum(), cmesh.sum(), err_msg="Sum of counts and mesh not equal")
-        np.testing.assert_array_equal(cycles_rebinned_range[:, 2], cmesh.sum(axis=0),
-                                      err_msg=f"Sum of counts along mean axis (constant ranges) are wrong")
-        np.testing.assert_array_equal(cycles_rebinned_mean[:, 2], cmesh.sum(axis=1),
-                                      err_msg=f"Sum of counts along range axis (constant means) are wrong")
+        np.testing.assert_array_equal(
+            cycles_rebinned_range[:, 2],
+            cmesh.sum(axis=0),
+            err_msg="Sum of counts along mean axis (constant ranges) are wrong",
+        )
+        np.testing.assert_array_equal(
+            cycles_rebinned_mean[:, 2],
+            cmesh.sum(axis=1),
+            err_msg="Sum of counts along range axis (constant means) are wrong",
+        )
         # (bins along respective axes should match bins obtained by rebinning by 'range' and 'mean', respectively)
-        np.testing.assert_array_equal(rmesh[0, :], cycles_rebinned_range[:, 0],
-                                      err_msg="Range mesh error (transposed by 'accident'?)")
-        np.testing.assert_array_equal(mmesh[:, 0], cycles_rebinned_mean[:, 1],
-                                      err_msg="Mean mesh error (transposed by 'accident'?)")
+        np.testing.assert_array_equal(
+            rmesh[0, :], cycles_rebinned_range[:, 0], err_msg="Range mesh error (transposed by 'accident'?)"
+        )
+        np.testing.assert_array_equal(
+            mmesh[:, 0], cycles_rebinned_mean[:, 1], err_msg="Mean mesh error (transposed by 'accident'?)"
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

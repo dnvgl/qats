@@ -3,6 +3,7 @@
 """
 Provides :class:`TimeSeries` class.
 """
+
 import copy
 import os
 from collections import OrderedDict
@@ -16,8 +17,7 @@ from scipy.stats import kurtosis, skew, tstd
 
 from .fatigue.rainflow import count_cycles, mesh
 from .fatigue.rainflow import rebin as rebin_cycles
-from .signal import (average_frequency, bandblock, bandpass, find_maxima,
-                     highpass, lowpass, psd, smooth, taper)
+from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 from .signal import threshold as thresholdpass
 from .stats.gumbel import Gumbel
 from .stats.weibull import Weibull, pwm, weibull2gumbel
@@ -34,6 +34,7 @@ from .stats.weibull import Weibull, pwm, weibull2gumbel
 # todo: cross spectrum(scipy.signal.csd)
 # todo: coherence (scipy.signal.coherence)
 # todo: smarter sizing of scatter dots in plot_cycle_rangemean()
+
 
 class TimeSeries(object):
     """
@@ -82,10 +83,12 @@ class TimeSeries(object):
 
         # check input parameters
         assert t.size == x.size, "Time and data must be of equal length."
-        assert isinstance(dtg_ref, (datetime, np.datetime64)) or dtg_ref is None, \
+        assert isinstance(dtg_ref, (datetime, np.datetime64)) or dtg_ref is None, (
             "Expected 'dtg_ref' datetime object or None"
-        assert isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64)), \
+        )
+        assert isinstance(x[0], (int, np.int32, np.int64, float, np.float32, np.float64)), (
             f"Data (x) must be integers or floats not '{type(x[0])}'."
+        )
 
         self.name = name
         self.kind = kind
@@ -105,7 +108,7 @@ class TimeSeries(object):
             # handle time specified as datetime
             self._dtg_ref = dtg_ref if dtg_ref is not None else t[0]
             self._dtg_time = t  # time as datetime
-            self._t = np.array([(_ - self._dtg_ref).total_seconds() for _ in t])    # time as floats
+            self._t = np.array([(_ - self._dtg_ref).total_seconds() for _ in t])  # time as floats
         elif isinstance(t[0], (int, np.int32, np.int64, float, np.float32, np.float64)):
             # time as integer and floats
             self._t = np.array(t).flatten().astype(float)
@@ -176,7 +179,7 @@ class TimeSeries(object):
         float
             average period between mean level crossings
         """
-        return 1. / self.average_frequency
+        return 1.0 / self.average_frequency
 
     @property
     def data(self):
@@ -190,7 +193,7 @@ class TimeSeries(object):
 
         """
         # todo: QA/debugging on TimeSeries.data (dictionary)
-        '''
+        """
         # make dict with all non callable items from class dir(), skip private '__<>__' and itself ("data")
         d = OrderedDict()
         # d.update(self.__dict__)
@@ -205,7 +208,7 @@ class TimeSeries(object):
         # todo: ts.data (dict): consider to include output from selected methods (e.g. mean, std, skewness, kurtosis)
 
         return d
-        '''
+        """
         raise NotImplementedError("data property is not yet implemented")
 
     @property
@@ -295,7 +298,7 @@ class TimeSeries(object):
         dt = np.diff(self.t)
         dt_avg = np.ones(np.shape(dt)) * self.dt
 
-        if np.allclose(dt, dt_avg, rtol=1.e-5, atol=0.):
+        if np.allclose(dt, dt_avg, rtol=1.0e-5, atol=0.0):
             return True
         else:
             return False
@@ -462,7 +465,7 @@ class TimeSeries(object):
         """
         # make 'freq' a tuple if float is given
         if isinstance(freq, float):
-            freq = freq,
+            freq = (freq,)
 
         # check input parameters
         if filtertype in ("lp", "hp", "tp"):
@@ -486,7 +489,7 @@ class TimeSeries(object):
 
         return t, x
 
-    def fit_weibull(self, twin=None, method='msm'):
+    def fit_weibull(self, twin=None, method="msm"):
         """
         Fit Weibull distribution to sample of global maxima.
 
@@ -592,11 +595,12 @@ class TimeSeries(object):
         resample, interpolate, qats.signal.smooth
 
         """
-        assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), \
+        assert not ((isinstance(resample, np.ndarray)) and (twin is not None)), (
             "Cannot specify both resampling to `newt` and cropping to time window `twin`."
+        )
 
         def new_timearray(t0, t1, d):
-            """ Establish time array from specified start (t0), end (t1) and time step (d) """
+            """Establish time array from specified start (t0), end (t1) and time step (d)"""
             n = int(round((t1 - t0) / d)) + 1
             t_ = np.linspace(t0, t1, n, retstep=False)
             return t_
@@ -620,7 +624,9 @@ class TimeSeries(object):
                 # specified time step
                 t = new_timearray(t[0], t[-1], resample)
             else:
-                raise TypeError("Parameter resample should be either a float or a numpy.ndarray type, not %s." % type(resample))
+                raise TypeError(
+                    "Parameter resample should be either a float or a numpy.ndarray type, not %s." % type(resample)
+                )
 
             x = self.interpolate(t)
 
@@ -632,34 +638,35 @@ class TimeSeries(object):
             pass
 
         # data tapering
-        if (taperfrac is not None) and (isinstance(taperfrac, float)) and (taperfrac > 0.) and (taperfrac < 1.):
-            x, _ = taper(x, window='tukey', alpha=taperfrac)
+        if (taperfrac is not None) and (isinstance(taperfrac, float)) and (taperfrac > 0.0) and (taperfrac < 1.0):
+            x, _ = taper(x, window="tukey", alpha=taperfrac)
 
         # filtering
         if filterargs is not None:
-            assert isinstance(filterargs, tuple) or isinstance(filterargs, list), \
+            assert isinstance(filterargs, tuple) or isinstance(filterargs, list), (
                 "Parameter filter should be either a list or tuple, not %s." % type(filterargs)
+            )
 
             # time step for the filter calculation
             _dt = t[1] - t[0]
 
-            if filterargs[0] == 'lp':
+            if filterargs[0] == "lp":
                 assert len(filterargs) == 2, "Excepted 2 values in filterargs but got %d." % len(filterargs)
                 x = lowpass(x, _dt, filterargs[1])
 
-            elif filterargs[0] == 'hp':
+            elif filterargs[0] == "hp":
                 assert len(filterargs) == 2, "Excepted 2 values in filterargs but got %d." % len(filterargs)
                 x = highpass(x, _dt, filterargs[1])
 
-            elif filterargs[0] == 'bp':
+            elif filterargs[0] == "bp":
                 assert len(filterargs) == 3, "Excepted 3 values in filterargs but got %d." % len(filterargs)
                 x = bandpass(x, _dt, filterargs[1], filterargs[2])
 
-            elif filterargs[0] == 'bs':
+            elif filterargs[0] == "bs":
                 assert len(filterargs) == 3, "Excepted 3 values in filterargs but got %d." % len(filterargs)
                 x = bandblock(x, _dt, filterargs[1], filterargs[2])
 
-            elif filterargs[0] == 'tp':
+            elif filterargs[0] == "tp":
                 assert len(filterargs) == 2, "Excepted 2 values in filterargs but got %d." % len(filterargs)
                 x = thresholdpass(x, filterargs[1])
             else:
@@ -668,7 +675,7 @@ class TimeSeries(object):
 
         # smoothing
         if (window_len is not None) and (isinstance(window_len, int)) and (window_len > 0):
-            x = smooth(x, window_len=window_len, window=window, mode='same')
+            x = smooth(x, window_len=window_len, window=window, mode="same")
 
         return t, x
 
@@ -874,7 +881,8 @@ class TimeSeries(object):
         Minima are found by multiplying the time series with -1, finding the maxima using the maxima() method and then
         multiplying the maxima with -1 again.
 
-        By default only 'global' minima are considered, that is the smallest minimum between each mean-level up-crossing.
+        By default only 'global' minima are considered, that is the smallest minimum between each mean-level
+        up-crossing.
         If local=True local minima are also considered.
 
         See Also
@@ -885,13 +893,13 @@ class TimeSeries(object):
         t, x = self.get(twin=twin, **kwargs)
 
         # flip the time series to that minima becomes maxima
-        x *= -1.
+        x *= -1.0
         if threshold is not None:
             threshold *= -1
 
         # find minima
         m, ind = find_maxima(x, local=local, threshold=threshold)
-        m *= -1.    # reverse flip
+        m *= -1.0  # reverse flip
 
         # ... and associated time, if specified
         if rettime is True:
@@ -935,7 +943,7 @@ class TimeSeries(object):
 
         plt.figure(num=num)
         plt.plot(t, x, label=self.name)
-        plt.xlabel('Time (s)')
+        plt.xlabel("Time (s)")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -963,8 +971,8 @@ class TimeSeries(object):
         plt.figure(num=num)
         f, p = self.psd(**kwargs)
         plt.plot(f, p, label=self.name)
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Power spectral density')
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Power spectral density")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -972,7 +980,7 @@ class TimeSeries(object):
         if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_range(self, n=200, w=None, bw=1., figurename=None, show=None, num=1, **kwargs):
+    def plot_cycle_range(self, n=200, w=None, bw=1.0, figurename=None, show=None, num=1, **kwargs):
         """
         Plot cycle range versus number of occurrences.
 
@@ -998,18 +1006,19 @@ class TimeSeries(object):
         rfc, qats.fatigue.rainflow.count_cycles, qats.fatigue.rainflow.rebin
         """
         # rebin cycles
-        assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
-                                                   "be different from None"
+        assert (n is not None) or (w is not None), (
+            "Cycles must be rebinned for this plot - either 'n' or 'w' must be different from None"
+        )
 
         cycles = self.rfc(**kwargs)
-        cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+        cycles = rebin_cycles(cycles, binby="range", n=n, w=w)
 
-        r, _, c = cycles.T   # unpack cycle range and count, ignore mean value
-        dr = r[1] - r[0]     # bin width, used as basis for bar width
+        r, _, c = cycles.T  # unpack cycle range and count, ignore mean value
+        dr = r[1] - r[0]  # bin width, used as basis for bar width
         plt.figure(num=num)
         plt.bar(r, c, dr * bw, label=self.name)
-        plt.xlabel('Cycle range')
-        plt.ylabel('Cycle count (-)')
+        plt.xlabel("Cycle range")
+        plt.ylabel("Cycle count (-)")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1049,15 +1058,15 @@ class TimeSeries(object):
 
         # rebin cycles
         if (n is not None) or (w is not None):
-            cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+            cycles = rebin_cycles(cycles, binby="range", n=n, w=w)
 
         ranges, means, counts = cycles.T  # unpack cycle range, mean and count
 
         # the scatter plot (with double marker size for improved readability)
         plt.figure(num=num)
-        plt.scatter(means, ranges, s=[2. * c for c in counts], alpha=0.4, label=self.name)
-        plt.xlabel('Cycle mean')
-        plt.ylabel('Cycle range')
+        plt.scatter(means, ranges, s=[2.0 * c for c in counts], alpha=0.4, label=self.name)
+        plt.xlabel("Cycle mean")
+        plt.ylabel("Cycle range")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1087,23 +1096,22 @@ class TimeSeries(object):
         """
         # This import registers the 3D projection, but is otherwise unused.
         # noinspection PyUnresolvedReferences
-        from mpl_toolkits.mplot3d import Axes3D
 
         cycles = self.rfc(**kwargs)
         ranges, means, counts = mesh(cycles, nr=nr, nm=nm)
 
         fig = plt.figure(num=num)
-        ax = fig.gca(projection='3d')
+        ax = fig.gca(projection="3d")
         ax.plot_surface(ranges, means, counts, cmap=cm.coolwarm)
-        ax.set_xlabel('Cycle range')
-        ax.set_ylabel('Cycle mean')
-        ax.set_zlabel('Cycle count')
+        ax.set_xlabel("Cycle range")
+        ax.set_ylabel("Cycle mean")
+        ax.set_zlabel("Cycle count")
         if figurename is not None:
             plt.savefig(figurename)
         if show is True or (show is None and figurename is None):
             plt.show()
 
-    def psd(self, nperseg=None, noverlap=None, detrend='constant', nfft=None, normalize=False, **kwargs):
+    def psd(self, nperseg=None, noverlap=None, detrend="constant", nfft=None, normalize=False, **kwargs):
         """
         Estimate power spectral density using Welch’s method.
 
@@ -1163,17 +1171,28 @@ class TimeSeries(object):
         # ensure constant time step
         _dt = np.diff(t)
         # (use atol not zero to avoid false positives for zero values)
-        if not np.isclose(min(_dt), max(_dt), rtol=1.e-2, atol=1.e-6):
-            raise ValueError(f"The time step of '{self.name}' varies with more than 1%. A constant time step is "
-                             f"required when estimating power spectral density using FFT. Resample to constant "
-                             f"time step.")
+        if not np.isclose(min(_dt), max(_dt), rtol=1.0e-2, atol=1.0e-6):
+            raise ValueError(
+                f"The time step of '{self.name}' varies with more than 1%. A constant time step is "
+                f"required when estimating power spectral density using FFT. Resample to constant "
+                f"time step."
+            )
 
         # average time step for requested series
         dt = float(np.mean(_dt))
 
         # estimate psd using qats.signal.psd (which uses welch's definition)
-        f, p = psd(x, dt, nperseg=nperseg, noverlap=noverlap, detrend=detrend, nfft=nfft, scaling='density',
-                   return_onesided=True, axis=-1)
+        f, p = psd(
+            x,
+            dt,
+            nperseg=nperseg,
+            noverlap=noverlap,
+            detrend=detrend,
+            nfft=nfft,
+            scaling="density",
+            return_onesided=True,
+            axis=-1,
+        )
 
         if normalize:
             p = p / np.max(p)
@@ -1206,11 +1225,12 @@ class TimeSeries(object):
         """
         assert dt is not None or t is not None, "Either new time step 'dt' or new time array 't' has to be specified."
         if t is not None:
-            assert t.min() >= self.start and t.max() <= self.end, "The new specified time array exceeds the original " \
-                                                                  "time array. Extrapolation is not allowed."
+            assert t.min() >= self.start and t.max() <= self.end, (
+                "The new specified time array exceeds the original time array. Extrapolation is not allowed."
+            )
             return self.interpolate(t)
         else:
-            assert dt > 0., "The specified time step is to small."
+            assert dt > 0.0, "The specified time step is to small."
             return self.interpolate(np.arange(self.start, self.end, step=dt))
 
     def rfc(self, **kwargs):
@@ -1296,7 +1316,7 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=10800., quantiles=(0.37, 0.57, 0.9), is_minima=False, include_sample=False, **kwargs):
+    def stats(self, statsdur=10800.0, quantiles=(0.37, 0.57, 0.9), is_minima=False, include_sample=False, **kwargs):
         """
         Returns dictionary with time series properties and statistics
 
@@ -1367,18 +1387,18 @@ class TimeSeries(object):
         t, x = self.get(**kwargs)
 
         try:
-            tz = 1. / average_frequency(t, x)
+            tz = 1.0 / average_frequency(t, x)
         except IndexError:
             # too few maxima, tz may not calculated (keep it as None)
             tz = np.nan
 
         # find global maxima or minima
         if not is_minima:
-            f = 1.
+            f = 1.0
         else:
-            f = -1.
+            f = -1.0
 
-        mx,  _ = find_maxima(f * x)
+        mx, _ = find_maxima(f * x)
         if np.size(mx) <= 1:
             wloc = wscale = wshape = gloc = gscale = np.nan
             pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
@@ -1390,13 +1410,13 @@ class TimeSeries(object):
             n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             try:
                 gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
-            except (AssertionError, ZeroDivisionError) as e:
+            except (AssertionError, ZeroDivisionError):
                 # invalid distribution parameters or bad combinations
                 gloc = gscale = np.nan
 
             try:
                 g = Gumbel(loc=gloc, scale=gscale)
-            except AssertionError as e:
+            except AssertionError:
                 # invalid distribution parameters
                 values = np.nan * np.ones(np.shape(quantiles))
             else:
@@ -1406,11 +1426,25 @@ class TimeSeries(object):
 
         # establish output dictionary
         d = OrderedDict(
-            start=t[0], end=t[-1], duration=t[-1] - t[0], dtavg=np.mean(np.diff(t)),
-            mean=x.mean(), std=tstd(x), skew=skew(x, bias=False),
-            kurt=kurtosis(x, fisher=False, bias=False), min=x.min(), max=x.max(), tz=tz,
-            wloc=wloc, wscale=wscale, wshape=wshape, gloc=gloc, gscale=gscale, is_minima=is_minima,
-            sample=f * mx if include_sample else None, **pvalues
+            start=t[0],
+            end=t[-1],
+            duration=t[-1] - t[0],
+            dtavg=np.mean(np.diff(t)),
+            mean=x.mean(),
+            std=tstd(x),
+            skew=skew(x, bias=False),
+            kurt=kurtosis(x, fisher=False, bias=False),
+            min=x.min(),
+            max=x.max(),
+            tz=tz,
+            wloc=wloc,
+            wscale=wscale,
+            wshape=wshape,
+            gloc=gloc,
+            gscale=gscale,
+            is_minima=is_minima,
+            sample=f * mx if include_sample else None,
+            **pvalues,
         )
         return d
 

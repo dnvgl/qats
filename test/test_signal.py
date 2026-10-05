@@ -2,25 +2,25 @@
 """
 Module for testing signal processing functions
 """
+
 import os
 import unittest
 
 import numpy as np
 
 from qats import TsDB
-from qats.signal import (average_frequency, bandblock, bandpass, find_maxima,
-                         highpass, lowpass, psd, smooth, taper)
+from qats.signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 
 
 class TestSignal(unittest.TestCase):
     def setUp(self):
-        self.t = np.linspace(0., 100000., num=1000000)
-        self.x1 = 10 + np.sin(2. * np.pi * 0.05 * self.t)
-        self.x2 = 0.15 * np.sin(2. * np.pi * 0.20 * self.t)
+        self.t = np.linspace(0.0, 100000.0, num=1000000)
+        self.x1 = 10 + np.sin(2.0 * np.pi * 0.05 * self.t)
+        self.x2 = 0.15 * np.sin(2.0 * np.pi * 0.20 * self.t)
         self.x = self.x1 + self.x2
         self.xnoise = self.x + 0.1 * np.random.randn(np.size(self.x))
 
-        self.data_directory = os.path.join(os.path.dirname(__file__), '..', 'data')
+        self.data_directory = os.path.join(os.path.dirname(__file__), "..", "data")
         self.peaks_file = "example.peaks.ts"
         self.peaks_path = os.path.join(self.data_directory, self.peaks_file)
 
@@ -34,14 +34,52 @@ class TestSignal(unittest.TestCase):
         self.assertAlmostEqual(average_frequency(self.t, self.x, up=False), 0.05, places=3)
 
     def test_smooth(self):
-        """Check that the noise is removed and that the average mean crossing frequency equals that of the base signal."""
+        """
+        Check that the noise is removed and that the average mean crossing frequency equals that of the base signal.
+        """
         self.assertAlmostEqual(average_frequency(self.t, smooth(self.xnoise, window_len=31), up=True), 0.05, places=3)
 
     def test_taper(self):
         """Check that the signal is tapered to zero in both ends."""
         tapered, _ = taper(self.xnoise, alpha=0.02)
-        self.assertAlmostEqual(tapered[0], 0., delta=0.01)
-        self.assertAlmostEqual(tapered[-1], 0., delta=0.01)
+        self.assertAlmostEqual(tapered[0], 0.0, delta=0.01)
+        self.assertAlmostEqual(tapered[-1], 0.0, delta=0.01)
+
+    def test_smooth_numpy_windows(self):
+        """Check that each numpy window name in `smooth()` uses the corresponding numpy window function."""
+        x = self.xnoise[:500]
+        n = 31
+        for name, func in (
+            ("hanning", np.hanning),
+            ("hamming", np.hamming),
+            ("bartlett", np.bartlett),
+            ("blackman", np.blackman),
+        ):
+            w = func(n)
+            # reference: convolution with the explicitly chosen window, as described in the smooth() docstring
+            s = np.r_[x[n - 1 : 0 : -1], x, x[-1:-n:-1]]
+            expected = np.convolve(w / w.sum(), s, mode="valid")
+            np.testing.assert_allclose(smooth(x, window_len=n, window=name, mode="valid"), expected, err_msg=name)
+
+    def test_taper_numpy_windows(self):
+        """Check that each numpy window name in `taper()` uses the corresponding numpy window function."""
+        x = self.xnoise[:500]
+        n = x.size
+        for name, w in (
+            ("hanning", np.hanning(n)),
+            ("hamming", np.hamming(n)),
+            ("bartlett", np.bartlett(n)),
+            ("blackman", np.blackman(n)),
+            ("kaiser", np.kaiser(n, 0.5)),
+        ):
+            tapered, wcorr = taper(x, window=name, alpha=0.5)
+            np.testing.assert_allclose(tapered, x * w, err_msg=name)
+            self.assertAlmostEqual(wcorr, np.sum(w**2) / n, msg=name)
+
+    def test_taper_window_name_is_not_evaluated(self):
+        """Check that the window name is looked up, not evaluated as code."""
+        with self.assertRaises(AttributeError):
+            taper(self.xnoise[:100], window="ones(3) + np.zeros")
 
     def test_reconstruct_signal_from_lowpass_and_higpass(self):
         """Check that the sum of the lowpassed signal and the highpassed signal equals the original signal."""
@@ -63,46 +101,46 @@ class TestSignal(unittest.TestCase):
         """Check statistics against analytical solution."""
         dt = self.t[1] - self.t[0]
         x = lowpass(self.xnoise, dt, 0.1)
-        self.assertAlmostEqual(np.mean(x), 10., delta=0.001)
-        self.assertAlmostEqual(np.var(x), 0.5, delta=0.001)     # variance of sinoid = amplitude ** 2 / 2
+        self.assertAlmostEqual(np.mean(x), 10.0, delta=0.001)
+        self.assertAlmostEqual(np.var(x), 0.5, delta=0.001)  # variance of sinoid = amplitude ** 2 / 2
 
     def test_statistics_of_highpassed_signal(self):
         """Check statistics against analytical solution."""
         dt = self.t[1] - self.t[0]
         x = highpass(self.xnoise, dt, 0.1)
-        self.assertAlmostEqual(np.mean(x), 0., delta=0.001)
+        self.assertAlmostEqual(np.mean(x), 0.0, delta=0.001)
 
         # variance of sinoid = amplitude ** 2 / 2
         # variance of random uniform distributed number is amplitude squared
         # the processes are independent
-        self.assertAlmostEqual(np.var(x), 0.15 ** 2. / 2. + 0.1 ** 2., delta=0.001)
+        self.assertAlmostEqual(np.var(x), 0.15**2.0 / 2.0 + 0.1**2.0, delta=0.001)
 
     def test_statistics_of_bandpassed_signal(self):
         """Check statistics against analytical solution."""
         dt = self.t[1] - self.t[0]
         x = bandpass(self.xnoise, dt, 0.1, 0.25)
-        self.assertAlmostEqual(np.mean(x), 0., delta=0.001)
+        self.assertAlmostEqual(np.mean(x), 0.0, delta=0.001)
 
         # variance of sinoid = amplitude ** 2 / 2
-        self.assertAlmostEqual(np.var(x), 0.15 ** 2. / 2., delta=0.001)
+        self.assertAlmostEqual(np.var(x), 0.15**2.0 / 2.0, delta=0.001)
 
     def test_statistics_of_bandblocked_signal(self):
         """Check statistics against analytical solution."""
         dt = self.t[1] - self.t[0]
         x = bandblock(self.xnoise, dt, 0.1, 0.25)
-        self.assertAlmostEqual(np.mean(x), 10., delta=0.001)
+        self.assertAlmostEqual(np.mean(x), 10.0, delta=0.001)
 
         # variance of sinoid = amplitude ** 2 / 2
         # variance of random uniform distributed number is amplitude squared
         # the processes are independent
-        self.assertAlmostEqual(np.var(x), 0.5 + 0.1 ** 2., delta=0.001)
+        self.assertAlmostEqual(np.var(x), 0.5 + 0.1**2.0, delta=0.001)
 
     def test_psd_area_moment_0(self):
         """Check zero area moment of the spectral density."""
         dt = self.t[1] - self.t[0]
         f, p = psd(self.x, dt, nperseg=1000)
         df = f[1] - f[0]
-        self.assertAlmostEqual(df * np.sum(p), np.var(self.x), delta=1.e-3)
+        self.assertAlmostEqual(df * np.sum(p), np.var(self.x), delta=1.0e-3)
 
     def test_psd_area_moment_2(self):
         """Check second area moment of the spectral density."""
@@ -110,27 +148,27 @@ class TestSignal(unittest.TestCase):
         f, p = psd(self.x2, dt, nperseg=1000)
         df = f[1] - f[0]
         m0 = df * np.sum(p)
-        m2 = df * np.sum(f ** 2. * p)
-        self.assertAlmostEqual(np.sqrt(m2 / m0), 0.2, delta=1.e-3)
+        m2 = df * np.sum(f**2.0 * p)
+        self.assertAlmostEqual(np.sqrt(m2 / m0), 0.2, delta=1.0e-3)
 
     def test_psd_nyquist_frequency(self):
         """Check that the maximum psd frequency equals the Nyquist frequency."""
         dt = self.t[1] - self.t[0]
         f, _ = psd(self.x, dt)
-        self.assertAlmostEqual(np.max(f), 0.5 * 1. / dt, delta=1.e-6)
+        self.assertAlmostEqual(np.max(f), 0.5 * 1.0 / dt, delta=1.0e-6)
 
     def test_psd_zero_frequency(self):
         """Check that the maximum psd frequency equals the Nyquist frequency."""
         dt = self.t[1] - self.t[0]
         f, _ = psd(self.x, dt)
-        self.assertAlmostEqual(np.min(f), 0., delta=1.e-6)
+        self.assertAlmostEqual(np.min(f), 0.0, delta=1.0e-6)
 
     def test_find_maxima_global(self):
-        """ 
+        """
         Check that correct number of global maxima is found
         * end points shoult not be included
         * if down-crossing after last up-crossing, peak in-between should be included
-        
+
         This test would have caught issue #106: https://github.com/dnvgl/qats/issues/106
         """
         db = TsDB.fromfile(self.peaks_path)
@@ -138,14 +176,14 @@ class TestSignal(unittest.TestCase):
 
         # this time series has 842 global maxima
         # * the last global maximum is between an up-crossing and a down-crossing
-        # * the last up-crossing is between the last two points in the series - this 
+        # * the last up-crossing is between the last two points in the series - this
         #   previously lead find_maxima() to erroneously identify the end point as an
         #   additional global maximum (=> 843 maxima), ref. issue 106.
         x1 = ts.x
         peaks1, _ = find_maxima(x1, local=False)
         npeaks1 = peaks1.size
         self.assertEqual(npeaks1, 842)
-        
+
         # also check that if the last mean-level crossing is a down-crossing, the
         # global maximum of this last half-cycle is included (otherwise, only 841 peaks
         # will be found)
@@ -154,5 +192,6 @@ class TestSignal(unittest.TestCase):
         npeaks2 = peaks2.size
         self.assertEqual(npeaks2, 842)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

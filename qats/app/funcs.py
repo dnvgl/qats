@@ -1,6 +1,7 @@
 """
 Module with functions for handling file operations and calculations. Made for multithreading.
 """
+
 import numpy as np
 
 from ..fatigue.rainflow import rebin as rebin_cycles
@@ -39,7 +40,7 @@ def calculate_psd(container, twin, fargs, nperseg, normalize):
         #       "nperseg = {nperseg} is greater than input length = {input_length:d}, using nperseg = {input_length:d}"
         t, _ = ts.get(twin=twin, resample=ts.dt)
         nperseg_ = np.min((nperseg, t.size))
-        # calculate power spectral density 
+        # calculate power spectral density
         # (resampling to average time step for robustness, necessary for series with varying time step)
         f, s = ts.psd(twin=twin, filterargs=fargs, resample=ts.dt, taperfrac=0.1, nperseg=nperseg_, normalize=normalize)
         container_out[name] = tuple([f, s])
@@ -75,13 +76,13 @@ def calculate_rfc(container, twin, fargs, nbins):
 
         # rebin
         if nbins is not None:
-            cycles = rebin_cycles(cycles, binby='range', n=nbins)
+            cycles = rebin_cycles(cycles, binby="range", n=nbins)
 
         # handle empty cycles
         if len(cycles) == 0:
             container_out[name] = ((), ())
             continue
-        
+
         # unpack pairs (tuples) in list
         r, _, c = zip(*cycles)
         container_out[name] = tuple([r, c])
@@ -114,8 +115,7 @@ def calculate_trace(container, twin, fargs):
         xmin, tmin = ts.minima(twin=twin, filterargs=fargs, rettime=True)
         xmax, tmax = ts.maxima(twin=twin, filterargs=fargs, rettime=True)
 
-        container_out[name] = dict(t=t, x=x, tmin=tmin, xmin=xmin,
-                                   tmax=tmax, xmax=xmax)
+        container_out[name] = dict(t=t, x=x, tmin=tmin, xmin=xmin, tmax=tmax, xmax=xmax)
 
     return container_out
 
@@ -140,8 +140,17 @@ def calculate_stats(container, twin, fargs, minima=False):
     dict
         Filtered and windowed time series and peaks/throughs
     """
-    return {name: ts.stats(twin=twin, filterargs=fargs, statsdur=10800., quantiles=(0.37, 0.57, 0.9),
-                           is_minima=minima, include_sample=True) for name, ts in container.items()}
+    return {
+        name: ts.stats(
+            twin=twin,
+            filterargs=fargs,
+            statsdur=10800.0,
+            quantiles=(0.37, 0.57, 0.9),
+            is_minima=minima,
+            include_sample=True,
+        )
+        for name, ts in container.items()
+    }
 
 
 def calculate_gumbel_fit(container, twin, fargs, minima=False):
@@ -165,7 +174,7 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False):
         Sample and fitted gumbel distribution parameters
     """
     if len(container.keys()) < 2:
-        raise ValueError(f"Select more than 1 time series to fit Gumbel CDF to extremes sample.")
+        raise ValueError("Select more than 1 time series to fit Gumbel CDF to extremes sample.")
 
     # create sample of extremes
     sample = list()
@@ -247,4 +256,3 @@ def read_timeseries(db, names):
         Container with TimeSeries objects
     """
     return db.getm(names=names, store=False)
-

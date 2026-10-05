@@ -5,40 +5,68 @@ Module containing windows, widgets etc. to create the QATS application
 
 @author: perl
 """
+
+import atexit
+import contextlib
+import importlib.resources
 import json
 import logging
 import os
 import sys
 from itertools import cycle
 
-import importlib.resources, contextlib, atexit
-import numpy as np
 # NOTE: import qtpy before the matplotlib Qt backend so that qtpy resolves the
 # Qt binding (and sets QT_API) first; matplotlib then uses the same binding.
 from qtpy import API_NAME as QTPY_API_NAME
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox, QDialog,
-                            QDialogButtonBox, QDoubleSpinBox, QFileDialog,
-                            QFrame, QGroupBox, QHBoxLayout, QHeaderView,
-                            QLabel, QLineEdit, QListView, QMainWindow,
-                            QMessageBox, QPushButton, QRadioButton, QSpinBox,
-                            QSplitter, QTabBar, QVBoxLayout, QWidget)
+from qtpy.QtCore import QRegularExpression, QSortFilterProxyModel, Qt, QThreadPool
+from qtpy.QtGui import QGuiApplication, QIcon, QPalette, QStandardItem, QStandardItemModel
+from qtpy.QtWidgets import (
+    QAction,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QDoubleSpinBox,
+    QFileDialog,
+    QFrame,
+    QGroupBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QListView,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QRadioButton,
+    QSpinBox,
+    QSplitter,
+    QTabBar,
+    QVBoxLayout,
+    QWidget,
+)
+
 import matplotlib
-from matplotlib.backends.backend_qtagg import \
-    FigureCanvasQTAgg as FigureCanvas
+import numpy as np
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+from .. import __version__
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
-from .funcs import (calculate_gumbel_fit, calculate_psd, calculate_rfc,
-                    calculate_stats, calculate_trace, export_to_file,
-                    import_from_file, read_timeseries)
+from .funcs import (
+    calculate_gumbel_fit,
+    calculate_psd,
+    calculate_rfc,
+    calculate_stats,
+    calculate_trace,
+    export_to_file,
+    import_from_file,
+    read_timeseries,
+)
 from .logger import QLogger
 from .threading import Worker
-from .widgets import (CustomTableWidget, CustomTableWidgetItem,
-                      CustomTabWidget, WhiteSaveNavigationToolbar)
-from .. import __version__
+from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget, WhiteSaveNavigationToolbar
 
 LOGGING_LEVELS = dict(
     debug=logging.DEBUG,
@@ -61,8 +89,24 @@ ICON_PATH = icofile_manager.enter_context(importlib.resources.as_file(icoref))
 ICON_FILE = str(ICON_PATH.absolute())
 
 # define statistics to calculate
-STATS_ORDER = ["name", "min", "max", "mean", "std", "skew", "kurt", "tz", "wloc", "wscale", "wshape",
-               "gloc", "gscale", "p_37.00", "p_57.00", "p_90.00"]
+STATS_ORDER = [
+    "name",
+    "min",
+    "max",
+    "mean",
+    "std",
+    "skew",
+    "kurt",
+    "tz",
+    "wloc",
+    "wscale",
+    "wshape",
+    "gloc",
+    "gscale",
+    "p_37.00",
+    "p_57.00",
+    "p_90.00",
+]
 STATS_LABELS_TOOLTIPS = {
     "name": ("Name", "Time series name."),
     "min": ("Min.", "Sample minimum."),
@@ -72,27 +116,46 @@ STATS_LABELS_TOOLTIPS = {
     "skew": ("Skew.", "Skewness."),
     "kurt": ("Kurt.", "Kurtosis, Pearson’s definition (3.0 --> normal)."),
     "tz": ("Tz", "Average mean crossing period (s)."),
-    "wloc": ("Wloc", "Weibull location parameter in distribution fitted to\n"
-                     "sample maxima or -1 multiplied with the sample minima."),
-    "wscale": ("Wscale", "Weibull scale parameter in distribution fitted to\n"
-                         "sample maxima or -1 multiplied with the sample minima."),
-    "wshape": ("Wshape", "Weibull shape parameter in distribution fitted to\n"
-                         "sample maxima or -1 multiplied with the sample minima."),
-    "gloc": ("Gloc", "Gumbel location parameter in sample extreme distribution,\n"
-                     "derived from sample maxima/minima distribution."),
-    "gscale": ("Gscale", "Gumbel location parameter in sample extreme distribution,\n"
-                         "derived from sample maxima/minima distribution."),
-    "p_37.00": ("P .37", "Most probable largest maximum (MPM). 37 percentile in\n"
-                         "the extreme maxima/minima distribution. The generic\n"
-                         "Gumbel (extreme value) distribution is derived from the Weibull\n"
-                         "distribution fitted to sample maxima/minima."),
-    "p_57.00": ("P .57", "Expected largest maximum. 57 percentile in\n"
-                         "the extreme maxima/minima distribution. The generic\n"
-                         "Gumbel (extreme value) distribution is derived from the Weibull\n"
-                         "distribution fitted to sample maxima/minima."),
-    "p_90.00": ("P .90", "90 percentile in the extreme maxima/minima distribution.\n"
-                         "The generic Gumbel (extreme value) distribution is derived from the\n"
-                         "Weibull distribution fitted to sample maxima/minima."),
+    "wloc": (
+        "Wloc",
+        "Weibull location parameter in distribution fitted to\nsample maxima or -1 multiplied with the sample minima.",
+    ),
+    "wscale": (
+        "Wscale",
+        "Weibull scale parameter in distribution fitted to\nsample maxima or -1 multiplied with the sample minima.",
+    ),
+    "wshape": (
+        "Wshape",
+        "Weibull shape parameter in distribution fitted to\nsample maxima or -1 multiplied with the sample minima.",
+    ),
+    "gloc": (
+        "Gloc",
+        "Gumbel location parameter in sample extreme distribution,\nderived from sample maxima/minima distribution.",
+    ),
+    "gscale": (
+        "Gscale",
+        "Gumbel location parameter in sample extreme distribution,\nderived from sample maxima/minima distribution.",
+    ),
+    "p_37.00": (
+        "P .37",
+        "Most probable largest maximum (MPM). 37 percentile in\n"
+        "the extreme maxima/minima distribution. The generic\n"
+        "Gumbel (extreme value) distribution is derived from the Weibull\n"
+        "distribution fitted to sample maxima/minima.",
+    ),
+    "p_57.00": (
+        "P .57",
+        "Expected largest maximum. 57 percentile in\n"
+        "the extreme maxima/minima distribution. The generic\n"
+        "Gumbel (extreme value) distribution is derived from the Weibull\n"
+        "distribution fitted to sample maxima/minima.",
+    ),
+    "p_90.00": (
+        "P .90",
+        "90 percentile in the extreme maxima/minima distribution.\n"
+        "The generic Gumbel (extreme value) distribution is derived from the\n"
+        "Weibull distribution fitted to sample maxima/minima.",
+    ),
 }
 
 # todo: New method that generalize threading
@@ -108,9 +171,9 @@ class Qats(QMainWindow):
 
     Contain widgets for plotting time series, power spectra and statistics.
 
-    Series of data are loaded from a time series file (e.g., .ts), and their names are displayed in a checkable 
-    list view. The user can select the series it wants from the list and plot them on a matplotlib canvas. The 
-    base library is used to load time series from file (`qats.io`), perform signal processing (`qats.signal`), 
+    Series of data are loaded from a time series file (e.g., .ts), and their names are displayed in a checkable
+    list view. The user can select the series it wants from the list and plot them on a matplotlib canvas. The
+    base library is used to load time series from file (`qats.io`), perform signal processing (`qats.signal`),
     calculating power spectra and statistics (`qats.stats`) and plotting.
     """
 
@@ -175,13 +238,14 @@ class Qats(QMainWindow):
         w = QWidget()
         self.tabs.addTab(w, "Time history")
         self.tabs.setTabToolTip(0, "Plot data versus time for selected time series")
-        self.tabs.tabBar().setTabButton(0, QTabBar.RightSide, None)     # disable close button
+        self.tabs.tabBar().setTabButton(0, QTabBar.RightSide, None)  # disable close button
         self.history_fig = Figure()
         self.history_canvas = FigureCanvas(self.history_fig)
         self.history_canvas.setParent(w)
         self.history_axes = self.history_fig.add_subplot(111)
-        self.history_mpl_toolbar = WhiteSaveNavigationToolbar(self.history_canvas, self.upper_left_frame,
-                                                              dark_colors=self.dark_plot_colors)
+        self.history_mpl_toolbar = WhiteSaveNavigationToolbar(
+            self.history_canvas, self.upper_left_frame, dark_colors=self.dark_plot_colors
+        )
         vbox = QVBoxLayout()
         vbox.addWidget(self.history_canvas)
         vbox.addWidget(self.history_mpl_toolbar)
@@ -196,8 +260,9 @@ class Qats(QMainWindow):
         self.spectrum_canvas = FigureCanvas(self.spectrum_fig)
         self.spectrum_canvas.setParent(w)
         self.spectrum_axes = self.spectrum_fig.add_subplot(111)
-        self.spectrum_mpl_toolbar = WhiteSaveNavigationToolbar(self.spectrum_canvas, self.upper_left_frame,
-                                                               dark_colors=self.dark_plot_colors)
+        self.spectrum_mpl_toolbar = WhiteSaveNavigationToolbar(
+            self.spectrum_canvas, self.upper_left_frame, dark_colors=self.dark_plot_colors
+        )
         vbox = QVBoxLayout()
         vbox.addWidget(self.spectrum_canvas)
         vbox.addWidget(self.spectrum_mpl_toolbar)
@@ -209,7 +274,7 @@ class Qats(QMainWindow):
         self.tabs.setTabToolTip(2, "Sample statistics for the selected time series")
         self.tabs.tabBar().setTabButton(2, QTabBar.RightSide, None)  # disable close button
         self.stats_table = CustomTableWidget()
-        self.stats_table_initial_sort = None   # variable used to enable resetting of sorting order
+        self.stats_table_initial_sort = None  # variable used to enable resetting of sorting order
         self.stats_table_initial_order = None  # variable used to enable resetting of sorting order
         vbox = QVBoxLayout()
         vbox.addWidget(self.stats_table)
@@ -219,15 +284,17 @@ class Qats(QMainWindow):
         # weibull paper plot tab
         w = QWidget()
         self.tabs.addTab(w, "Maxima/Minima CDF")
-        self.tabs.setTabToolTip(3, "Plot fitted Weibull cumulative distribution function to maxima/minima of "
-                                   "selected time series")
+        self.tabs.setTabToolTip(
+            3, "Plot fitted Weibull cumulative distribution function to maxima/minima of selected time series"
+        )
         self.tabs.tabBar().setTabButton(3, QTabBar.RightSide, None)  # disable close button
         self.weibull_fig = Figure()
         self.weibull_canvas = FigureCanvas(self.weibull_fig)
         self.weibull_canvas.setParent(w)
         self.weibull_axes = self.weibull_fig.add_subplot(111)
-        self.weibull_mpl_toolbar = WhiteSaveNavigationToolbar(self.weibull_canvas, self.upper_left_frame,
-                                                              dark_colors=self.dark_plot_colors)
+        self.weibull_mpl_toolbar = WhiteSaveNavigationToolbar(
+            self.weibull_canvas, self.upper_left_frame, dark_colors=self.dark_plot_colors
+        )
         vbox = QVBoxLayout()
         vbox.addWidget(self.weibull_canvas)
         vbox.addWidget(self.weibull_mpl_toolbar)
@@ -236,15 +303,15 @@ class Qats(QMainWindow):
         # cycle distribution plot tab
         w = QWidget()
         self.tabs.addTab(w, "Cycle distribution")
-        self.tabs.setTabToolTip(4, "Plot distribution of cycle magnitude versus cycle count for "
-                                   "selected time series")
+        self.tabs.setTabToolTip(4, "Plot distribution of cycle magnitude versus cycle count for selected time series")
         self.tabs.tabBar().setTabButton(4, QTabBar.RightSide, None)  # disable close button
         self.cycles_fig = Figure()
         self.cycles_canvas = FigureCanvas(self.cycles_fig)
         self.cycles_canvas.setParent(w)
         self.cycles_axes = self.cycles_fig.add_subplot(111)
-        self.cycles_mpl_toolbar = WhiteSaveNavigationToolbar(self.cycles_canvas, self.upper_left_frame,
-                                                             dark_colors=self.dark_plot_colors)
+        self.cycles_mpl_toolbar = WhiteSaveNavigationToolbar(
+            self.cycles_canvas, self.upper_left_frame, dark_colors=self.dark_plot_colors
+        )
         vbox = QVBoxLayout()
         vbox.addWidget(self.cycles_canvas)
         vbox.addWidget(self.cycles_mpl_toolbar)
@@ -305,16 +372,16 @@ class Qats(QMainWindow):
         self.to_time.setRange(0, 1e12)
         self.from_time.setEnabled(True)
         self.to_time.setEnabled(True)
-        self.from_time.setSingleStep(10**(-ndecimals))
-        self.to_time.setSingleStep(10**(-ndecimals))
+        self.from_time.setSingleStep(10 ** (-ndecimals))
+        self.to_time.setSingleStep(10 ** (-ndecimals))
         self.from_time.setSuffix(" s")
         self.to_time.setSuffix(" s")
         self.to_time.setDecimals(ndecimals)
         self.from_time.setDecimals(ndecimals)
         spins_hbox = QHBoxLayout()
-        spins_hbox.addWidget(QLabel('from'))
+        spins_hbox.addWidget(QLabel("from"))
         spins_hbox.addWidget(self.from_time)
-        spins_hbox.addWidget(QLabel('to'))
+        spins_hbox.addWidget(QLabel("to"))
         spins_hbox.addWidget(self.to_time)
         spins_hbox.addStretch(1)
         time_group.setLayout(spins_hbox)
@@ -325,8 +392,9 @@ class Qats(QMainWindow):
 
         # mutual exclusive peaks/troughs radio buttons
         minmax_group = QGroupBox("Select statistical quantity")
-        minmax_group.setToolTip("Select maxima or minima as basis for the fitted and plotted cumulative"
-                                " distribution functions. ")
+        minmax_group.setToolTip(
+            "Select maxima or minima as basis for the fitted and plotted cumulative distribution functions. "
+        )
         self.maxima = QRadioButton("Maxima")
         self.minima = QRadioButton("Minima")
         self.show_minmax = QCheckBox("Show in plot")
@@ -398,9 +466,15 @@ class Qats(QMainWindow):
         bandblock_hbox.addWidget(self.bandblock_hf)
 
         # set range, decimals and suffix of frequency filter range spin boxes
-        for w in [self.lowpass_f, self.hipass_f, self.bandpass_lf, self.bandpass_hf, self.bandblock_lf,
-                  self.bandblock_hf]:
-            w.setRange(0.0, 50.)
+        for w in [
+            self.lowpass_f,
+            self.hipass_f,
+            self.bandpass_lf,
+            self.bandpass_hf,
+            self.bandblock_lf,
+            self.bandblock_hf,
+        ]:
+            w.setRange(0.0, 50.0)
             w.setDecimals(3)
             w.setSuffix(" Hz")
 
@@ -496,8 +570,9 @@ class Qats(QMainWindow):
         quit_action.triggered.connect(self.close)
 
         plot_gumbel_action = QAction("Plot extremes CDF", self)
-        plot_gumbel_action.setToolTip("Plot fitted Gumbel cumulative distribution function to extremes"
-                                      " in selected time series")
+        plot_gumbel_action.setToolTip(
+            "Plot fitted Gumbel cumulative distribution function to extremes in selected time series"
+        )
         plot_gumbel_action.triggered.connect(self.on_create_gumbel_plot)
 
         about_action = QAction("&About", self)
@@ -565,13 +640,13 @@ class Qats(QMainWindow):
         Return filter type and cut off frequencies
         """
         if self.lowpass.isChecked():
-            args = ('lp', self.lowpass_f.value())
+            args = ("lp", self.lowpass_f.value())
         elif self.hipass.isChecked():
-            args = ('hp', self.hipass_f.value())
+            args = ("hp", self.hipass_f.value())
         elif self.bandpass.isChecked():
-            args = ('bp', self.bandpass_lf.value(), self.bandpass_hf.value())
+            args = ("bp", self.bandpass_lf.value(), self.bandpass_hf.value())
         elif self.bandblock.isChecked():
-            args = ('bs', self.bandblock_lf.value(), self.bandblock_hf.value())
+            args = ("bs", self.bandblock_lf.value(), self.bandblock_hf.value())
         else:
             args = None
 
@@ -580,8 +655,15 @@ class Qats(QMainWindow):
     def keyPressEvent(self, e):
         selected = self.stats_table.selectedRanges()
         if e.key() == Qt.Key_C:  # Ctr+C
-            s = "\t".join([str(self.stats_table.horizontalHeaderItem(i).text()) for i in
-                                  range(selected[0].leftColumn(), selected[0].rightColumn() + 1)]) + "\n"
+            s = (
+                "\t".join(
+                    [
+                        str(self.stats_table.horizontalHeaderItem(i).text())
+                        for i in range(selected[0].leftColumn(), selected[0].rightColumn() + 1)
+                    ]
+                )
+                + "\n"
+            )
 
             for r in range(selected[0].topRow(), selected[0].bottomRow() + 1):
                 for c in range(selected[0].leftColumn(), selected[0].rightColumn() + 1):
@@ -628,11 +710,10 @@ class Qats(QMainWindow):
             with open(self.settings_file) as fp:
                 self.settings = json.load(fp)
         except (FileNotFoundError, json.decoder.JSONDecodeError):
-            # If settings file doesn't exist, create empty dict for settings 
-            # Do this also if JSONDecodeError (may occur if settings file is empty, and doesn't 
+            # If settings file doesn't exist, create empty dict for settings
+            # Do this also if JSONDecodeError (may occur if settings file is empty, and doesn't
             # even contain an empty json string, see issue 128: https://github.com/dnvgl/qats/issues/128)
             self.settings = dict()
-
 
     def model_view_filter_changed(self):
         """
@@ -645,37 +726,39 @@ class Qats(QMainWindow):
         pattern = self.db_view_filter_pattern.text()
         # case sensitivity (if 'Case sensitive filter' is checked)
         case_sensitive = self.db_view_filter_casesensitivity.isChecked()
-        
+
         # the code below works for python qt5 (pyside2/pyqt5) and qt6 (pyside6/pyqt6)
-        # pyside6: see the following links for documentation on QRegularExpression and the filter model (QSortFilterProxyModel)
+        # pyside6: see the following links for documentation on QRegularExpression and the filter model
+        # (QSortFilterProxyModel)
         #   https://doc.qt.io/qtforpython-6/PySide6/QtCore/QRegularExpression.html
         #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#filtering
         #   https://doc-snapshots.qt.io/qtforpython-6.2/PySide6/QtCore/QSortFilterProxyModel.html#PySide6.QtCore.QSortFilterProxyModel.filterAcceptsRow
 
         # notes on the methods available for self.db_proxy_model (type: QSortFilterProxyModel)
-        #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
+        #   .setFilterCaseSensitivity(Qt.CaseSensitive | Qt.CaseInsensitive) may be used with
+        #   .setFilterWildcard(pattern) and .setFilterFixedString(pattern)
         #   .setFilterRegularExpression(QRegularExpression) may not be used with .setFilterCaseSensitivity(...)
-        #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks the binding to what previously set)
+        #       * setting a new regular expression propagates its case sensitivity to .filterCaseSensitivity (-> breaks
+        #           the binding to what previously set)
         #       * setting a filter case sensitivity afterwards breaks the binding to the regular expression
-        
+
         # construct regexp string that may be used to initiate QRegularExpression instance
         if filter_type == "wildcard":
             # pad with wildcard ('*') to get expected behaviour
             reg_exp_pattern = QRegularExpression.wildcardToRegularExpression(
-                f"*{pattern}*", 
-                options=QRegularExpression.WildcardConversionOption.NonPathWildcardConversion
-                )
+                f"*{pattern}*", options=QRegularExpression.WildcardConversionOption.NonPathWildcardConversion
+            )
         elif filter_type == "regexp":
             # pattern string should be interpreted as a regexp pattern
             reg_exp_pattern = pattern
         elif filter_type == "fixedstring":
-            # according to https://doc.qt.io/qt-6/qregexp.html, a fixed string is 
-            # equivalent to using the regexp pattern on a string in which all 
+            # according to https://doc.qt.io/qt-6/qregexp.html, a fixed string is
+            # equivalent to using the regexp pattern on a string in which all
             # metacharacters are escaped using escape()
             reg_exp_pattern = QRegularExpression.escape(pattern)
         else:
             raise ValueError(f"Unsupported filter type: {filter_type}")
-    
+
         # options (for case sensitivity) to QRegularExpression construction
         if case_sensitive:
             # case sensitive is default for QRegularExpression => no options
@@ -686,7 +769,7 @@ class Qats(QMainWindow):
 
         # initiate QRegularExpression instance
         reg_exp = QRegularExpression(reg_exp_pattern, **options)
-        
+
         # assign reg exp to proxy model filter
         # (but only if reg exp is valid, which is not always the case when user is still typing)
         if reg_exp.isValid():
@@ -696,14 +779,16 @@ class Qats(QMainWindow):
         """
         Show information about the application
         """
-        msg = "This is a low threshold tool for inspection of time series, power spectra and statistics. " \
-              "Its main objective is to ease self-check, quality assurance and reporting.<br><br>" \
-              "Import qats Python package and use the <a href='https://qats.readthedocs.io/en/latest/'>API</a> " \
-              "when you need advanced features or want to extend it's functionality.<br><br>" \
-              "Please send feature requests, technical queries and bug reports to the developers on " \
-              "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>" \
-              "ENJOY! <br><br>" \
-              f"QT API used: {QTPY_API_NAME}"
+        msg = (
+            "This is a low threshold tool for inspection of time series, power spectra and statistics. "
+            "Its main objective is to ease self-check, quality assurance and reporting.<br><br>"
+            "Import qats Python package and use the <a href='https://qats.readthedocs.io/en/latest/'>API</a> "
+            "when you need advanced features or want to extend it's functionality.<br><br>"
+            "Please send feature requests, technical queries and bug reports to the developers on "
+            "<a href='https://github.com/dnvgl/qats/issues'>Github</a>.<br><br>"
+            "ENJOY! <br><br>"
+            f"QT API used: {QTPY_API_NAME}"
+        )
 
         msgbox = QMessageBox()
         msgbox.setWindowIcon(self.icon)
@@ -789,27 +874,31 @@ class Qats(QMainWindow):
         # file save dialogue
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
+        dlg.setViewMode(QFileDialog.Detail)  # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
-        name, _ = dlg.getSaveFileName(dlg, "Export time series to file", "",
-                                      "Direct access file (*.ts);;"
-                                      "ASCII file with header (*.dat);;"
-                                      "SIMA H5 file (*.h5);;"
-                                      "DataFrame Pickle file (*.pkl *.pickle);;"
-                                      "All Files (*)")
+        name, _ = dlg.getSaveFileName(
+            dlg,
+            "Export time series to file",
+            "",
+            "Direct access file (*.ts);;"
+            "ASCII file with header (*.dat);;"
+            "SIMA H5 file (*.h5);;"
+            "DataFrame Pickle file (*.pkl *.pickle);;"
+            "All Files (*)",
+        )
 
         # get list of selected time series
         keys = self.selected_series()
-        
+
         # if none are selected, export all
-        if not keys: 
+        if not keys:
             keys = self.db.register_keys
 
         # get ui settings
         fargs = self.filter_settings()
         twin = self.time_window()
 
-        if name:    # nullstring if file dialog is cancelled
+        if name:  # nullstring if file dialog is cancelled
             # update statusbar
             self.set_status("Exporting....")
 
@@ -831,20 +920,24 @@ class Qats(QMainWindow):
         """
         dlg = QFileDialog()
         dlg.setWindowIcon(self.icon)
-        dlg.setViewMode(QFileDialog.Detail) # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
+        dlg.setViewMode(QFileDialog.Detail)  # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
-        files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "",
-                                        "Direct access files (*.ts);;"
-                                        "SIMO S2X direct access files with info array (*.tda);;"
-                                        "RIFLEX SIMO binary files (*.bin);;"
-                                        "RIFLEX SIMO ASCII files (*.asc);;"
-                                        "SINTEF Ocean test data export format (*.mat);;"
-                                        "ASCII file with header (*.dat);;"
-                                        "SIMA H5 files (*.h5);;"
-                                        "CSV file with header (*.csv);;"
-                                        "Technical Data Management Streaming files (*.tdms);;"
-                                        "DataFrame Pickle file (*.pkl *.pickle);;"
-                                        "All Files (*)")
+        files, _ = dlg.getOpenFileNames(
+            dlg,
+            "Load time series files",
+            "",
+            "Direct access files (*.ts);;"
+            "SIMO S2X direct access files with info array (*.tda);;"
+            "RIFLEX SIMO binary files (*.bin);;"
+            "RIFLEX SIMO ASCII files (*.asc);;"
+            "SINTEF Ocean test data export format (*.mat);;"
+            "ASCII file with header (*.dat);;"
+            "SIMA H5 files (*.h5);;"
+            "CSV file with header (*.csv);;"
+            "Technical Data Management Streaming files (*.tdms);;"
+            "DataFrame Pickle file (*.pkl *.pickle);;"
+            "All Files (*)",
+        )
 
         # load files into db and update application model and view
         self.load_files(files)
@@ -956,20 +1049,20 @@ class Qats(QMainWindow):
         # clear axes
         self.history_axes.clear()
         self.history_axes.grid(True)
-        self.history_axes.set_xlabel('Time (s)')
+        self.history_axes.set_xlabel("Time (s)")
 
         # draw
         for name, data in container.items():
             # plot timetrace
-            self.history_axes.plot(data.get('t'), data.get('x'), '-', label=name)
+            self.history_axes.plot(data.get("t"), data.get("x"), "-", label=name)
 
             # include maxima/minima if requested
             if self.show_minmax.isChecked() and self.maxima.isChecked():
                 # maxima
-                self.history_axes.plot(data.get('tmax'), data.get('xmax'), 'o')
+                self.history_axes.plot(data.get("tmax"), data.get("xmax"), "o")
             elif self.show_minmax.isChecked() and self.minima.isChecked():
                 # minima
-                self.history_axes.plot(data.get('tmin'), data.get('xmin'), 'o')
+                self.history_axes.plot(data.get("tmin"), data.get("xmin"), "o")
 
             self.history_axes.legend(loc="upper left")
             self.history_canvas.draw()
@@ -988,13 +1081,13 @@ class Qats(QMainWindow):
         # clear axes
         self.spectrum_axes.clear()
         self.spectrum_axes.grid(True)
-        self.spectrum_axes.set_xlabel('Frequency (Hz)')
-        self.spectrum_axes.set_ylabel('Power spectral density')
+        self.spectrum_axes.set_xlabel("Frequency (Hz)")
+        self.spectrum_axes.set_ylabel("Power spectral density")
 
         # draw
         for name, value in container.items():
             f, s = value
-            self.spectrum_axes.plot(f, s, '-', label=name)
+            self.spectrum_axes.plot(f, s, "-", label=name)
             self.spectrum_axes.legend(loc="upper left")
             self.spectrum_canvas.draw()
 
@@ -1011,8 +1104,8 @@ class Qats(QMainWindow):
         """
         self.cycles_axes.clear()
         self.cycles_axes.grid(True)
-        self.cycles_axes.set_xlabel('Cycle range')
-        self.cycles_axes.set_ylabel('Cycle count (-)')
+        self.cycles_axes.set_xlabel("Cycle range")
+        self.cycles_axes.set_ylabel("Cycle count (-)")
 
         # cycle bar colors through matplotlib's default color cycle
         # (readable on both light and dark backgrounds)
@@ -1020,7 +1113,7 @@ class Qats(QMainWindow):
 
         # draw
         for name, value in container.items():
-            crange, count = value    # unpack magnitude and count
+            crange, count = value  # unpack magnitude and count
 
             try:
                 # width of bars
@@ -1052,12 +1145,12 @@ class Qats(QMainWindow):
         """
         self.weibull_axes.clear()
         self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel('X - location')
-        self.weibull_axes.set_ylabel('Cumulative probability (-)')
+        self.weibull_axes.set_xlabel("X - location")
+        self.weibull_axes.set_ylabel("Cumulative probability (-)")
 
         # labels and tick positions for weibull paper plot
         p_labels = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-        p_ticks = np.log(np.log(1. / (1. - p_labels)))
+        p_ticks = np.log(np.log(1.0 / (1.0 - p_labels)))
         x_lb, x_ub = None, None
 
         # draw
@@ -1074,17 +1167,17 @@ class Qats(QMainWindow):
 
             # flip sample to be able to plot sample on weibull scales
             if is_minima:
-                x *= -1.
+                x *= -1.0
 
             # normalize maxima/minima sample on weibull scales
             x = np.sort(x)  # sort ascending
-            mask = (x >= loc)  # weibull paper plot will fail for mv-loc < 0
+            mask = x >= loc  # weibull paper plot will fail for mv-loc < 0
             x_norm = np.log(x[mask] - loc)
-            ecdf_norm = np.log(np.log(1. / (1. - (np.arange(x.size) + 1.) / (x.size + 1.))))
-            q_fitted = scale * (-np.log(1. - p_labels)) ** (1. / shape)  # x-loc
+            ecdf_norm = np.log(np.log(1.0 / (1.0 - (np.arange(x.size) + 1.0) / (x.size + 1.0))))
+            q_fitted = scale * (-np.log(1.0 - p_labels)) ** (1.0 / shape)  # x-loc
 
             # consider switching to np.any(), not sure what is more correct
-            if np.all(q_fitted <= 0.):
+            if np.all(q_fitted <= 0.0):
                 logging.warning("Invalid sample for time series '%s'. Cannot fit Weibull distribution." % name)
 
             else:
@@ -1107,22 +1200,22 @@ class Qats(QMainWindow):
                 # calculate axes tick and labels
                 labels_sample = np.around(np.linspace(x_lb, x_ub, 4), decimals=1)
 
-                ticks_sample = np.log(labels_sample[labels_sample > 0.])
+                ticks_sample = np.log(labels_sample[labels_sample > 0.0])
 
                 # and draw weibull paper plot (avoid log(0))
-                self.weibull_axes.plot(x_norm, ecdf_norm[mask], 'o', label=name)
-                self.weibull_axes.plot(q_norm_fitted, p_ticks, '-')
+                self.weibull_axes.plot(x_norm, ecdf_norm[mask], "o", label=name)
+                self.weibull_axes.plot(q_norm_fitted, p_ticks, "-")
 
                 self.weibull_axes.set_xticks(ticks_sample)
                 if self.maxima.isChecked():
-                    self.weibull_axes.set_xticklabels(labels_sample[labels_sample > 0.])
+                    self.weibull_axes.set_xticklabels(labels_sample[labels_sample > 0.0])
                 else:
-                    self.weibull_axes.set_xticklabels(-1. * labels_sample[labels_sample > 0.])
+                    self.weibull_axes.set_xticklabels(-1.0 * labels_sample[labels_sample > 0.0])
 
                 self.weibull_axes.set_ylim((p_labels[0], p_labels[-1]))
                 self.weibull_axes.set_yticks(p_ticks)
                 self.weibull_axes.set_yticklabels(p_labels)
-                self.weibull_axes.legend(loc='upper left')
+                self.weibull_axes.legend(loc="upper left")
                 self.weibull_canvas.draw()
 
             self.set_status("Weibull distribution plot updated", msecs=3000)
@@ -1138,10 +1231,10 @@ class Qats(QMainWindow):
             Sample and fitted Gumbel distribution parameters
         """
         # get sample and fitted distribution parameters
-        sample = container.get('sample')
-        loc = container.get('loc')
-        scale = container.get('scale')
-        is_minima = container.get('minima')
+        sample = container.get("sample")
+        loc = container.get("loc")
+        scale = container.get("scale")
+        is_minima = container.get("minima")
 
         # nomalize sample distribution and fitted distribution
         sample_dist = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
@@ -1160,19 +1253,21 @@ class Qats(QMainWindow):
         w.setLayout(vbox)
         self.tabs.addTab(w, "Extremes CDF")
         tabindex = self.tabs.indexOf(w)
-        self.tabs.setTabToolTip(tabindex, "Plot fitted Gumbel cumulative distribution function "
-                                          "to extremes (maxima/minima) of selected time series")
+        self.tabs.setTabToolTip(
+            tabindex,
+            "Plot fitted Gumbel cumulative distribution function to extremes (maxima/minima) of selected time series",
+        )
         if is_minima:
             # TODO: Double check that this is correct considering sample multiplied with -1 etc.
             axes.invert_xaxis()
-            txt = 'minima'
+            txt = "minima"
         else:
-            txt = 'maxima'
+            txt = "maxima"
 
         # plot
         # TODO: Double check if sample should be multiplied with -1 or not.
-        axes.plot(sample, sample_dist, marker='o', linestyle='', label='Data')
-        axes.plot(sample, fitted_dist, '-m', label='Fitted')
+        axes.plot(sample, sample_dist, marker="o", linestyle="", label="Data")
+        axes.plot(sample, fitted_dist, "-m", label="Fitted")
 
         # plotting positions and plot configurations
         ylabels = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999])
@@ -1186,8 +1281,10 @@ class Qats(QMainWindow):
         canvas.draw()
 
         self.set_status("Gumbel distribution plot created", msecs=3000)
-        logging.info(f"Fitted Gumbel distribution to {txt} extreme sample of {sample.size}'. "
-                     f"(location, scale) = ({loc}, {scale})")
+        logging.info(
+            f"Fitted Gumbel distribution to {txt} extreme sample of {sample.size}'. "
+            f"(location, scale) = ({loc}, {scale})"
+        )
 
     def psd_nperseg(self):
         """int: Length of segments used to estimate PSD with Welch's method."""
@@ -1219,36 +1316,38 @@ class Qats(QMainWindow):
         used by `WhiteSaveNavigationToolbar` to restore the dark style after a
         white-background image export.
         """
-        palette = self.palette()    # inherits the QApplication palette
+        palette = self.palette()  # inherits the QApplication palette
         window = palette.color(QPalette.Window)
-        self.dark_mode = window.lightness() < 128   # robust light/dark test
+        self.dark_mode = window.lightness() < 128  # robust light/dark test
 
         if not self.dark_mode:
             self.dark_plot_colors = None
             return
 
-        fg = palette.color(QPalette.WindowText).name()      # '#rrggbb'
+        fg = palette.color(QPalette.WindowText).name()  # '#rrggbb'
         fig_bg = window.name()
         axes_bg = palette.color(QPalette.Base).name()
         self.dark_plot_colors = dict(fig_bg=fig_bg, axes_bg=axes_bg, fg=fg, grid=fg)
 
-        matplotlib.rcParams.update({
-            "figure.facecolor": fig_bg,
-            "figure.edgecolor": fig_bg,
-            "axes.facecolor":   axes_bg,
-            "axes.edgecolor":   fg,
-            "axes.labelcolor":  fg,
-            "axes.titlecolor":  fg,
-            "text.color":       fg,
-            "xtick.color":      fg,
-            "ytick.color":      fg,
-            "grid.color":       fg,
-            "grid.alpha":       0.25,   # subtle gridlines on dark background
-            "legend.facecolor": axes_bg,
-            "legend.edgecolor": fg,
-            # savefig.* deliberately left at (white) defaults; white exports are
-            # handled by WhiteSaveNavigationToolbar.
-        })
+        matplotlib.rcParams.update(
+            {
+                "figure.facecolor": fig_bg,
+                "figure.edgecolor": fig_bg,
+                "axes.facecolor": axes_bg,
+                "axes.edgecolor": fg,
+                "axes.labelcolor": fg,
+                "axes.titlecolor": fg,
+                "text.color": fg,
+                "xtick.color": fg,
+                "ytick.color": fg,
+                "grid.color": fg,
+                "grid.alpha": 0.25,  # subtle gridlines on dark background
+                "legend.facecolor": axes_bg,
+                "legend.edgecolor": fg,
+                # savefig.* deliberately left at (white) defaults; white exports are
+                # handled by WhiteSaveNavigationToolbar.
+            }
+        )
 
     def reset_axes(self):
         """
@@ -1256,22 +1355,22 @@ class Qats(QMainWindow):
         """
         self.history_axes.clear()
         self.history_axes.grid(True)
-        self.history_axes.set_xlabel('Time (s)')
+        self.history_axes.set_xlabel("Time (s)")
         self.history_canvas.draw()
         self.spectrum_axes.clear()
         self.spectrum_axes.grid(True)
-        self.spectrum_axes.set_xlabel('Frequency (Hz)')
-        self.spectrum_axes.set_ylabel('Spectral density')
+        self.spectrum_axes.set_xlabel("Frequency (Hz)")
+        self.spectrum_axes.set_ylabel("Spectral density")
         self.spectrum_canvas.draw()
         self.weibull_axes.clear()
         self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel('X - location')
-        self.weibull_axes.set_ylabel('Cumulative probability (-)')
+        self.weibull_axes.set_xlabel("X - location")
+        self.weibull_axes.set_ylabel("Cumulative probability (-)")
         self.weibull_canvas.draw()
         self.cycles_axes.clear()
         self.cycles_axes.grid(True)
-        self.cycles_axes.set_xlabel('Cycle magnitude')
-        self.cycles_axes.set_ylabel('Cycle count (-)')
+        self.cycles_axes.set_xlabel("Cycle magnitude")
+        self.cycles_axes.set_ylabel("Cycle count (-)")
         self.cycles_canvas.draw()
 
     def reset_stats_table(self):
@@ -1316,9 +1415,9 @@ class Qats(QMainWindow):
 
         # show temporary message
         if not message:
-            message = ""    # statusbar.showMessage() does not accept NoneType
+            message = ""  # statusbar.showMessage() does not accept NoneType
         if not msecs:
-            msecs = 0       # statusbar.showMessage() does not accept NoneType
+            msecs = 0  # statusbar.showMessage() does not accept NoneType
 
         # self.statusBar().showMessage(message, msecs=msecs)
 
@@ -1365,7 +1464,7 @@ class Qats(QMainWindow):
         self.set_status("Processing...", msecs=3000)
 
         # ui selections
-        twin = self. time_window()
+        twin = self.time_window()
         fargs = self.filter_settings()
         nperseg = self.psd_nperseg()
         psdnorm = self.psd_normalized()
@@ -1409,7 +1508,7 @@ class Qats(QMainWindow):
         self.set_status("Processing...", msecs=3000)
 
         # ui selections
-        twin = self. time_window()
+        twin = self.time_window()
         fargs = self.filter_settings()
 
         # start calculation of filtered and windows time series trace
@@ -1438,7 +1537,7 @@ class Qats(QMainWindow):
                     cell.setToolTip(name)
                 else:
                     value = data.get(key, np.nan)
-                    cell = CustomTableWidgetItem(f"{value:12.5g}")   # works also with nan values
+                    cell = CustomTableWidgetItem(f"{value:12.5g}")  # works also with nan values
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j, cell)
         # store original sorting order first time this function is called
@@ -1475,7 +1574,7 @@ class Qats(QMainWindow):
 
         # fill item model with time series by unique id (common path is removed)
         names = self.db.list(names="*", relative=True, display=False)
-        self.db_source_model.clear()    # clear before re-adding
+        self.db_source_model.clear()  # clear before re-adding
         for name in names:
             # set each item as unchecked initially
             item = QStandardItem(name)
@@ -1505,6 +1604,7 @@ class SettingsDialog(QDialog):
     parent : QWidget, optional
         Parent widget.
     """
+
     def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle("Configure application settings")
@@ -1513,8 +1613,10 @@ class SettingsDialog(QDialog):
 
         # settings checkbox: normalized psd?
         self.psdnormcheckbox = QCheckBox()  # "Plot normalized power spectral density")
-        self.psdnormcheckbox.setToolTip("Normalize power spectral density on maximum value to ease comparison of\n"
-                                        "signals of different order of magnitude.")
+        self.psdnormcheckbox.setToolTip(
+            "Normalize power spectral density on maximum value to ease comparison of\n"
+            "signals of different order of magnitude."
+        )
         self.psdnormcheckbox.setChecked(False)
         if psdnorm:
             self.psdnormcheckbox.setChecked(True)
@@ -1531,10 +1633,12 @@ class SettingsDialog(QDialog):
         self.psdnpersegspinbox.setSingleStep(10)
         self.psdnpersegspinbox.setEnabled(True)
         self.psdnpersegspinbox.setValue(nperseg)
-        self.psdnpersegspinbox.setToolTip("When estimating power spectral density using Welch's method the signal\n"
-                                          "is divided into overlapping segments and psd is estimated for each segment\n"
-                                          "and then averaged. The overlap is half of the segment length. The \n"
-                                          "psd-estimate is smoother with shorter segments.")
+        self.psdnpersegspinbox.setToolTip(
+            "When estimating power spectral density using Welch's method the signal\n"
+            "is divided into overlapping segments and psd is estimated for each segment\n"
+            "and then averaged. The overlap is half of the segment length. The \n"
+            "psd-estimate is smoother with shorter segments."
+        )
         psdlayout = QHBoxLayout()
         psdlayout.addWidget(QLabel("Length of segment used when estimating power spectral density *"))
         psdlayout.addStretch(1)
@@ -1547,8 +1651,9 @@ class SettingsDialog(QDialog):
         self.rfcnbinsspinbox.setSingleStep(1)
         self.rfcnbinsspinbox.setEnabled(True)
         self.rfcnbinsspinbox.setValue(nbins)
-        self.rfcnbinsspinbox.setToolTip("Group the cycles counted using the Rainflow algorithm into a certain number\n"
-                                        "of bins of equal width.")
+        self.rfcnbinsspinbox.setToolTip(
+            "Group the cycles counted using the Rainflow algorithm into a certain number\nof bins of equal width."
+        )
         rfclayout = QHBoxLayout()
         rfclayout.addWidget(QLabel("Number of bins in cycle distribution based on RFC method"))
         rfclayout.addStretch(1)
@@ -1570,8 +1675,13 @@ class SettingsDialog(QDialog):
 
         # help text
         helptext = QHBoxLayout()
-        helptext.addWidget(QLabel("*  Parameter 'nperseg' in scipy.signal.welch \n    (signal length is used if smaller than specified value)\n"
-                                  "** Close and re-open application for this setting to have effect"))
+        helptext.addWidget(
+            QLabel(
+                "*  Parameter 'nperseg' in scipy.signal.welch \n"
+                "    (signal length is used if smaller than specified value)\n"
+                "** Close and re-open application for this setting to have effect"
+            )
+        )
         helptext.addStretch(1)
         layout.addLayout(helptext)
 
@@ -1586,8 +1696,12 @@ class SettingsDialog(QDialog):
 
     def get_settings(self):
         """Collect settings."""
-        return self.psdnormcheckbox.isChecked(), self.psdnpersegspinbox.value(), self.rfcnbinsspinbox.value(), \
-               self.twindecspinbox.value()
+        return (
+            self.psdnormcheckbox.isChecked(),
+            self.psdnpersegspinbox.value(),
+            self.rfcnbinsspinbox.value(),
+            self.twindecspinbox.value(),
+        )
 
     @staticmethod
     def settings(defaults, parent=None):
@@ -1622,5 +1736,3 @@ class SettingsDialog(QDialog):
         logging.debug(f"settings saved: twindec = {twindec}")
         # ---
         return norm, nperseg, nbins, twindec, result == QDialog.Accepted
-
-

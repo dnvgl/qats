@@ -3,6 +3,7 @@
 """
 Fatigue related corrections.
 """
+
 import numpy as np
 
 
@@ -62,8 +63,9 @@ def goodman_haigh(cycles, uts):
     """
     # ensure array and assert 2d
     cycles = np.asarray(cycles)
-    assert cycles.ndim == 2 and cycles.shape[1] == 2, \
+    assert cycles.ndim == 2 and cycles.shape[1] == 2, (
         "Cycles must be specified as 2D array or shape (n, 2) (or: list of 2-tuples)"
+    )
 
     # unpack
     ranges, means = cycles.T
@@ -72,4 +74,3 @@ def goodman_haigh(cycles, uts):
     corrected_ranges = ranges * (uts / (uts - means))
 
     return corrected_ranges
-

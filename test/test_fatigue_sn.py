@@ -22,7 +22,7 @@ class TestFatigueSn(unittest.TestCase):
         Common setup for all tests
         """
         # define sn curve parameters
-        self.sndict_studless = dict( # single slope S-N curve, here: DNVGL-OS-E301 curve for studless chain
+        self.sndict_studless = dict(  # single slope S-N curve, here: DNVGL-OS-E301 curve for studless chain
             name="Studless chain OS-E301",
             m1=3.0,
             a1=6e10,
@@ -53,13 +53,16 @@ class TestFatigueSn(unittest.TestCase):
         b1_air = self.sn_b1_air
         c_sea = self.sn_c_sea
         # check that correct value of log(a2) is calculated at initiation
-        self.assertAlmostEqual(b1_air.loga2, 17.146, places=3,
-                               msg="SNCurve initiation, wrong value for log10(a2) (curve B1 air)")
-        self.assertAlmostEqual(c_sea.loga2, 16.320, places=3,
-                               msg="SNCurve initiation, wrong value for log10(a2) (curve C sea cp)")
+        self.assertAlmostEqual(
+            b1_air.loga2, 17.146, places=3, msg="SNCurve initiation, wrong value for log10(a2) (curve B1 air)"
+        )
+        self.assertAlmostEqual(
+            c_sea.loga2, 16.320, places=3, msg="SNCurve initiation, wrong value for log10(a2) (curve C sea cp)"
+        )
         # check that correct value of Sswitch (or "fatigue limit") is calculated at initiation
-        self.assertAlmostEqual(b1_air.sswitch, 106.97, places=2,
-                               msg="SNCurve initiation, wrong value for sswitch (curve B1 air)")
+        self.assertAlmostEqual(
+            b1_air.sswitch, 106.97, places=2, msg="SNCurve initiation, wrong value for sswitch (curve B1 air)"
+        )
 
     def test_sncurve_n(self):
         """
@@ -68,11 +71,13 @@ class TestFatigueSn(unittest.TestCase):
         """
         b1_air = self.sn_b1_air
         c_sea = self.sn_c_sea
-        self.assertAlmostEqual(np.log10(b1_air.n(106.967)), 7, places=5,
-                               msg="Wrong fatigue capacity `n` calculated for S-N curve B1 air")
+        self.assertAlmostEqual(
+            np.log10(b1_air.n(106.967)), 7, places=5, msg="Wrong fatigue capacity `n` calculated for S-N curve B1 air"
+        )
         # note: for C (sea, cp), RP-C203 says fatigue limit 73.10 at 1e7 cycles
-        self.assertAlmostEqual(np.log10(c_sea.n(73.114)), 7, places=5,
-                               msg="Wrong fatigue capacity `n` calculated for S-N curve C sea cp")
+        self.assertAlmostEqual(
+            np.log10(c_sea.n(73.114)), 7, places=5, msg="Wrong fatigue capacity `n` calculated for S-N curve C sea cp"
+        )
 
     def test_sncurve_fatigue_strength(self):
         """
@@ -81,11 +86,19 @@ class TestFatigueSn(unittest.TestCase):
         """
         b1_air = self.sn_b1_air
         c_sea = self.sn_c_sea
-        self.assertAlmostEqual(b1_air.fatigue_strength(1e7), 106.97, places=2,
-                               msg="Wrong fatigue strength at 1e7 cycles calculated for S-N curve B1 air")
+        self.assertAlmostEqual(
+            b1_air.fatigue_strength(1e7),
+            106.97,
+            places=2,
+            msg="Wrong fatigue strength at 1e7 cycles calculated for S-N curve B1 air",
+        )
         # note: for C (sea, cp), RP-C203 says fatigue limit 73.10 at 1e7 cycles
-        self.assertAlmostEqual(c_sea.fatigue_strength(1e7), 73.11, places=2,
-                               msg="Wrong fatigue strength at 1e7 cycles calculated for S-N curve C sea cp")
+        self.assertAlmostEqual(
+            c_sea.fatigue_strength(1e7),
+            73.11,
+            places=2,
+            msg="Wrong fatigue strength at 1e7 cycles calculated for S-N curve C sea cp",
+        )
 
     def test_sncurve_sswitch(self):
         """
@@ -94,10 +107,12 @@ class TestFatigueSn(unittest.TestCase):
         """
         b1_air = self.sn_b1_air
         c_sea = self.sn_c_sea
-        self.assertAlmostEqual(b1_air.n(b1_air.sswitch), b1_air.nswitch, places=8,
-                               msg="Wrong 'sswitch' calculated for S-N curve B1 air")
-        self.assertAlmostEqual(c_sea.n(c_sea.sswitch), c_sea.nswitch, places=8,
-                               msg="Wrong 'sswitch' calculated for S-N curve C sea cp")
+        self.assertAlmostEqual(
+            b1_air.n(b1_air.sswitch), b1_air.nswitch, places=8, msg="Wrong 'sswitch' calculated for S-N curve B1 air"
+        )
+        self.assertAlmostEqual(
+            c_sea.n(c_sea.sswitch), c_sea.nswitch, places=8, msg="Wrong 'sswitch' calculated for S-N curve C sea cp"
+        )
 
     def test_minersum(self):
         """
@@ -108,8 +123,9 @@ class TestFatigueSn(unittest.TestCase):
         srange = np.linspace(start, stop, 20)  # stress range histogram
         d = 0.5  # target damage
         count = np.array([c_sea.n(s) for s in srange]) / srange.size * d
-        self.assertAlmostEqual(minersum(srange, count, c_sea), d, places=8,
-                               msg="Wrong fatigue life (damage) from minersum()")
+        self.assertAlmostEqual(
+            minersum(srange, count, c_sea), d, places=8, msg="Wrong fatigue life (damage) from minersum()"
+        )
 
     def test_minersum_scf(self):
         """
@@ -118,12 +134,16 @@ class TestFatigueSn(unittest.TestCase):
         studless = self.sn_studless
         start, stop = studless.fatigue_strength(1e7), studless.fatigue_strength(1e5)
         srange = np.linspace(start, stop, 20)  # stress range histogram
-        d = 0.5     # target damage (excl. SCF)
+        d = 0.5  # target damage (excl. SCF)
         scf = 1.15  # stress concentration factor
-        d_scf = d * scf ** studless.m  # damage incl. SCF
+        d_scf = d * scf**studless.m  # damage incl. SCF
         count = np.array([studless.n(s) for s in srange]) / srange.size * d
-        self.assertAlmostEqual(minersum(srange, count, studless, scf=scf), d_scf, places=8,
-                               msg="Wrong fatigue life (damage) from minersum() with SCF specified")
+        self.assertAlmostEqual(
+            minersum(srange, count, studless, scf=scf),
+            d_scf,
+            places=8,
+            msg="Wrong fatigue life (damage) from minersum() with SCF specified",
+        )
 
     def test_minersum_weibull_bilinear(self):
         """
@@ -136,14 +156,17 @@ class TestFatigueSn(unittest.TestCase):
             3. Compare calculated fatigue damage to fatigue life (damage) specified initially.
         """
         sn = self.sn_b1_air
-        life = 100.
+        life = 100.0
         dyear = 1 / life
         v0 = 0.1  # mean stress cycle frequency
         for h in (0.8, 1.0, 1.1):
             q = _q_calc(life, h, v0, sn)
-            self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from minersum_weibull() for bilinear S-N curve and"
-                                   f" shape={h}")
+            self.assertAlmostEqual(
+                minersum_weibull(q, h, sn, v0, td=31536000),
+                dyear,
+                places=6,
+                msg=f"Wrong fatigue life from minersum_weibull() for bilinear S-N curve and shape={h}",
+            )
 
     def test_minersum_weibull_singleslope(self):
         """
@@ -156,13 +179,17 @@ class TestFatigueSn(unittest.TestCase):
             3. Compare calculated fatigue damage to fatigue life (damage) specified initially.
         """
         sn = self.sn_studless
-        life = 100.
+        life = 100.0
         dyear = 1 / life
         v0 = 0.1  # mean stress cycle frequency
         for h in (0.8, 1.0, 1.1):
             q = _q_calc_single_slope(life, h, v0, sn)
-            self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000), dyear, places=6,
-                                   msg=f"Wrong fatigue life from minersum_weibull() for linear S-N curve and shape={h}")
+            self.assertAlmostEqual(
+                minersum_weibull(q, h, sn, v0, td=31536000),
+                dyear,
+                places=6,
+                msg=f"Wrong fatigue life from minersum_weibull() for linear S-N curve and shape={h}",
+            )
 
     def test_minersum_weibull_scf(self):
         """
@@ -171,17 +198,20 @@ class TestFatigueSn(unittest.TestCase):
         """
         sn = self.sn_studless
         scf = 1.15
-        life = 100.
-        dyear_scf = (1 / life) * scf ** sn.m  # only correct for linear (single slope) S-N curves
-        life_scf = life / scf ** sn.m
+        life = 100.0
+        dyear_scf = (1 / life) * scf**sn.m  # only correct for linear (single slope) S-N curves
         v0 = 0.1  # mean stress cycle frequency
         h = 1.0
         q = _q_calc_single_slope(life, h, v0, sn)
-        self.assertAlmostEqual(minersum_weibull(q, h, sn, v0, td=31536000, scf=scf), dyear_scf, places=6,
-                               msg="SCF not correctly accounting for by minersum_weibull()")
+        self.assertAlmostEqual(
+            minersum_weibull(q, h, sn, v0, td=31536000, scf=scf),
+            dyear_scf,
+            places=6,
+            msg="SCF not correctly accounting for by minersum_weibull()",
+        )
 
 
-def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
+def _q_calc(fatigue_life, h, v0, sn, method="brentq"):
     """
     Calculate Weibull scale parameter (q) that gives specified fatigue life using closed form expression
     in DNV-RP-C03 (2016) eq. F.12-1.
@@ -219,11 +249,11 @@ def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
     q_calc_single_slope
     """
     rootfuncs = {
-        'brentq': brentq,
-        'brenth': brenth,
+        "brentq": brentq,
+        "brenth": brenth,
     }
     if method not in rootfuncs:
-        raise ValueError("method must be either of: %s" % ', '.join(["'%s'" % k for k in rootfuncs.keys()]))
+        raise ValueError("method must be either of: %s" % ", ".join(["'%s'" % k for k in rootfuncs.keys()]))
 
     if type(sn) not in (dict, OrderedDict, defaultdict, SNCurve):
         raise ValueError("`sn` must be dict-like or SNCurve instance")
@@ -232,7 +262,7 @@ def _q_calc(fatigue_life, h, v0, sn, method='brentq'):
         sn = SNCurve("", **sn)
 
     # fatigue life in seconds
-    td = fatigue_life * 3600. * 24 * 365
+    td = fatigue_life * 3600.0 * 24 * 365
 
     # calculate gamma parameters
     eps = np.finfo(float).eps  # machine epsilon
@@ -274,7 +304,7 @@ def _q_calc_single_slope(fatigue_life, h, v0, sn):
         sn = SNCurve("", **sn)
 
     # fatigue life in seconds
-    td = fatigue_life * 3600. * 24 * 365
+    td = fatigue_life * 3600.0 * 24 * 365
 
     # calculate q
     q = (v0 * td / sn.a1 * gamma(1 + sn.m1 / h)) ** (-1 / sn.m1)

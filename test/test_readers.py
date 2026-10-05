@@ -4,22 +4,27 @@ Module for testing io.
 The module utilizes TsDB.fromfile and .get() to read at least one time series from the file, to check that this does not
 generate any exceptions.
 """
+
 import os
 import sys
 import unittest
 from pathlib import Path
-import pandas as pd
-from qats import TsDB
+
 import numpy as np
+import pandas as pd
+
+from qats import TsDB
+
 # todo: add test class for matlab
 
 ROOT = Path(__file__).resolve().parent
+
 
 class TestAllReaders(unittest.TestCase):
     def setUp(self):
         # the data directory used in the test relative to this module
         # necessary to do it like this for the tests to work both locally and in virtual env
-        self.data_directory = os.path.join(ROOT, '..', 'data')
+        self.data_directory = os.path.join(ROOT, "..", "data")
 
         # make pickle file
         self.make_pickle_file_multiindex()
@@ -68,12 +73,12 @@ class TestAllReaders(unittest.TestCase):
             fp = os.path.join(self.data_directory, fn)
             if os.path.exists(fp):
                 os.remove(fp)
-        
+
     def make_pickle_file_multiindex(self):
-        """ Create pickle file with multiindex columns to be used in reader testing """
+        """Create pickle file with multiindex columns to be used in reader testing"""
 
         # Generate range of seconds
-        seconds = np.linspace(0, 100,1000)
+        seconds = np.linspace(0, 100, 1000)
 
         # Generate random data
         data = np.random.randn(1000, 4)
@@ -81,9 +86,9 @@ class TestAllReaders(unittest.TestCase):
         # Create MultiIndex for columns
         arrays = [
             ["Category A", "Category A", "Category B", "Category B"],
-            ["Subcategory 1", "Subcategory 2", "Subcategory 1", "Subcategory 2"]
+            ["Subcategory 1", "Subcategory 2", "Subcategory 1", "Subcategory 2"],
         ]
-        index = pd.MultiIndex.from_arrays(arrays, names=('Category', 'Subcategory'))
+        index = pd.MultiIndex.from_arrays(arrays, names=("Category", "Subcategory"))
 
         # Create the DataFrame
         df = pd.DataFrame(data, index=seconds, columns=index)
@@ -92,33 +97,38 @@ class TestAllReaders(unittest.TestCase):
         df.to_pickle(os.path.join(self.data_directory, "df_multiindex.pkl"))
 
     def test_correct_number_of_timeseries(self):
-        """ Read key file, check number of keys (data not loaded) """
+        """Read key file, check number of keys (data not loaded)"""
         failed = []
         for filename, nts in self.files:
             db = TsDB.fromfile(os.path.join(self.data_directory, filename))
             if not nts == db.n:
                 failed.append(f"{filename} ({nts} != {db.n})")
-        self.assertTrue(len(failed) == 0,
-                        f"Failed to identify correct number of time series on {len(failed)} file(s):\n   *** " +
-                        f"\n   *** ".join(failed))
+        self.assertTrue(
+            len(failed) == 0,
+            f"Failed to identify correct number of time series on {len(failed)} file(s):\n   *** "
+            + "\n   *** ".join(failed),
+        )
 
     def test_correct_timeseries_size(self):
-        """ Load time series: check that it loads and that t.size matches x.size """
+        """Load time series: check that it loads and that t.size matches x.size"""
         failed = []
         for filename, _ in self.files:
             try:
                 db = TsDB.fromfile(os.path.join(self.data_directory, filename))
                 ts = db.get(ind=0)  # should not fail
-                self.assertTrue(ts.t.size > 1 and ts.t.size == ts.x.size,
-                                f"Did not read time series correctly (t.size = {ts.t.size}, x.size = {ts.x.size})")
+                self.assertTrue(
+                    ts.t.size > 1 and ts.t.size == ts.x.size,
+                    f"Did not read time series correctly (t.size = {ts.t.size}, x.size = {ts.x.size})",
+                )
             except Exception:
                 exctype, excvalue, _ = sys.exc_info()
                 exctypestr = str(exctype).lstrip("<class '").rstrip("'>")  # e.g. <class 'IndexError'>  =>  IndexError
                 failed.append(f"{filename}: {exctypestr}: {excvalue}")
-        self.assertTrue(len(failed) == 0,
-                        f"Failed to read time series from {len(failed)} file(s):\n   *** " +
-                        f"\n   *** ".join(failed))
+        self.assertTrue(
+            len(failed) == 0,
+            f"Failed to read time series from {len(failed)} file(s):\n   *** " + "\n   *** ".join(failed),
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

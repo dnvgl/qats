@@ -5,12 +5,13 @@ Module with custom widgets
 
 @author: perl
 """
+
 # NOTE: import qtpy before the matplotlib Qt backend so that qtpy resolves the
 # Qt binding (and sets QT_API) first; matplotlib then uses the same binding.
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import QTableWidget, QTableWidgetItem, QTabWidget
-from matplotlib.backends.backend_qtagg import \
-    NavigationToolbar2QT as NavigationToolbar
+
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 
 # colors used to flip a figure to a light style for image export
 _LIGHT_EXPORT = dict(fig_bg="white", axes_bg="white", fg="black", grid="#b0b0b0")
@@ -60,6 +61,7 @@ class WhiteSaveNavigationToolbar(NavigationToolbar):
     temporarily flips the figure to a light style, saves, then restores the dark
     style so the on-screen plot is unchanged.
     """
+
     def __init__(self, canvas, parent, dark_colors=None):
         super().__init__(canvas, parent)
         self._dark_colors = dark_colors
@@ -76,10 +78,11 @@ class WhiteSaveNavigationToolbar(NavigationToolbar):
             self.canvas.draw_idle()
 
 
-class CustomTabWidget (QTabWidget):
+class CustomTabWidget(QTabWidget):
     """
     Custom tab widget to enable closing tabs
     """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setTabsClosable(True)
@@ -95,12 +98,13 @@ class CustomTabWidget (QTabWidget):
 
 
 class CustomTableWidget(QTableWidget):
-    """ Placeholder for possible future customization of QTableWidget.
-    Currently behaves exactly as its parent. """
+    """Placeholder for possible future customization of QTableWidget.
+    Currently behaves exactly as its parent."""
 
 
 class CustomTableWidgetItem(QTableWidgetItem):
-    """ To enable table sorting based on value (not string) """
+    """To enable table sorting based on value (not string)"""
+
     # based on: https://stackoverflow.com/questions/11938459/sorting-in-pyqt-tablewidget
 
     def __lt__(self, other):

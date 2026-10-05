@@ -3,6 +3,7 @@
 """
 Provides :class:`TsDB` class.
 """
+
 import copy
 import fnmatch
 import glob
@@ -17,9 +18,11 @@ import pandas as pd
 from .fatigue.rainflow import rebin as rebin_cycles
 from .io.csv import read_data as read_csv_data
 from .io.csv import read_names as read_csv_names
-from .io.direct_access import (read_tda_data, read_tda_names, read_ts_data,
-                               read_ts_names, write_ts_data)
+from .io.direct_access import read_tda_data, read_tda_names, read_ts_data, read_ts_names, write_ts_data
 from .io.other import read_dat_data, read_dat_names, write_dat_data
+from .io.pickle_format import read_data as read_pickle_data
+from .io.pickle_format import read_pickle_names as read_pickle_names
+from .io.pickle_format import write_data as write_pickle_data
 from .io.sima import read_ascii_data as read_sima_ascii_data
 from .io.sima import read_bin_data as read_sima_bin_data
 from .io.sima import read_names as read_sima_names
@@ -29,9 +32,6 @@ from .io.sima_h5 import read_names as read_sima_h5_names
 from .io.sima_h5 import write_data as write_sima_h5_data
 from .io.sintef_mat import read_data as read_mat_data
 from .io.sintef_mat import read_names as read_mat_names
-from .io.pickle_format import read_pickle_names as read_pickle_names
-from .io.pickle_format import read_data as read_pickle_data
-from .io.pickle_format import write_data as write_pickle_data
 from .io.tdms import read_data as read_tdms_data
 from .io.tdms import read_names as read_tdms_names
 from .ts import TimeSeries
@@ -67,10 +67,10 @@ class TsDB(object):
     def __init__(self, name=None):
         self.uuid = uuid4()
         self.name = name
-        self.register = OrderedDict()           # dictionary of unique id and time series objects
-        self.register_parent = OrderedDict()    # dictionary of unique id and parent name (source/file name)
-        self.register_indices = OrderedDict()   # dictionary of unique id and the time series index on parent file
-        self.register_keys = []     # register keys in the order the associated time series where loaded
+        self.register = OrderedDict()  # dictionary of unique id and time series objects
+        self.register_parent = OrderedDict()  # dictionary of unique id and parent name (source/file name)
+        self.register_indices = OrderedDict()  # dictionary of unique id and the time series index on parent file
+        self.register_keys = []  # register keys in the order the associated time series where loaded
         self._timekeys = dict()  # register of time keys (only relevant for .mat files)
 
     def __contains__(self, item):
@@ -80,8 +80,9 @@ class TsDB(object):
         elif isinstance(item, TimeSeries):
             names = item.fullname
         else:
-            raise TypeError(f"Unable to check containment of type '{type(item)}' items. Item must be string or"
-                            f"TimeSeries.")
+            raise TypeError(
+                f"Unable to check containment of type '{type(item)}' items. Item must be string orTimeSeries."
+            )
 
         match = self.list(names=names, display=False)
         if len(match) > 0:
@@ -111,10 +112,7 @@ class TsDB(object):
         return f"<TsDB id='{self.uuid}'>"
 
     def __str__(self):
-        _ = f"type: TsDB\n" \
-            f"id : {self.uuid}\n" \
-            f"name : {self.name}\n" \
-            f"number of time series : {self.n}\n"
+        _ = f"type: TsDB\nid : {self.uuid}\nname : {self.name}\nnumber of time series : {self.n}\n"
         return _
 
     @classmethod
@@ -227,9 +225,9 @@ class TsDB(object):
         dtg_ref = _dtg_ref[0] if (dtg_defined is True and _same_dtg_ref is True) else None
 
         # evaluate time step, start and end time
-        _same_dt = ((max(_dt) - min(_dt)) == 0.)
-        _same_start_time = ((max(_start_time) - min(_start_time)) == 0.)
-        _same_end_time = ((max(_end_time) - min(_end_time)) == 0.)
+        _same_dt = (max(_dt) - min(_dt)) == 0.0
+        _same_start_time = (max(_start_time) - min(_start_time)) == 0.0
+        _same_end_time = (max(_end_time) - min(_end_time)) == 0.0
 
         # recommended parameters for common time: latest start, earliest end, smallest avg. time step
         common_start = max(_start_time)
@@ -253,13 +251,14 @@ class TsDB(object):
             deviations["end"] = "end time varies from %.7g to %.7g" % (min(_end_time), max(_end_time))
 
         if dtg_defined and not _same_dtg_ref:
-            '''
+            """
             If dtg_ref test criteria fails, none of the previous tests are relevant anymore. Therefore, the devations
             dict is reset here.
-            '''
+            """
             deviations = OrderedDict()
-            deviations["dtg_ref"] = "'dtg_ref' is defined for one or more of the time series, " \
-                                    "but is not equal for all of them"
+            deviations["dtg_ref"] = (
+                "'dtg_ref' is defined for one or more of the time series, but is not equal for all of them"
+            )
 
         # identify any deviations that are handled by kwargs
         handled = set()
@@ -286,7 +285,7 @@ class TsDB(object):
             _ = deviations.pop(h, None)
 
         # evaluate if time array is common
-        is_common = (len(deviations) == 0)
+        is_common = len(deviations) == 0
 
         # define actions
         actions = []
@@ -295,17 +294,21 @@ class TsDB(object):
             if "dt" in deviations:
                 actions.append("Resample to constant time step by specifying `resample=%.10g` (or smaller)" % common[2])
             if "start" in deviations or "end" in deviations:
-                actions.append("Crop time series to the common time window by specifying "
-                               "`twin=(%.7g, %.7g)`" % (common[0], common[1]))
-                actions.append("Resample to a common time array by specifying "
-                               "`resample=np.arange(%.7g, %.7g, %.7g)`" % (common[0], common[1]+common[2], common[2]))
+                actions.append(
+                    "Crop time series to the common time window by specifying "
+                    "`twin=(%.7g, %.7g)`" % (common[0], common[1])
+                )
+                actions.append(
+                    "Resample to a common time array by specifying "
+                    "`resample=np.arange(%.7g, %.7g, %.7g)`" % (common[0], common[1] + common[2], common[2])
+                )
             if "dtg_ref" in deviations:
-                actions.append("Ensure 'dtg_ref' is the same for all specified time series "
-                               "-- see `TimeSeries.set_dtg_ref()`")
+                actions.append(
+                    "Ensure 'dtg_ref' is the same for all specified time series -- see `TimeSeries.set_dtg_ref()`"
+                )
 
             # compile deviations and recommended actions to message string
-            msg = "Time array is not common within specified parameters for specified time series.\n" \
-                  "Deviations:\n"
+            msg = "Time array is not common within specified parameters for specified time series.\nDeviations:\n"
             for dev, s in deviations.items():
                 msg += "  * %s : %s\n" % (dev, s)
             if len(actions) > 0:
@@ -317,16 +320,16 @@ class TsDB(object):
                     msg += "   (none - not possible to create common time array)\n"
 
         timecheck = dict(
-            is_common=is_common,        # True or False
+            is_common=is_common,  # True or False
             # dtg info
-            dtg_defined=dtg_defined,    # True or False
-            dtg_ref=dtg_ref,            # datetime or None
+            dtg_defined=dtg_defined,  # True or False
+            dtg_ref=dtg_ref,  # datetime or None
             # recommended parameters for common time array
-            common=common,              # tuple or None
+            common=common,  # tuple or None
             # descriptions of deviations and proposed actions
-            deviations=deviations,      # dict
-            actions=actions,            # list
-            msg=msg,                    # str
+            deviations=deviations,  # dict
+            actions=actions,  # list
+            msg=msg,  # str
         )
 
         return timecheck
@@ -452,8 +455,7 @@ class TsDB(object):
                 new_k = self._path_basename(key)
                 key_count[new_k] += 1
                 if key_count[new_k] > 1:
-                    raise KeyError("Multiple keys with basename '%s' -- "
-                                   "consider using ``basename=False``" % new_k)
+                    raise KeyError("Multiple keys with basename '%s' -- consider using ``basename=False``" % new_k)
             else:
                 # make
                 relkey = self._path_relpath(key, common_key)
@@ -505,7 +507,7 @@ class TsDB(object):
         # initiate and pre-populate ordered dictionary (to keep order of keys)
         container = OrderedDict()
         for key in keys:
-            reg = self.register[key]   # gives None if not previously read/stored
+            reg = self.register[key]  # gives None if not previously read/stored
             if isinstance(reg, TimeSeries) or reg is None:
                 container[keypairs[key]] = reg
             else:
@@ -530,54 +532,54 @@ class TsDB(object):
 
             tslist = [None] * len(keys)
 
-            if fext == '.ts':
+            if fext == ".ts":
                 data = read_ts_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.tda':
+            elif fext == ".tda":
                 data = read_tda_data(parent, ind=indices)
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.asc':
+            elif fext == ".asc":
                 data = read_sima_ascii_data(parent, ind=indices)
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.bin':
+            elif fext == ".bin":
                 data = read_sima_bin_data(parent, ind=indices)
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.dat':
+            elif fext == ".dat":
                 data = read_dat_data(parent, ind=indices)
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i+1, :], parent=parent)
+                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.mat':
+            elif fext == ".mat":
                 _tk = self._timekeys[parent]
                 data = read_mat_data(parent, [_tk, *names])
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[_tk], data[name], parent=parent)
 
-            elif fext in ('.h5', '.hdf5'):
+            elif fext in (".h5", ".hdf5"):
                 data = read_sima_h5_data(parent, names=names)
                 for i, name in enumerate(names):
                     timearr, arr = data[i]
                     tslist[i] = TimeSeries(name, timearr, arr, parent=parent)
 
-            elif fext == '.csv':
+            elif fext == ".csv":
                 data = read_csv_data(parent, ind=indices)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext in ('.pkl', '.pickle'):
+            elif fext in (".pkl", ".pickle"):
                 data = read_pickle_data(parent)
                 for i, name in enumerate(names):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
-            elif fext == '.tdms':
+            elif fext == ".tdms":
                 data = read_tdms_data(parent, names=names)
                 for i, name in enumerate(names):
                     timearr, arr = data[i]
@@ -609,12 +611,12 @@ class TsDB(object):
         adding the TimeSeries to the db.
 
         """
-        '''
-        Note: 
-        If only 'name' is used as the register key, one may encounter issues later (e.g. at export), since 
+        """
+        Note:
+        If only 'name' is used as the register key, one may encounter issues later (e.g. at export), since
         os.path.commonpath will not accept a mix of absolute and relative paths. Therefore, the added timeseries is
         registered with a fictitious key constructed as follows: commonpath + ts.name
-        '''
+        """
         if not isinstance(ts, TimeSeries):
             raise TypeError("expected TimeSeries instance, got: %s" % type(ts))
 
@@ -624,8 +626,8 @@ class TsDB(object):
             raise KeyError("The specified key is not unique: %s" % key)
 
         self.register[key] = ts
-        self.register_parent[key] = None    # does not have a parent (file)
-        self.register_indices[key] = None   # ... and therefore has no index (yet)
+        self.register_parent[key] = None  # does not have a parent (file)
+        self.register_indices[key] = None  # ... and therefore has no index (yet)
         self.register_keys.append(key)
 
     def clear(self, names=None, display=True):
@@ -718,12 +720,13 @@ class TsDB(object):
             try:
                 start, end, dt = timecheck["common"]
             except TypeError:
-                raise ValueError("Could not create common time array "
-                                "- check if earliest end time is before latest start time")
+                raise ValueError(
+                    "Could not create common time array - check if earliest end time is before latest start time"
+                )
             if maxdt is not None:
                 if dt > maxdt:
                     dt = maxdt
-            nt = int(round((end-start)/dt)) + 1
+            nt = int(round((end - start) / dt)) + 1
             common_time, _dt = np.linspace(start, end, nt, retstep=True)
             if strict is True and not round(dt - _dt, 4) == 0:
                 raise ValueError("obtained 'dt' (%f) deviates from specified 'dt' (%s)" % (_dt, dt))
@@ -734,8 +737,18 @@ class TsDB(object):
             common_time = common_time[ind]
         return common_time
 
-    def export(self, filename, names=None, delim="\t", skip_header=False, exist_ok=True, basename=True,
-               verbose=False, force_common_time=False, **kwargs):
+    def export(
+        self,
+        filename,
+        names=None,
+        delim="\t",
+        skip_header=False,
+        exist_ok=True,
+        basename=True,
+        verbose=False,
+        force_common_time=False,
+        **kwargs,
+    ):
         """
         Export time series to file
 
@@ -760,7 +773,7 @@ class TsDB(object):
             Print information
         force_common_time: bool, optional
             If True, a common time array is enforced by resampling the time series (unless time array is
-            already common). See notes below. If False (the default), a ValueError is raised if the time 
+            already common). See notes below. If False (the default), a ValueError is raised if the time
             array is not common.
         kwargs : optional
             see documentation of :meth:`~qats.TimeSeries.get` method for available options
@@ -773,8 +786,9 @@ class TsDB(object):
          - SIMA hdf file (.h5).
          - pickle file (.pkl or .pickle) with time series stored in a pandas dataframe (index is the common time array).
 
-        If `force_common_time` is True and the time arrays of the specified time series are not equal, the time series are 
-        resampled to a common time vector with a constant time step (sample rate). The minimum average time step 
+        If `force_common_time` is True and the time arrays of the specified time series are not equal, the time series
+        are
+        resampled to a common time vector with a constant time step (sample rate). The minimum average time step
         of all the selected time series is applied. This is done before enforcing the specified time window.
 
         If `basename` is true, an exception is raised if two or more time series share the same basename. The solution
@@ -799,24 +813,25 @@ class TsDB(object):
             os.makedirs(dirname)
 
         # generate time series container
-        '''
+        """
         Note:
         For most of the code below, it is convenient to use container generated by `getm()`. However; to evaluate
-        whether time array is common (using `_check_time_arrays()`), we need TimeSeries objects in case `dtg_ref` 
+        whether time array is common (using `_check_time_arrays()`), we need TimeSeries objects in case `dtg_ref`
         defined. The container is therefore generated as follows:
         1) Generate container of TimeSeries objects
         2) Modify container keys to export friendly keys
         3) Perform time array check (taking `dtg_ref` and  `**kwargs` into account)
         4) Evaluate time check and take necessary actions in accordance with specifications
         5) Convert container to container of arrays (same as output from `getm()`, taking **kwargs into account)
-        '''
+        """
         # generate container, step 1 (generate container of TimeSeries objects)
         container = self.getm(names=names, fullkey=True, store=False)
         # generate container, step 2 (create export friendly keys)
         container = self._make_export_friendly_names(container, keep_basename=basename)
         # generate container, step 3 (perform time array check
         timecheck = self._check_time_arrays(container, **kwargs)
-        # generate container, step 4 (evaluate outcome of time array check, take action in accordance with parameters given)
+        # generate container, step 4 (evaluate outcome of time array check, take action in accordance with parameters
+        # given)
         if timecheck["is_common"] is False:
             if "resample" in kwargs:
                 # resampling has been specified => common time array will be enforced in next step
@@ -838,10 +853,10 @@ class TsDB(object):
         # get file extension
         _, ext = os.path.splitext(filename)
 
-        if ext == ".ts":    # write direct access file
+        if ext == ".ts":  # write direct access file
             write_ts_data(filename, common_time_array, container)
 
-        elif ext == ".dat":     # write ascii file
+        elif ext == ".dat":  # write ascii file
             write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
 
         elif ext == ".h5":
@@ -940,8 +955,9 @@ class TsDB(object):
             if n == 0:
                 raise LookupError("No match found for specified name")
             elif n > 1:
-                raise ValueError("More than one match found for specified name:"
-                                 "\n    %s" % "\n    ".join(container.keys()))
+                raise ValueError(
+                    "More than one match found for specified name:\n    %s" % "\n    ".join(container.keys())
+                )
             else:
                 return container.popitem()[1]
 
@@ -1053,8 +1069,9 @@ class TsDB(object):
         get, geta, getl, getm
         """
         # read time series and put in ordered dictionary (reuse getm() to avoid duplicating code)
-        container = OrderedDict((k, v.get(**kwargs)) for k, v in
-                                self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items())
+        container = OrderedDict(
+            (k, v.get(**kwargs)) for k, v in self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items()
+        )
 
         return container
 
@@ -1198,6 +1215,7 @@ class TsDB(object):
         Full identifier/key is obtained by joining the common path of all time series in db and the unique part of the
         identifiers.
         """
+
         def _remove_special_characters(strings):
             """
             Remove characters with special meaning in regular expressions
@@ -1241,7 +1259,7 @@ class TsDB(object):
                 _prefix = ""
             else:
                 # add prefix *\\ (or */ in unix)
-                _prefix = '*' + os.path.sep
+                _prefix = "*" + os.path.sep
             if isinstance(names, str):
                 if not names.startswith(common):
                     names = _prefix + names
@@ -1323,21 +1341,21 @@ class TsDB(object):
             if not os.path.isfile(thefile):
                 raise FileExistsError("Object is not a file: %s" % thefile)
 
-            if fext == '.ts':
+            if fext == ".ts":
                 # direct access format without info array
-                names = read_ts_names(thefile.replace(fext, '.key'))
+                names = read_ts_names(thefile.replace(fext, ".key"))
 
-            elif fext == '.tda':
+            elif fext == ".tda":
                 # simo s2x direct access format (with info array)
-                names = read_tda_names(thefile.replace(fext, '.txt'))
+                names = read_tda_names(thefile.replace(fext, ".txt"))
 
-            elif fext == '.asc':
+            elif fext == ".asc":
                 # simo-riflex, sima ascii
-                names = read_sima_names(os.path.join(dirname, 'key_' + basename.replace(fext, '.txt')))
+                names = read_sima_names(os.path.join(dirname, "key_" + basename.replace(fext, ".txt")))
 
-            elif fext == '.bin':
-                _ = os.path.join(dirname, 'key_' + basename.replace(fext, '.txt'))
-                if thefile.endswith('witurb.bin') or thefile.endswith('blresp.bin'):
+            elif fext == ".bin":
+                _ = os.path.join(dirname, "key_" + basename.replace(fext, ".txt"))
+                if thefile.endswith("witurb.bin") or thefile.endswith("blresp.bin"):
                     # wind turbine data and blade response is stored on .bin files but the corresponding
                     # key file has a different structure than the ones associated with 'elmfor' and 'noddis'
                     # .bin files
@@ -1346,28 +1364,28 @@ class TsDB(object):
                     # riflex/simo, sima direct access format
                     names = read_sima_names(_)
 
-            elif fext == '.dat':
+            elif fext == ".dat":
                 # plain column wise ascii format
                 names = read_dat_names(thefile)
 
-            elif fext == '.mat':
+            elif fext == ".mat":
                 # SINTEF Ocean test data export format based on Matlab .mat files.
                 _tk, names = read_mat_names(thefile)
-                self._timekeys[thefile] = _tk   # remember the name of the time array
+                self._timekeys[thefile] = _tk  # remember the name of the time array
 
-            elif fext in ('.h5', '.hdf5'):
+            elif fext in (".h5", ".hdf5"):
                 # sima h5
                 names = read_sima_h5_names(thefile)
 
-            elif fext == '.csv':
+            elif fext == ".csv":
                 # column wise csv
                 names = read_csv_names(thefile)
 
-            elif fext == '.pkl' or fext == '.pickle':
+            elif fext == ".pkl" or fext == ".pickle":
                 # column wise pickle
                 names = read_pickle_names(thefile)
 
-            elif fext == '.tdms':
+            elif fext == ".tdms":
                 # National Instrument structured binary file format
                 names = read_tdms_names(thefile)
 
@@ -1384,7 +1402,7 @@ class TsDB(object):
                 # Parent, i.e. source file
                 self.register_parent[key] = thefile
                 # Time series index on file, to speed up reading the time series, dummy for .mat files, +1 to skip time
-                ind = j + 1 if fext not in ('.h5', '.hdf5', '.mat') else None
+                ind = j + 1 if fext not in (".h5", ".hdf5", ".mat") else None
                 self.register_indices[key] = ind
                 # time series names in the order the associated time series where loaded
                 self.register_keys.append(key)
@@ -1395,7 +1413,7 @@ class TsDB(object):
 
             if verbose:
                 print("Loaded %d records from file '%s'." % (len(names), thefile))
-                print('\n'.join(names))
+                print("\n".join(names))
 
     def plot(self, names=None, figurename=None, show=None, num=1, store=True, **kwargs):
         """
@@ -1436,7 +1454,7 @@ class TsDB(object):
             label = k  # todo: more readable label, e.g. remove commonpath
             plt.plot(v[0], v[1], label=label)
 
-        plt.xlabel('Time (s)')
+        plt.xlabel("Time (s)")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1481,8 +1499,8 @@ class TsDB(object):
             f, p = v.psd(**kwargs)
             plt.plot(f, p, label=k)
 
-        plt.xlabel('Frequency (Hz)')
-        plt.ylabel('Power spectral density')
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Power spectral density")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1490,8 +1508,9 @@ class TsDB(object):
         if show is True or (show is None and figurename is None):
             plt.show()
 
-    def plot_cycle_range(self, names=None, n=200, w=None, bw=1., figurename=None, show=None, num=1, store=True,
-                         **kwargs):
+    def plot_cycle_range(
+        self, names=None, n=200, w=None, bw=1.0, figurename=None, show=None, num=1, store=True, **kwargs
+    ):
         """
         Plot cycle range versus number of occurrences.
 
@@ -1530,8 +1549,9 @@ class TsDB(object):
         container = self.getm(names=names, store=store)
 
         # ensure that rebinning will be done
-        assert (n is not None) or (w is not None), "Cycles must be rebinned for this plot - either 'n' or 'w' must " \
-                                                   "be different from None"
+        assert (n is not None) or (w is not None), (
+            "Cycles must be rebinned for this plot - either 'n' or 'w' must be different from None"
+        )
 
         plt.figure(num=num)
         for k, v in container.items():
@@ -1539,14 +1559,14 @@ class TsDB(object):
             cycles = v.rfc(**kwargs)
 
             # rebin cycles
-            cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+            cycles = rebin_cycles(cycles, binby="range", n=n, w=w)
 
             r, _, c = zip(*cycles)  # unpack range and count pairs, ignore mean value
-            dr = r[1] - r[0]        # bin width, used as basis for bar width
+            dr = r[1] - r[0]  # bin width, used as basis for bar width
             plt.bar(r, c, dr * bw, label=k, alpha=0.4)
 
-        plt.xlabel('Cycle range')
-        plt.ylabel('Cycle count (-)')
+        plt.xlabel("Cycle range")
+        plt.ylabel("Cycle count (-)")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1600,13 +1620,15 @@ class TsDB(object):
 
             # rebin cycles
             if (n is not None) or (w is not None):
-                cycles = rebin_cycles(cycles, binby='range', n=n, w=w)
+                cycles = rebin_cycles(cycles, binby="range", n=n, w=w)
 
-            ranges, means, counts = zip(*cycles)      # unpack range and count pairs, ignore mean value
-            plt.scatter(means, ranges, s=[2. * c for c in counts], label=k, alpha=0.4)  # double marker size for improved readability
+            ranges, means, counts = zip(*cycles)  # unpack range and count pairs, ignore mean value
+            plt.scatter(
+                means, ranges, s=[2.0 * c for c in counts], label=k, alpha=0.4
+            )  # double marker size for improved readability
 
-        plt.xlabel('Cycle mean')
-        plt.ylabel('Cycle range')
+        plt.xlabel("Cycle mean")
+        plt.ylabel("Cycle range")
         plt.grid()
         plt.legend()
         if figurename is not None:
@@ -1635,8 +1657,7 @@ class TsDB(object):
         if n == 0:
             raise LookupError("No match found for specified name")
         elif n > 1:
-            raise ValueError("More than one match found for specified name:"
-                             "\n    %s" % "\n    ".join(names))
+            raise ValueError("More than one match found for specified name:\n    %s" % "\n    ".join(names))
 
         # define new key, and check that it doesn't exist
         # todo: consider replace (parent --> "") instead of dirname (only relevant for ts from .h5?)
@@ -1658,7 +1679,7 @@ class TsDB(object):
 
         return
 
-    def stats(self, statsdur=10800., names=None, ind=None, store=True, fullkey=False, **kwargs):
+    def stats(self, statsdur=10800.0, names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
         Get statistics for time series processed according to parameters
 
@@ -1719,12 +1740,14 @@ class TsDB(object):
         """
         # todo: create entry in dictionary with meta data such as applied time window, filter etc.
         # read time series and put in ordered dictionary (reuse getm() to avoid duplicating code)
-        container = OrderedDict((k, v.stats(statsdur=statsdur, **kwargs)) for k, v in
-                                self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items())
+        container = OrderedDict(
+            (k, v.stats(statsdur=statsdur, **kwargs))
+            for k, v in self.getm(names=names, ind=ind, store=store, fullkey=fullkey).items()
+        )
 
         return container
 
-    def stats_dataframe(self, statsdur=10800., names=None, ind=None, store=True, fullkey=False, **kwargs):
+    def stats_dataframe(self, statsdur=10800.0, names=None, ind=None, store=True, fullkey=False, **kwargs):
         """
         Get Pandas Dataframe with time series statistics.
 
@@ -1771,7 +1794,7 @@ class TsDB(object):
     def to_dataframe(self, names=None, **kwargs):
         """
         Get pandas DataFrame with time series data in columns.
-        
+
         Parameters
         ----------
         names : str or list or tuple, optional
@@ -1789,13 +1812,13 @@ class TsDB(object):
         When working on a large time series database it is recommended to set ``store=False`` to avoid too high memory
         usage. Then the TimeSeries objects will not be stored in the database, only their addresses.
 
-        If specified time series do not have a common time array, the following code is an example of 
+        If specified time series do not have a common time array, the following code is an example of
         how to enforce it:
         >>> db : TsDB
         >>> names : list
         >>> common_time_array = db.create_common_time(names=names)
         >>> df = db.to_dataframe(names=names, resample=common_time_array)
-        
+
         See also
         --------
         qats.TimeSeries.get
@@ -1811,14 +1834,17 @@ class TsDB(object):
         else:
             timecheck = self._check_time_arrays(container)
             if timecheck["is_common"] is False:
-                raise ValueError("Specified time series do not have a common time array - specify `resample=common_time_array` to enforce it")
-        
+                raise ValueError(
+                    "Specified time series do not have a common time array - "
+                    "specify `resample=common_time_array` to enforce it"
+                )
+
         # convert dict of TimeSeries objects to dict of tuples (time, data)
         container = {k: v.get(**kwargs) for k, v in container.items()}
 
         # extract common time array
         common_time_array = container[list(container)[0]][0]
-            
+
         # create dataframe, store common time array as index
         df = pd.DataFrame({k: v[1] for k, v in container.items()}, index=common_time_array)
 

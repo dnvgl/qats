@@ -3,6 +3,7 @@
 """
 Transformations and operations related to motion.
 """
+
 import numpy as np
 
 
@@ -35,7 +36,7 @@ def transform_motion(motion, newref, rotunit="deg"):
     """
     motion = np.asarray(motion)  # ensure motion is numpy array
     newref = np.asarray(newref)  # ensure newref is numpy array, for efficiency in loop with np.dot
-    ndof, nt = motion.shape      # number of dofs and time steps
+    ndof, nt = motion.shape  # number of dofs and time steps
     assert ndof == 6, f"Motion must be of shape (6, nt) (6-dof motion), got {motion.shape}"
     assert newref.size == 3, f"Specified position must be list/tuple with three values, got {len(newref)}"
 
@@ -48,13 +49,21 @@ def transform_motion(motion, newref, rotunit="deg"):
         raise ValueError(f"Parameter `rotunit` must be 'deg' or 'rad', not '{rotunit}'")
 
     # calculate transformation matrix -> shape (3, 3, nt)
-    trans = np.array([
-        [np.cos(rz) * np.cos(ry), -np.sin(rz) * np.cos(rx) + np.cos(rz) * np.sin(ry) * np.sin(rx),
-         np.sin(rz) * np.sin(rx) + np.cos(rz) * np.sin(ry) * np.cos(rx)],
-        [np.sin(rz) * np.cos(ry), np.cos(rz) * np.cos(rx) + np.sin(rz) * np.sin(ry) * np.sin(rx),
-         -np.cos(rz) * np.sin(rx) + np.sin(rz) * np.sin(ry) * np.cos(rx)],
-        [-np.sin(ry), np.cos(ry) * np.sin(rx), np.cos(ry) * np.cos(rx)],
-    ])
+    trans = np.array(
+        [
+            [
+                np.cos(rz) * np.cos(ry),
+                -np.sin(rz) * np.cos(rx) + np.cos(rz) * np.sin(ry) * np.sin(rx),
+                np.sin(rz) * np.sin(rx) + np.cos(rz) * np.sin(ry) * np.cos(rx),
+            ],
+            [
+                np.sin(rz) * np.cos(ry),
+                np.cos(rz) * np.cos(rx) + np.sin(rz) * np.sin(ry) * np.sin(rx),
+                -np.cos(rz) * np.sin(rx) + np.sin(rz) * np.sin(ry) * np.cos(rx),
+            ],
+            [-np.sin(ry), np.cos(ry) * np.sin(rx), np.cos(ry) * np.cos(rx)],
+        ]
+    )
 
     # transform to new reference position for each time step -> shape (3, nt)
     xyz = np.zeros((3, nt))
@@ -137,8 +146,8 @@ def velocity(x, t):
         pass
     else:
         # assume time array is specified -> check that it matches the number of time steps in input signals
-        t = np.asarray(t)   # ensure t is numpy array
-        nt = x.shape[-1]    # number of time steps
+        t = np.asarray(t)  # ensure t is numpy array
+        nt = x.shape[-1]  # number of time steps
         assert t.size == nt, "If time array is specified, it must match number of time steps in input signal(s)"
 
     if x.ndim == 1:
@@ -151,4 +160,3 @@ def velocity(x, t):
     vel = np.gradient(x, t, axis=axis)
 
     return vel
-

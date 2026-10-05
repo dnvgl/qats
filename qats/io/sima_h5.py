@@ -1,6 +1,7 @@
 """
 Readers for HDF5 formatted time series files exported from SIMA
 """
+
 import os
 
 import h5py
@@ -28,7 +29,7 @@ def read_names(path, verbose=False):
         raise FileNotFoundError("file not found: %s" % path)
 
     if verbose:
-        print('Identifying datasets on %s ...' % path)
+        print("Identifying datasets on %s ..." % path)
 
     names = []  # list of dataset names/keys (only for data sets that are time series)
     n_dsets = 0
@@ -51,7 +52,7 @@ def read_names(path, verbose=False):
                 n_groups += 1
                 # print("group: ", key)
                 for i in f[key]:
-                    allkeys.append('{}/{}'.format(key, i))
+                    allkeys.append("{}/{}".format(key, i))
 
             else:
                 raise Exception("unexpected error: %s is not a dataset or a group" % key)
@@ -62,7 +63,7 @@ def read_names(path, verbose=False):
         print("   no. of time series : %4d" % len(names) + "   (datasets interpreted as time series)")
 
     # replace all slashes with backslash
-    names = [_.replace('/', "\\") for _ in names]
+    names = [_.replace("/", "\\") for _ in names]
 
     return names
 
@@ -96,7 +97,7 @@ def read_data(path, names=None, verbose=False):
         raise FileNotFoundError("file not found: %s" % path)
 
     if verbose:
-        print('Reading %s ...' % path)
+        print("Reading %s ..." % path)
 
     if isinstance(names, str):
         names = [names]
@@ -109,7 +110,7 @@ def read_data(path, names=None, verbose=False):
         raise TypeError("`names` must be str/list/tuple, got: %s" % type(names))
 
     # correct slashes
-    names = [_.replace('\\', '/') for _ in names]
+    names = [_.replace("\\", "/") for _ in names]
     arrays = []
 
     with h5py.File(path, "r") as f:
@@ -130,8 +131,8 @@ def read_data(path, names=None, verbose=False):
                 raise NotImplementedError(
                     f"only 1-dimensional arrays implemented, got ndim={data.ndim} (for name '{name}')"
                 )
-            data = data.flatten()   # flatten data array
-            nt = data.size          # number of time steps
+            data = data.flatten()  # flatten data array
+            nt = data.size  # number of time steps
 
             # attrs = dset.attrs  # dict with dataset attributes
 
@@ -143,7 +144,7 @@ def read_data(path, names=None, verbose=False):
             if kind == "sima":
                 t_start = timeinfo["start"]
                 dt = timeinfo["dt"]
-                t_end = t_start + (nt-1) * dt
+                t_end = t_start + (nt - 1) * dt
                 timearr, step = np.linspace(t_start, t_end, nt, retstep=True)
                 if not np.isclose(dt, step):  # dt == step:
                     raise Exception("unexpected error: `dt` should be %s but is %s" % (dt, step))
@@ -152,8 +153,10 @@ def read_data(path, names=None, verbose=False):
 
             # verify that time array has correct shape (==> should be same as `data` shape)
             if not timearr.shape == data.shape:
-                raise Exception("unexpected error: `time` has shape " + str(timearr.shape) + "while data has"
-                                "shape " + str(data.shape) + " (should be equal)")
+                raise Exception(
+                    "unexpected error: `time` has shape " + str(timearr.shape) + "while data has"
+                    "shape " + str(data.shape) + " (should be equal)"
+                )
             # make 2-dimensional array with time and data, and append to output
             arrays.append([timearr, data])
 
@@ -206,7 +209,7 @@ def _timearray_info(dset):
     attrs = dset.attrs
     if "start" in attrs and "delta" in attrs:
         # SIMA-way of defining time array
-        timeinfo = {"kind": "sima"} 
+        timeinfo = {"kind": "sima"}
         # timeinfo["start"] = float(attrs["start"])
         # timeinfo["dt"} =: float(attrs["delta"]),
         for keyout, keysima in {"start": "start", "dt": "delta"}.items():

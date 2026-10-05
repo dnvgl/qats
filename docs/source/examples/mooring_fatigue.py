@@ -1,10 +1,9 @@
 """
 Calculate mooring line fatigue.
 """
+
 import os
 from math import pi
-
-import numpy as np
 
 from qats import TsDB
 from qats.fatigue.sn import SNCurve, minersum
@@ -16,16 +15,16 @@ db = TsDB.fromfile(os.path.join("..", "..", "..", "data", "simo_p_out.ts"))
 sncurve = SNCurve(name="Studless chain OS-E301", m1=3.0, a1=6e10)
 
 # Calculate fatigue damage for all mooring line tension time series (kN)
-for ts in db.getl(names='tension_*_qs'):
+for ts in db.getl(names="tension_*_qs"):
     # count tension (discarding the 100s transient)
-    cycles = ts.rfc(twin=(100., 1e12))
+    cycles = ts.rfc(twin=(100.0, 1e12))
 
     # unpack cycle range and count as separate lists (discard cycle means)
     ranges, _, counts = cycles.T
 
     # calculate cross section stress cycles (shown here: 118mm studless chain, with unit [kN] for tension cycles)
-    area = 2. * pi * (118. / 2.) ** 2.          # mm^2
-    ranges = [r * 1e3 / area for r in ranges]   # MPa
+    area = 2.0 * pi * (118.0 / 2.0) ** 2.0  # mm^2
+    ranges = [r * 1e3 / area for r in ranges]  # MPa
 
     # calculate fatigue damage from Palmgren-Miner rule (SCF=1, no thickness correction)
     damage = minersum(ranges, counts, sncurve)
@@ -35,4 +34,3 @@ for ts in db.getl(names='tension_*_qs'):
     print(f"\t- Max stress range = {max(ranges):12.5g} MPa")
     print(f"\t- Total number of stress ranges = {sum(counts)}")
     print(f"\t- Fatigue damage = {damage:12.5g}\n")
-

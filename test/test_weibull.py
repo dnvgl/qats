@@ -9,35 +9,36 @@ class WeibullTestCases(unittest.TestCase):
     """
     Test the general case where the loc parameter is non-zero.
     """
+
     def setUp(self):
-        self.loc = 66000.
-        self.scale = 410.
-        self.shape = 2.
+        self.loc = 66000.0
+        self.scale = 410.0
+        self.shape = 2.0
 
         wd = Weibull(loc=self.loc, scale=self.scale, shape=self.shape)
         self.x = wd.rnd(size=500, seed=3)
 
     def test_pwm(self):
         a, b, c = pwm(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
         self.assertLessEqual((self.shape - c) / self.shape, 0.1)
 
     def test_msm(self):
         a, b, c = msm(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
         self.assertLessEqual((self.shape - c) / self.shape, 0.1)
 
     def test_lse(self):
         a, b, c = lse(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
         self.assertLessEqual((self.shape - c) / self.shape, 0.1)
 
     def test_mle(self):
         a, b, c = mle(self.x)
-        self.assertLessEqual((self.loc-a)/self.loc, 0.1)
+        self.assertLessEqual((self.loc - a) / self.loc, 0.1)
         self.assertLessEqual((self.scale - b) / self.scale, 0.1)
         self.assertLessEqual((self.shape - c) / self.shape, 0.1)
 
@@ -53,9 +54,10 @@ class Weibull2PTestCases(unittest.TestCase):
     """
     Test the case where the loc parameter is zero
     """
+
     def setUp(self):
-        self.loc = 0.
-        self.scale = 410.
+        self.loc = 0.0
+        self.scale = 410.0
         self.shape = 3.5
 
         wd = Weibull(loc=self.loc, scale=self.scale, shape=self.shape)
@@ -69,10 +71,10 @@ class Weibull2PTestCases(unittest.TestCase):
     def test_fit_2p(self):
         weib = Weibull.fit(self.x, method="pwm2")
         b, c = pwm2(self.x)
-        self.assertEqual(weib.loc, 0.)
+        self.assertEqual(weib.loc, 0.0)
         self.assertEqual(weib.scale, b)
         self.assertEqual(weib.shape, c)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

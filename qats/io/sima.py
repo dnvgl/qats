@@ -1,6 +1,7 @@
 """
 Readers for ASCII and direct access formatted time series files exported from SIMA
 """
+
 import fnmatch
 import os
 import re
@@ -27,11 +28,11 @@ def read_sima_wind_names(path):
     """
 
     # open and read
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         lines = f.readlines()
 
     # Extract storage info lines
-    p = re.compile(r'ignore*')
+    p = re.compile(r"ignore*")
     key_lines = [li for li in lines if not li.startswith("'") and not p.search(li.lower())]
 
     # for each row, split into columns (space-separated) and keep first three
@@ -41,7 +42,7 @@ def read_sima_wind_names(path):
     # note:
     #   idx_time is 1 for the witurb format exported by RIFLEX version <4.20
     #   idx_time is 2 for the witurb format exported by RIFLEX version >=4.20
-    idx_time = rows[0].index('Time')
+    idx_time = rows[0].index("Time")
 
     # pop first row (the one with 'Time')
     _ = rows.pop(0)
@@ -52,7 +53,7 @@ def read_sima_wind_names(path):
         keys = [row[1] for row in rows]
     else:  # idx_time == 2:
         # SIMA/RIFLEX version >=4.20: wind turbine name in second
-        keys = [row[1] + '_' + row[2] for row in rows]
+        keys = [row[1] + "_" + row[2] for row in rows]
 
     return keys
 
@@ -80,55 +81,55 @@ def read_names(path):
 
     """
     # Line id. for pure digit line entries
-    linid = 'Lin'
+    linid = "Lin"
     # zero padding width
     nlin = 2
     nseg = 3
     nnod = 3  # for elements/nodes
 
     # extract 'noddis', 'elmsfo', 'elmfor' (asc), ...
-    keyfiletype = os.path.splitext(path.split('_')[-1])[0].lower()
+    keyfiletype = os.path.splitext(path.split("_")[-1])[0].lower()
 
     # open and read
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         lines = f.readlines()
 
     # define parameters
-    if keyfiletype == 'noddis':
-        elkey = 'No'
-    elif keyfiletype in ('elmsfo', 'elmfor'):
-        elkey = 'El'
+    if keyfiletype == "noddis":
+        elkey = "No"
+    elif keyfiletype in ("elmsfo", "elmfor"):
+        elkey = "El"
     else:
-        elkey = ''
+        elkey = ""
     suffices = _name_suffices(lines)
 
     # find start line for storage information
     i_start = 1 + lines.index(fnmatch.filter(lines, "*------------------------------------------------------*")[0])
     # extract storage info lines
-    p = re.compile(r'ignore*')
-    key_lines = [l for l in lines[i_start:] if l.strip() and not p.search(l)]
+    p = re.compile(r"ignore*")
+    key_lines = [line for line in lines[i_start:] if line.strip() and not p.search(line)]
 
     # determine number of keys on each line, and in total
     nkeys = [int(line.split()[3]) for line in key_lines]
     nkeystot = sum(nkeys)
 
     # parse keys
-    keys = [''] * nkeystot
+    keys = [""] * nkeystot
     i = 0
     for nk, kl in zip(nkeys, key_lines):
-        l = kl.split()
+        fields = kl.split()
         # Line id.
-        if l[0].isdigit():
-            a = linid + str(l[0]).zfill(nlin)
+        if fields[0].isdigit():
+            a = linid + str(fields[0]).zfill(nlin)
         else:
-            a = l[0]
+            a = fields[0]
         # Segment id.
-        b = 'Seg' + str(l[1]).zfill(nseg)
+        b = "Seg" + str(fields[1]).zfill(nseg)
         # El./Node id.
-        c = elkey + str(l[2]).zfill(nnod)
+        c = elkey + str(fields[2]).zfill(nnod)
         # define key entries
         for suff in suffices[:nk]:
-            keys[i] = '_'.join([a, b, c, suff])
+            keys[i] = "_".join([a, b, c, suff])
             i += 1
     return keys
 
@@ -162,36 +163,36 @@ def read_bin_data(path, ind=None, verbose=False):
 
     """
     if verbose:
-        print('Reading %s ...' % path)
+        print("Reading %s ..." % path)
 
     # read
     nbytes = 4
-    intfmt = 'i'  # integer format
-    with open(path, 'rb') as f:
+    intfmt = "i"  # integer format
+    with open(path, "rb") as f:
         # parse no. of records
-        nbytesrec = unpack('i', f.read(4))[0]
+        nbytesrec = unpack("i", f.read(4))[0]
         nrec = int(nbytesrec / nbytes + 2)  # plus 2 due to first and last cols.
-        nts = int(nrec - 2 - 1)             # no. time series (excl. time array)
+        nts = int(nrec - 2 - 1)  # no. time series (excl. time array)
 
         # parse no. of time steps
-        f.seek(0, 2)                        # go to end
-        nbytestot = f.tell()                # get position
-        f.seek(0)                           # go back to start
+        f.seek(0, 2)  # go to end
+        nbytestot = f.tell()  # get position
+        f.seek(0)  # go back to start
         ndat = int(nbytestot / (nbytes * nrec))
 
         # which keys/indices to extract
         if ind is None:
-            ind = range(nts + 1)            # (including time array)
+            ind = range(nts + 1)  # (including time array)
 
         # info
         if verbose:
-            print('---------------------------------------')
-            print('nts (no. of responses on file) : %d' % nts)
-            print('ndat (no. of time steps)       : %d' % ndat)
-            print('number of keys to read         : %d  (%s)' % (len(ind), "including time array index 0 is specified"))
+            print("---------------------------------------")
+            print("nts (no. of responses on file) : %d" % nts)
+            print("ndat (no. of time steps)       : %d" % ndat)
+            print("number of keys to read         : %d  (%s)" % (len(ind), "including time array index 0 is specified"))
 
         # prepare for reading
-        basefmt = intfmt + 'f' + 'f' * nts + intfmt
+        basefmt = intfmt + "f" + "f" * nts + intfmt
         fmt = basefmt * ndat
         # read, unpack, reshape and transpose (ignoring first and last row
         s = f.read(nbytestot)
@@ -231,10 +232,10 @@ def read_ascii_data(path, ind=None, verbose=False):
 
     """
     if verbose:
-        print('Reading %s ...' % path)
+        print("Reading %s ..." % path)
 
     # read
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         # skip commmented lines at start of file
         for line in f:
             if not line.startswith("#"):
@@ -247,9 +248,9 @@ def read_ascii_data(path, ind=None, verbose=False):
     # info
     if verbose:
         nts, ndat = data.shape
-        print('---------------------------------------')
-        print('nts (no. of responses read) : %d' % nts)
-        print('ndat (no. of time steps)    : %d' % ndat)
+        print("---------------------------------------")
+        print("nts (no. of responses read) : %d" % nts)
+        print("ndat (no. of time steps)    : %d" % ndat)
 
     return data
 
@@ -277,7 +278,7 @@ def write_simo_file(path, time: np.ndarray, data: np.ndarray, dt: float = 0.2, d
     else:
         duration = time[-1] - time[0]
     f = interp1d(time, data)
-    trs = np.arange(0., duration, dt)
+    trs = np.arange(0.0, duration, dt)
     drs = f(trs)
     n = np.size(drs)  # reset
 
@@ -319,40 +320,38 @@ def _name_suffices(txt):
     dofstrings = [line for line in txt[ind:] if p.search(line)]
 
     # extract DOF descriptions by splitting on '='
-    dofdescr = [x.split('=')[-1].strip() for x in dofstrings]
+    dofdescr = [x.split("=")[-1].strip() for x in dofstrings]
 
     # define suffices
-    suffices = [''] * len(dofdescr)
+    suffices = [""] * len(dofdescr)
     for i, ds in enumerate(dofdescr):
         # displacements
-        if re.match('displacement', ds):
+        if re.match("displacement", ds):
             # extract direction : x, y, z
-            suff = ds.split()[2].upper() + 'd'
+            suff = ds.split()[2].upper() + "d"
         # forces, moments
-        elif re.match('Axial', ds):
-            suff = 'Te'
-        elif re.match('Torsional', ds):
-            suff = 'Mx'
-        elif re.match('Mom.', ds):
+        elif re.match("Axial", ds):
+            suff = "Te"
+        elif re.match("Torsional", ds):
+            suff = "Mx"
+        elif re.match("Mom.", ds):
             dsp = ds.split()
-            suff = 'M'
+            suff = "M"
             # which axis
-            suff += fnmatch.filter(dsp, '*axis*')[0][0]
+            suff += fnmatch.filter(dsp, "*axis*")[0][0]
             # which end
             suff += str(dsp[-1])
-        elif re.match('Shear', ds):
+        elif re.match("Shear", ds):
             dsp = ds.split()
-            suff = 'S'
+            suff = "S"
             # which axis
-            suff += fnmatch.filter(dsp, '*direction*')[0][0]
+            suff += fnmatch.filter(dsp, "*direction*")[0][0]
             # which end
             suff += str(dsp[-1])
 
         else:  # unknown description, use DOFxx
-            suff = 'DOF' + str(i + 1).zfill(2)
+            suff = "DOF" + str(i + 1).zfill(2)
 
         suffices[i] = suff
 
     return suffices
-
-

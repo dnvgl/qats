@@ -27,7 +27,7 @@ def read_names(path):
         raise FileNotFoundError("file not found: %s" % path)
 
     f = TdmsFile(path)
-    names = [f"{g.name}\\{c.name}" for g in f.groups() for c in f[g.name].channels() if c.name.lower() != 'time']
+    names = [f"{g.name}\\{c.name}" for g in f.groups() for c in f[g.name].channels() if c.name.lower() != "time"]
 
     return names
 

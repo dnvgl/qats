@@ -1,6 +1,7 @@
 """
 Example on working with cycle range and range-mean distributions.
 """
+
 import os
 
 from qats import TsDB
@@ -12,7 +13,7 @@ file_name = os.path.join("..", "..", "..", "data", "simo_p_out.ts")
 db = TsDB.fromfile(file_name)
 
 # fetch one of the time series from the db
-ts = db.get(name='tension_2_qs')
+ts = db.get(name="tension_2_qs")
 
 # plot its cycle ranges as bar diagram
 ts.plot_cycle_range(n=100)
@@ -31,7 +32,7 @@ ranges, means, counts = cycles.T
 
 # The TsDB class also has similar methods to ease comparison
 # compare cycle range distribution (range versus count) grouped in 100 bins
-db.plot_cycle_range(names='tension*', n=100)
+db.plot_cycle_range(names="tension*", n=100)
 
 # compare cycle range-mean distribution grouped in 100 bins
-db.plot_cycle_rangemean(names='tension*', n=100)
+db.plot_cycle_rangemean(names="tension*", n=100)

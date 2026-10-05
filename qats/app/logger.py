@@ -5,6 +5,7 @@ Module implementing a logger class
 
 @author: perl
 """
+
 import logging
 
 from qtpy.QtWidgets import QTextBrowser
@@ -14,6 +15,7 @@ class QLogger(logging.Handler):
     """
     Logger handler
     """
+
     def __init__(self, parent):
         super().__init__()
         self.widget = QTextBrowser(parent)
@@ -35,4 +37,3 @@ class QLogger(logging.Handler):
         """
         record = self.format(record)
         self.widget.append(record)
-
