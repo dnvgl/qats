@@ -1,0 +1,27 @@
+# Dependabot version updates: one grouped pull request per week and ecosystem.
+# Security updates are enabled in the repository settings and are opened as soon as an advisory is published.
+# https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference
+
+version: 2
+updates:
+  - package-ecosystem: "uv"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # QATS is a library: only update uv.lock, never raise the minimum versions in pyproject.toml that users get
+    versioning-strategy: "lockfile-only"
+    groups:
+      python-dependencies:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"
