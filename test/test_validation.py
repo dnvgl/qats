@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import unittest
+import warnings
 
 import numpy as np
 
@@ -317,12 +318,6 @@ CASES = [
     ),
 ]
 
-# checks that cannot be reached yet, because the method fails before them
-UNREACHABLE = {
-    "GumbelMin.bootstrap: method": "GumbelMin.bootstrap() raises AttributeError before its checks (#157)",
-    "GumbelMin.bootstrap: no data": "GumbelMin.bootstrap() raises AttributeError before its checks (#157)",
-}
-
 
 class TestValidation(unittest.TestCase):
     def setUp(self):
@@ -332,13 +327,14 @@ class TestValidation(unittest.TestCase):
         plt.switch_backend("Agg")
         self.addCleanup(plt.switch_backend, backend)
         self.addCleanup(plt.close, "all")
+        # GumbelMin is deprecated (tested in test_gumbelmin.py)
+        self.enterContext(warnings.catch_warnings())
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=r"qats\.stats\.gumbelmin")
 
     def test_invalid_input(self):
         """Each check raises the documented exception type, still an AssertionError, with the same message."""
         for name, call, exc_type, message in CASES:
             with self.subTest(name):
-                if name in UNREACHABLE:
-                    self.skipTest(UNREACHABLE[name])
                 with self.assertRaises(exc_type) as cm:
                     call()
                 self.assertIsInstance(cm.exception, AssertionError, "must stay an AssertionError until 6.0")

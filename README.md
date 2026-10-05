@@ -202,6 +202,34 @@ skip it locally (GitHub does this automatically), run once:
 git config blame.ignoreRevsFile .git-blame-ignore-revs
 ```
 
+### Deprecating an API
+
+5.x releases only add to the API. A change that would break user code (removing or renaming a function, class,
+parameter or module, or changing what it returns) goes into the next major release, and is announced with a
+`DeprecationWarning` in 5.x first. Use the helper in `qats._deprecation`, so that all warnings look the same and point
+to the line in the user's code:
+
+```python
+from .._deprecation import warn_deprecated
+
+
+def old_function(x):
+    """
+    Short description.
+
+    .. deprecated :: 5.5.0
+        `old_function()` will be removed in QATS 6.0.0. Use :func:`new_function` instead.
+    """
+    warn_deprecated("qats.module.old_function()", "5.5.0", "6.0.0", alternative="qats.module.new_function()")
+    return new_function(x)
+```
+
+- Warn where the user calls the deprecated API (the function, or `__init__` of a class), not in code that QATS itself
+  runs on every import.
+- If the deprecated API is used internally, call a private version that does not warn, so that users get one warning
+  and not several.
+- Add a test that the warning is issued (`assertWarns(DeprecationWarning)`).
+
 ### Building the package
 
 Build tarball and wheel distributions by
