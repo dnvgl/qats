@@ -317,12 +317,6 @@ CASES = [
     ),
 ]
 
-# checks that cannot be reached yet, because the method fails before them
-UNREACHABLE = {
-    "GumbelMin.bootstrap: method": "GumbelMin.bootstrap() raises AttributeError before its checks (#157)",
-    "GumbelMin.bootstrap: no data": "GumbelMin.bootstrap() raises AttributeError before its checks (#157)",
-}
-
 
 class TestValidation(unittest.TestCase):
     def setUp(self):
@@ -337,8 +331,6 @@ class TestValidation(unittest.TestCase):
         """Each check raises the documented exception type, still an AssertionError, with the same message."""
         for name, call, exc_type, message in CASES:
             with self.subTest(name):
-                if name in UNREACHABLE:
-                    self.skipTest(UNREACHABLE[name])
                 with self.assertRaises(exc_type) as cm:
                     call()
                 self.assertIsInstance(cm.exception, AssertionError, "must stay an AssertionError until 6.0")

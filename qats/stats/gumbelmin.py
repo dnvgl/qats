@@ -262,7 +262,7 @@ class GumbelMin(object):
         See [5] about bootstrapping.
 
         """
-        options = {"msm": self._msm, "lse": self._lse, "mle": self._mle}
+        options = {"msm": msm, "lse": lse, "mle": mle}
         if method.lower() not in options.keys():
             raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
