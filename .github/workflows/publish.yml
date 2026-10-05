@@ -71,7 +71,7 @@ jobs:
       id-token: write  # required for trusted publishing
     steps:
     - name: Download builds
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: builds
         path: dist
@@ -94,7 +94,7 @@ jobs:
       id-token: write  # required for trusted publishing
     steps:
     - name: Download builds
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: builds
         path: dist
@@ -118,7 +118,7 @@ jobs:
       contents: write  # required to upload builds to the release
     steps:
     - name: Download builds
-      uses: actions/download-artifact@v7
+      uses: actions/download-artifact@v8
       with:
         name: builds
         path: dist
