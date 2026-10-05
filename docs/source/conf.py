@@ -394,48 +394,44 @@ def setup(app):
                     f.write(f"run : {fullname}, {cm_typ}\n")
                 """
 
+                # errors are not caught here: a failure to collect members stops the docs build instead of
+                # silently producing an incomplete summary
                 if cm_typ == "class":
-                    try:
-                        r = __import__(root, globals(), locals(), [name])
-                        cm = getattr(r, name)
+                    r = __import__(root, globals(), locals(), [name])
+                    cm = getattr(r, name)
 
-                        self.content = []
+                    self.content = []
 
-                        if "properties" in self.options:
-                            _, props = self.get_class_members(cm, "property")
+                    if "properties" in self.options:
+                        _, props = self.get_class_members(cm, "property")
 
-                            # NOTE: `fullname` replaced by `name` due to warning in Sphinx 8.0+. Example:
-                            #       WARNING: Summarised items should not include the current module. Replace
-                            #       'qats.TimeSeries.average_frequency' with 'average_frequency'.
-                            #       [autosummary.import_cycle]
-                            self.content += ["~%s.%s" % (name, prop) for prop in props if not prop.startswith("_")]
+                        # NOTE: `fullname` replaced by `name` due to warning in Sphinx 8.0+. Example:
+                        #       WARNING: Summarised items should not include the current module. Replace
+                        #       'qats.TimeSeries.average_frequency' with 'average_frequency'.
+                        #       [autosummary.import_cycle]
+                        self.content += ["~%s.%s" % (name, prop) for prop in props if not prop.startswith("_")]
 
-                        if "methods" in self.options:
-                            _, methods = self.get_class_members(cm, "method", ["__init__"])
+                    if "methods" in self.options:
+                        _, methods = self.get_class_members(cm, "method", ["__init__"])
 
-                            self.content += [
-                                "~%s.%s" % (name, method) for method in methods if not method.startswith("_")
-                            ]
+                        self.content += ["~%s.%s" % (name, method) for method in methods if not method.startswith("_")]
 
-                    finally:
-                        return super(AutoAutoSummary, self).run()
+                    return super(AutoAutoSummary, self).run()
 
                 elif cm_typ == "module":
-                    try:
-                        typ = []
-                        if "classes" in self.options:
-                            typ.append("class")
-                        if "functions" in self.options:
-                            typ.append("function")
-                        if "modules" in self.options:
-                            typ.append("modules")
+                    typ = []
+                    if "classes" in self.options:
+                        typ.append("class")
+                    if "functions" in self.options:
+                        typ.append("function")
+                    if "modules" in self.options:
+                        typ.append("modules")
 
-                        members = self.get_module_members(cm, typ=typ)
+                    members = self.get_module_members(cm, typ=typ)
 
-                        self.content = [member for member in members if not member.startswith("_")]
+                    self.content = [member for member in members if not member.startswith("_")]
 
-                    finally:
-                        return super(AutoAutoSummary, self).run()
+                    return super(AutoAutoSummary, self).run()
 
         app.add_directive("autoautosummary", AutoAutoSummary)
     except BaseException as e:

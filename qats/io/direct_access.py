@@ -357,40 +357,37 @@ def write_ts_data(path, time: np.ndarray, data: dict):
     base, _ = os.path.splitext(path)
     keyfilename = base + ".key"
 
-    # open key file (ascii) and .ts file (binary)
+    # open key file (ascii) and .ts file (binary); both are closed even if opening the second one fails
     # todo: check if 'w' or 'wb' should be used, seems like fts.write(array(....)) expects a bytearray
-    fts = open(path, "wb")
-    fkey = open(keyfilename, "w")
-    try:
-        # number of data points in a single time series
-        ndat = time.size
+    with open(path, "wb") as fts, open(keyfilename, "w") as fkey:
+        try:
+            # number of data points in a single time series
+            ndat = time.size
 
-        # number of records (number of time series + header + time vector)
-        nrec = len(data) + 2
+            # number of records (number of time series + header + time vector)
+            nrec = len(data) + 2
 
-        # write meta info to first record
-        fts.write(pack("ii", ndat, nrec))
+            # write meta info to first record
+            fts.write(pack("ii", ndat, nrec))
 
-        # zero pad the first record
-        fts.write(array("i", [0] * (ndat - 2)))
+            # zero pad the first record
+            fts.write(array("i", [0] * (ndat - 2)))
 
-        # time array
-        fkey.write("time\n")
-        fts.write(array("f", time))
+            # time array
+            fkey.write("time\n")
+            fts.write(array("f", time))
 
-        # time series
-        for key, arr in data.items():
-            # write key to key file
-            fkey.write("%s\n" % key)
+            # time series
+            for key, arr in data.items():
+                # write key to key file
+                fkey.write("%s\n" % key)
 
-            # write time series array to ts file (position 1 refers to time series data)
-            fts.write(array("f", arr[1]))
+                # write time series array to ts file (position 1 refers to time series data)
+                fts.write(array("f", arr[1]))
 
-    except Exception:
-        raise RuntimeError("Exception encountered when writing data to file '%s'." % path)
+        except Exception as err:
+            raise RuntimeError("Exception encountered when writing data to file '%s'." % path) from err
 
-    finally:
-        # end key file and close file pointers
-        fkey.write("END\n")
-        fkey.close()
-        fts.close()
+        finally:
+            # end key file (the with statement closes the files)
+            fkey.write("END\n")
