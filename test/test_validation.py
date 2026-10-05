@@ -355,18 +355,6 @@ class TestValidation(unittest.TestCase):
         else:
             self.fail("invalid input is no longer caught by `except AssertionError`")
 
-    def test_gui_logging_level(self):
-        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-        from qtpy.QtWidgets import QApplication
-
-        from qats.app.gui import Qats
-
-        _ = QApplication.instance() or QApplication([])
-        with self.assertRaises(ValueError) as cm:
-            Qats(logging_level="bad")
-        self.assertIsInstance(cm.exception, AssertionError)
-        self.assertEqual(str(cm.exception), "invalid logging level: 'bad'")
-
     def test_checks_with_python_optimizations(self):
         """With `python -O`, assert statements are removed; the input checks must still raise."""
         code = (
@@ -392,6 +380,23 @@ class TestValidation(unittest.TestCase):
         result = subprocess.run([sys.executable, "-O", "-c", code], capture_output=True, text=True)  # noqa: S603
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         self.assertEqual(result.stdout.strip(), "ok")
+
+
+class TestValidationGui(unittest.TestCase):
+    # separate class without the matplotlib backend switching above: once Qt is running, matplotlib cannot switch
+    # back to the native macOS backend
+
+    def test_gui_logging_level(self):
+        os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        from qtpy.QtWidgets import QApplication
+
+        from qats.app.gui import Qats
+
+        _ = QApplication.instance() or QApplication([])
+        with self.assertRaises(ValueError) as cm:
+            Qats(logging_level="bad")
+        self.assertIsInstance(cm.exception, AssertionError)
+        self.assertEqual(str(cm.exception), "invalid logging level: 'bad'")
 
 
 if __name__ == "__main__":
