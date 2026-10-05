@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 """
 :class:`GumbelMin` class and functions related to Gumbel (minima) distribution.
+
+.. deprecated :: 5.4.0
+    `qats.stats.gumbelmin` will be removed in QATS 6.0.0. Fit :class:`qats.stats.gumbel.Gumbel` to the negated sample
+    (``-x``) instead, as QATS itself does for minima, or use :data:`scipy.stats.gumbel_l`.
 """
 
 import numpy as np
@@ -9,13 +13,12 @@ from matplotlib.pyplot import figure, grid, legend, plot, savefig, show, xlabel,
 from scipy.optimize import fsolve, leastsq
 from scipy.special import zetac
 
+from .._deprecation import warn_deprecated
 from .._validation import QatsValueError
 from .empirical import empirical_cdf
 from .gumbel import _euler_masceroni as em
 
-# todo: move fit methods e.g. _msm from class to standalone functions (importable)
-# todo: check fit procedures (read up once more and check implementation)
-# todo: create unit tests
+_ALTERNATIVE = "qats.stats.gumbel.Gumbel fitted to the negated sample (-x), or scipy.stats.gumbel_l,"
 
 
 class GumbelMin(object):
@@ -27,6 +30,10 @@ class GumbelMin(object):
         F(x) = 1 - exp{-exp[(x-a)/b]}
 
     where `a` is location parameter and `b` is the scale parameter.
+
+    .. deprecated :: 5.4.0
+        `GumbelMin` will be removed in QATS 6.0.0. Fit :class:`qats.stats.gumbel.Gumbel` to the negated sample
+        (``-x``) instead, as QATS itself does for minima, or use :data:`scipy.stats.gumbel_l`.
 
     .. versionchanged :: 5.4.0
         Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
@@ -78,6 +85,7 @@ class GumbelMin(object):
     """
 
     def __init__(self, loc=None, scale=None, data=None):
+        warn_deprecated("qats.stats.gumbelmin.GumbelMin", "5.4.0", "6.0.0", alternative=_ALTERNATIVE)
         self.location = loc
         self.scale = scale
 
@@ -262,7 +270,7 @@ class GumbelMin(object):
         See [5] about bootstrapping.
 
         """
-        options = {"msm": msm, "lse": lse, "mle": mle}
+        options = {"msm": _msm, "lse": _lse, "mle": _mle}
         if method.lower() not in options.keys():
             raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
@@ -303,7 +311,7 @@ class GumbelMin(object):
         """
         try:
             if x is None:
-                x = np.linspace(self.loc, self.loc - 3.0 * self.std, 100)
+                x = np.linspace(self.location, self.location - 3.0 * self.std, 100)
             else:
                 x = np.array(x)
 
@@ -338,7 +346,7 @@ class GumbelMin(object):
 
         """
 
-        options = {"msm": msm, "lse": lse, "mle": mle}
+        options = {"msm": _msm, "lse": _lse, "mle": _mle}
         if method.lower() not in options.keys():
             raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
@@ -409,9 +417,9 @@ class GumbelMin(object):
         plot(x, z_data, "ko", label="Data")
 
         # fit distributions
-        a_msm, b_msm = msm(self.data)
-        a_mle, b_mle = mle(self.data)
-        a_lse, b_lse = lse(self.data)
+        a_msm, b_msm = _msm(self.data)
+        a_mle, b_mle = _mle(self.data)
+        a_lse, b_lse = _lse(self.data)
 
         z_msm = (x - a_msm) / b_msm
         z_mle = (x - a_mle) / b_mle
@@ -495,7 +503,7 @@ class GumbelMin(object):
         """
         try:
             if x is None:
-                x = np.linspace(self.loc, self.loc - 3.0 * self.std, 100)
+                x = np.linspace(self.location, self.location - 3.0 * self.std, 100)
             else:
                 x = np.array(x)
 
@@ -568,7 +576,7 @@ class GumbelMin(object):
         return x
 
 
-def lse(x):
+def _lse(x):
     """
     Fit distribution parameters to sample by method of least square fit to empirical cdf
 
@@ -592,7 +600,7 @@ def lse(x):
         # error function to be minimized
         return fp(v, z) - y
 
-    a0, b0 = msm(x)  # initial guess based on method of moments
+    a0, b0 = _msm(x)  # initial guess based on method of moments
 
     # least square fit
     p, cov, info, msg, ier = leastsq(e, [a0, b0], args=(x, f), full_output=1)
@@ -600,7 +608,7 @@ def lse(x):
     return p[0], p[1]
 
 
-def mle(x):
+def _mle(x):
     """
     Fit distribution parameters to sample by maximum likelihood estimation
 
@@ -627,23 +635,28 @@ def mle(x):
             data
         """
         loc, scale = p  # unpack parameters
-        n = z.size
 
+        # weights exp(z / scale), shifted by max(z) to avoid overflow (the shift cancels out)
+        zmax = z.max()
+        w = np.exp((z - zmax) / scale)
+
+        # loc = scale * ln(mean(exp(z / scale)))
+        # scale = sum(z * exp(z / scale)) / sum(exp(z / scale)) - mean(z)
         out = [
-            loc + scale * np.log(1.0 / n * np.sum(np.exp(z / scale))),
-            z.mean() - np.sum(z * np.exp(z / scale)) / np.sum(np.exp(z / scale)) - scale,
+            loc - (zmax + scale * np.log(np.mean(w))),
+            np.sum(z * w) / np.sum(w) - z.mean() - scale,
         ]
 
         return out
 
     x = np.array(x)
-    a0, b0 = msm(x)  # initial guess
+    a0, b0 = _msm(x)  # initial guess
     a, b = fsolve(mle_eq, [a0, b0], args=x)
 
     return a, b
 
 
-def msm(x):
+def _msm(x):
     """
     Fit distribution parameters to sample by method of sample moments
 
@@ -662,3 +675,75 @@ def msm(x):
     a = x.mean() + em() * b
 
     return a, b
+
+
+def lse(x):
+    """
+    Fit distribution parameters to sample by method of least square fit to empirical cdf
+
+    .. deprecated :: 5.4.0
+        `lse()` will be removed in QATS 6.0.0. Fit :class:`qats.stats.gumbel.Gumbel` to the negated sample
+        (``-x``) instead, as QATS itself does for minima, or use :data:`scipy.stats.gumbel_l`.
+
+    Parameters
+    ----------
+    x : array_like
+        sample
+
+    Returns
+    -------
+    float
+        location parameter
+    float
+        scale parameter
+    """
+    warn_deprecated("qats.stats.gumbelmin.lse()", "5.4.0", "6.0.0", alternative=_ALTERNATIVE)
+    return _lse(x)
+
+
+def mle(x):
+    """
+    Fit distribution parameters to sample by maximum likelihood estimation
+
+    .. deprecated :: 5.4.0
+        `mle()` will be removed in QATS 6.0.0. Fit :class:`qats.stats.gumbel.Gumbel` to the negated sample
+        (``-x``) instead, as QATS itself does for minima, or use :data:`scipy.stats.gumbel_l`.
+
+    Parameters
+    ----------
+    x : array_like
+        sample
+
+    Returns
+    -------
+    float
+        location parameter
+    float
+        scale parameter
+    """
+    warn_deprecated("qats.stats.gumbelmin.mle()", "5.4.0", "6.0.0", alternative=_ALTERNATIVE)
+    return _mle(x)
+
+
+def msm(x):
+    """
+    Fit distribution parameters to sample by method of sample moments
+
+    .. deprecated :: 5.4.0
+        `msm()` will be removed in QATS 6.0.0. Fit :class:`qats.stats.gumbel.Gumbel` to the negated sample
+        (``-x``) instead, as QATS itself does for minima, or use :data:`scipy.stats.gumbel_l`.
+
+    Parameters
+    ----------
+    x : array_like
+        sample
+
+    Returns
+    -------
+    float
+        location parameter
+    float
+        scale parameter
+    """
+    warn_deprecated("qats.stats.gumbelmin.msm()", "5.4.0", "6.0.0", alternative=_ALTERNATIVE)
+    return _msm(x)

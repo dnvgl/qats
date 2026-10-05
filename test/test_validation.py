@@ -11,6 +11,7 @@ import re
 import subprocess
 import sys
 import unittest
+import warnings
 
 import numpy as np
 
@@ -326,6 +327,9 @@ class TestValidation(unittest.TestCase):
         plt.switch_backend("Agg")
         self.addCleanup(plt.switch_backend, backend)
         self.addCleanup(plt.close, "all")
+        # GumbelMin is deprecated (tested in test_gumbelmin.py)
+        self.enterContext(warnings.catch_warnings())
+        warnings.filterwarnings("ignore", category=DeprecationWarning, message=r"qats\.stats\.gumbelmin")
 
     def test_invalid_input(self):
         """Each check raises the documented exception type, still an AssertionError, with the same message."""
