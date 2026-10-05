@@ -8,6 +8,8 @@ from struct import pack, unpack
 
 import numpy as np
 
+from .._validation import QatsValueError
+
 
 def read_ts_names(path):
     """
@@ -290,10 +292,14 @@ def _read_data(path, ifmt, ind=None, verbose=False):
                 ind = list(range(nts + 1))  # (including time array)
             else:
                 # check number of keys (+1 is due to bug in some direct access files), if specified by user
-                assert max(ind) <= nts, "Requested time series no. %d, but there are only %d time series on file" % (
-                    max(ind),
-                    nts,
-                )
+                if not (max(ind) <= nts):
+                    raise QatsValueError(
+                        "Requested time series no. %d, but there are only %d time series on file"
+                        % (
+                            max(ind),
+                            nts,
+                        )
+                    )
 
             # define position
             pos = dict(zip(ind, range(len(ind))))
@@ -328,7 +334,7 @@ def _read_data(path, ifmt, ind=None, verbose=False):
 
     except OverflowError:
         raise
-    except AssertionError:
+    except ValueError:
         raise
 
     return arr

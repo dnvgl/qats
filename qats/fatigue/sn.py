@@ -10,12 +10,18 @@ import numpy as np
 from scipy.special import gamma as gammafunc
 from scipy.special import gammainc, gammaincc
 
+from .._validation import QatsTypeError, QatsValueError
+
 # todo: Update SNCurve docstring to include description of class and attributes
 
 
 class SNCurve(object):
     """
     S-N curve representing fatigue capacity versus cyclic stresses.
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -134,7 +140,8 @@ class SNCurve(object):
         For bi-linear curves, use `a1` and `a2` instead.
         """
         # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
-        assert self.a2 is None, "For bi-linear curves, use `a1` and `a2` instead of `a`"
+        if self.a2 is not None:
+            raise QatsValueError("For bi-linear curves, use `a1` and `a2` instead of `a`")
         return self.a1
 
     @property
@@ -154,7 +161,8 @@ class SNCurve(object):
         For bi-linear curves, use `loga1` and `loga2` instead.
         """
         # should only be available for linear S-N curves - otherwise, a1 and a2 should be used!
-        assert self.loga2 is None, "For bi-linear curves, use `loga1` and `loga2` instead of `loga`"
+        if self.loga2 is not None:
+            raise QatsValueError("For bi-linear curves, use `loga1` and `loga2` instead of `loga`")
         return self.loga1
 
     @property
@@ -164,7 +172,8 @@ class SNCurve(object):
         Not available for bi-linear curves.
         """
         # should only be available for linear S-N curves - otherwise, m1 and m2 should be used!
-        assert self.m2 is None, "For bi-linear curves, use `m1` and `m2` instead of `m`"
+        if self.m2 is not None:
+            raise QatsValueError("For bi-linear curves, use `m1` and `m2` instead of `m`")
         return self.m1
 
     def fatigue_strength(self, n, t=None):
@@ -321,6 +330,10 @@ def minersum(srange, count, sn, td=1.0, scf=1.0, th=None, retbins=False, args=()
     """
     Fatigue damage (Palmgren-Miner sum) calculation based on stress cycle histogram and S-N curve.
 
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
+
     Parameters
     ----------
     srange: np.ndarray or list of floats
@@ -365,7 +378,7 @@ def minersum(srange, count, sn, td=1.0, scf=1.0, th=None, retbins=False, args=()
     ------
     ValueError:
         If thickness is given but thickness correction not specified for S-N curve.
-    AssertionError
+    TypeError
         If parameter `sn` is not a dict, a callable, or a class instance with callable method `n()`.
 
     Notes
@@ -393,15 +406,17 @@ def minersum(srange, count, sn, td=1.0, scf=1.0, th=None, retbins=False, args=()
             raise ValueError("thickness is specified, but `k_tickn` and `t_ref` not defined for given S-N curve")
         damage_per_bin = td * count / sn.n(srange * scf, t=th)
     else:
-        assert th is None, (
-            "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. "
-            "For other cases, use parameter 'args' or 'kwds'."
-        )
+        if th is not None:
+            raise QatsValueError(
+                "Parameter 'th' is only accepted if 'sn' is a dict or an SNCurve instance. "
+                "For other cases, use parameter 'args' or 'kwds'."
+            )
         if callable(sn):
             func = sn
         else:
             func = getattr(sn, "n", None)
-            assert callable(func), "Parameter 'sn' must be dict, callable or class instance with callable method 'n'"
+            if not (callable(func)):
+                raise QatsTypeError("Parameter 'sn' must be dict, callable or class instance with callable method 'n'")
         damage_per_bin = td * count / func(srange * scf, *args, **kwds)
 
     # total damage is sum of damage per stress range bin

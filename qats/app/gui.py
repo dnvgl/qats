@@ -52,6 +52,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
 from .. import __version__
+from .._validation import QatsValueError
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
 from .funcs import (
@@ -192,7 +193,8 @@ class Qats(QMainWindow):
 
         """
         super(Qats, self).__init__(parent)
-        assert logging_level in LOGGING_LEVELS, "invalid logging level: '%s'" % logging_level
+        if logging_level not in LOGGING_LEVELS:
+            raise QatsValueError("invalid logging level: '%s'" % logging_level)
 
         # match plot colors to the Qt color scheme (e.g. Windows dark mode) before
         # any figure/axes is created, so all plots pick up the theme

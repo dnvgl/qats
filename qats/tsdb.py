@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from ._validation import QatsValueError
 from .fatigue.rainflow import rebin as rebin_cycles
 from .io.csv import read_data as read_csv_data
 from .io.csv import read_names as read_csv_names
@@ -43,6 +44,10 @@ from .ts import TimeSeries
 class TsDB(object):
     """
     A class for storage, processing and presentation of time series.
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -508,7 +513,8 @@ class TsDB(object):
         """
         # handle retkeys
         if retkeys is not None:
-            assert len(retkeys) == len(keys), "The number of 'retkeys' is different from the number of 'keys'."
+            if not (len(retkeys) == len(keys)):
+                raise QatsValueError("The number of 'retkeys' is different from the number of 'keys'.")
         else:
             retkeys = copy.copy(keys)
 
@@ -1560,9 +1566,10 @@ class TsDB(object):
         container = self.getm(names=names, store=store)
 
         # ensure that rebinning will be done
-        assert (n is not None) or (w is not None), (
-            "Cycles must be rebinned for this plot - either 'n' or 'w' must be different from None"
-        )
+        if n is None and w is None:
+            raise QatsValueError(
+                "Cycles must be rebinned for this plot - either 'n' or 'w' must be different from None"
+            )
 
         plt.figure(num=num)
         for k, v in container.items():

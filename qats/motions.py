@@ -6,6 +6,8 @@ Transformations and operations related to motion.
 
 import numpy as np
 
+from ._validation import QatsValueError
+
 
 def transform_motion(motion, newref, rotunit="deg"):
     """
@@ -13,6 +15,10 @@ def transform_motion(motion, newref, rotunit="deg"):
 
     The following sequence of rotation is used: z-y-z (known as yaw-pitch-roll). For more detailed description,
     see https://en.wikipedia.org/wiki/Euler_angles or SIMO Theory Manual (ch. 6.2 in version 4.14.0).
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -37,8 +43,10 @@ def transform_motion(motion, newref, rotunit="deg"):
     motion = np.asarray(motion)  # ensure motion is numpy array
     newref = np.asarray(newref)  # ensure newref is numpy array, for efficiency in loop with np.dot
     ndof, nt = motion.shape  # number of dofs and time steps
-    assert ndof == 6, f"Motion must be of shape (6, nt) (6-dof motion), got {motion.shape}"
-    assert newref.size == 3, f"Specified position must be list/tuple with three values, got {len(newref)}"
+    if not (ndof == 6):
+        raise QatsValueError(f"Motion must be of shape (6, nt) (6-dof motion), got {motion.shape}")
+    if not (newref.size == 3):
+        raise QatsValueError(f"Specified position must be list/tuple with three values, got {len(newref)}")
 
     # extract rotations, scale to radians if needed given as degrees
     if rotunit == "deg":
@@ -111,6 +119,10 @@ def velocity(x, t):
     """
     Numerical time differentiation to obtain velocity of signal(s).
 
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
+
     Parameters
     ----------
     x : list or np.array
@@ -139,7 +151,8 @@ def velocity(x, t):
     """
     # check input signal(s)
     x = np.asarray(x)
-    assert x.ndim in (1, 2), "Input signal 'x' must be 1- or 2-D array"
+    if x.ndim not in (1, 2):
+        raise QatsValueError("Input signal 'x' must be 1- or 2-D array")
     # check specified time
     if isinstance(t, float):
         # time step is specified
@@ -148,7 +161,8 @@ def velocity(x, t):
         # assume time array is specified -> check that it matches the number of time steps in input signals
         t = np.asarray(t)  # ensure t is numpy array
         nt = x.shape[-1]  # number of time steps
-        assert t.size == nt, "If time array is specified, it must match number of time steps in input signal(s)"
+        if not (t.size == nt):
+            raise QatsValueError("If time array is specified, it must match number of time steps in input signal(s)")
 
     if x.ndim == 1:
         axis = None

@@ -3,6 +3,8 @@ from typing import List, Tuple, Union
 
 from nptdms import TdmsFile
 
+from .._validation import QatsValueError
+
 
 def read_names(path):
     """
@@ -66,7 +68,8 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
     with TdmsFile.open(path) as f:
         for name in names:
             # assuming an object hierarchy with depth 2 'group-channel'
-            assert len(name.split("\\")) == 2, f"Unable to parse group name and channel name from {name}."
+            if not (len(name.split("\\")) == 2):
+                raise QatsValueError(f"Unable to parse group name and channel name from {name}.")
             group_name, channel_name = name.split("\\")
             group = f[group_name]
             channel = group[channel_name]

@@ -9,6 +9,7 @@ import numpy as np
 from scipy.optimize import brentq, fsolve, leastsq
 from scipy.special import binom, gamma
 
+from .._validation import QatsValueError
 from ..signal import find_maxima
 from .empirical import empirical_cdf
 
@@ -27,6 +28,10 @@ class Weibull(object):
 
     where `a` is location parameter, `b` is scale parameter and `c` is shape parameter.
 
+
+    .. versionchanged :: 5.4.0
+        Invalid input raises :class:`ValueError` or :class:`TypeError` instead of :class:`AssertionError`, also when
+        Python runs with ``-O``. Both are still subclasses of :class:`AssertionError` until 6.0.
 
     Parameters
     ----------
@@ -294,7 +299,8 @@ class Weibull(object):
         else:
             x = np.array(x)
 
-        assert np.all(x >= self.loc), "The location parameter must be less than all items in data set"
+        if not (np.all(x >= self.loc)):
+            raise QatsValueError("The location parameter must be less than all items in data set")
 
         p = 1.0 - np.exp(-(((x - self.loc) / self.scale) ** self.shape))
         return p
@@ -338,7 +344,8 @@ class Weibull(object):
 
         """
         options = {"msm": msm, "lse": lse, "mle": mle, "pwm": pwm, "pwm2": pwm2}
-        assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+        if method.lower() not in options.keys():
+            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
         data = np.array(data)  # ensure numpy array
 
@@ -451,7 +458,8 @@ class Weibull(object):
         else:
             x = np.array(x)
 
-        assert np.all(x >= self.loc), "The location parameter must be less than all items in data set"
+        if not (np.all(x >= self.loc)):
+            raise QatsValueError("The location parameter must be less than all items in data set")
 
         p = (
             self.shape
@@ -650,7 +658,8 @@ def bootstrap(loc, scale, shape, size, repetitions, method="pwm"):
 
     """
     options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-    assert method.lower() in options.keys(), "Method must be either %s" % (" or ".join(options.keys()))
+    if method.lower() not in options.keys():
+        raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
 
     # initiate distribution
     distribution = Weibull(loc, scale, shape)
