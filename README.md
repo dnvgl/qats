@@ -37,7 +37,14 @@ perfect for inspecting, comparing and reporting:
 
 ### Installation
 
-QATS requires Python 3.11 or later. Run the below command in a Python environment to install the latest QATS release:
+QATS supports the Python versions that are officially supported, i.e. those with status _bugfix_ or _security_ in
+the [status of Python versions](https://devguide.python.org/versions/). QATS 5.4 supports Python 3.11, 3.12, 3.13 and
+3.14; the [PyPI page](https://pypi.org/project/qats/) shows the versions supported by the latest release.
+
+On Python 3.8, 3.9 or 3.10, stay on QATS 5.3. `pip` selects it automatically, since QATS 5.4 and later require
+Python 3.11 or later.
+
+Run the below command in a Python environment to install the latest QATS release:
 
 ```console
 python -m pip install qats
@@ -57,15 +64,18 @@ You may now import qats in your own scripts:
 
 ... or use the GUI to inspect time series. 
 
-_New in version 5.0.0._ 
-The [Qt](https://www.qt.io) binding [PySide6](https://pypi.org/project/PySide6/) is installed with `qats`. 
-If you would rather like to use [PyQt6](https://pypi.org/project/PyQt6/), run
+The GUI uses the [Qt](https://www.qt.io) binding [PySide6](https://pypi.org/project/PySide6/), which is installed
+with `qats` and is the binding QATS is tested with. [PyQt6](https://pypi.org/project/PyQt6/) also works, through
+[qtpy](https://github.com/spyder-ide/qtpy), but is supported on a best-effort basis only. To use it, install it and
+select it with the environment variable `QT_API`:
 
 ```console
 python -m pip install pyqt6
+set QT_API=pyqt6
 ```
 
-If multiple Qt bindinds are installed, the one to use may be controlled by setting the environmental variable `QT_API` to the desired package. Accepted values include `pyqt6` (to use PyQt6) and `pyside6` (PySide6). For more details, see [README file for qtpy](https://github.com/spyder-ide/qtpy/blob/master/README.md).
+(On Linux and macOS: `export QT_API=pyqt6`.) Accepted values of `QT_API` include `pyside6` and `pyqt6`; see the
+[qtpy README](https://github.com/spyder-ide/qtpy/blob/master/README.md) for details.
 
 The GUI may now be launched by:
 
