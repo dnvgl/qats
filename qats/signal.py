@@ -581,9 +581,8 @@ def find_maxima(x, local: bool = False, threshold: float = None, up: bool = True
             if crossing_indices_up[-1] < crossing_indices_do[-1]:
                 crossing_indices = np.append(crossing_indices, crossing_indices_do[-1])
 
-            # number of crossings and number of peaks
+            # number of crossings
             n_crossings = crossing_indices.size
-            n_peaks = n_crossings - 1
 
             # no global maxima if `n_crossings` is now 1
             # (e.g., because there is one upcrossing and one downcrossing, but

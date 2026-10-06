@@ -7,7 +7,8 @@ Prerequisites
 *************
 
 You need Python, which may be installed from for instance https://www.python.org or https://www.anaconda.com.
-If not sure about which version to use, see supported python versions on https://pypi.org/project/qats/.
+QATS 5.4 supports Python 3.11, 3.12, 3.13 and 3.14; see :ref:`python_version_support`.
+On Python 3.8, 3.9 or 3.10, stay on QATS 5.3, which ``pip`` selects automatically.
 
 Installation
 ************
@@ -68,10 +69,11 @@ and run the command line interface (CLI).
 
 
 .. note::
-    As of version 5.0.0, qats installs the `Qt <https://www.qt.io>`_ binding `PySide6 <https://pypi.org/project/PySide6/>`_.
-    Although not recommended, you can choose a different qt binding yourself by installing the package and setting the 
-    environmental variable :code:`QT_API`. Accepted values include :code:`pyqt6` (to use PyQt6) and :code:`pyside6` (PySide6). For more details, 
-    see `README file for qtpy <https://github.com/spyder-ide/qtpy/blob/master/README.md>`_.
+    The GUI uses the `Qt <https://www.qt.io>`_ binding `PySide6 <https://pypi.org/project/PySide6/>`_, which is
+    installed with qats and is the binding QATS is tested with. `PyQt6 <https://pypi.org/project/PyQt6/>`_ also works,
+    through `qtpy <https://github.com/spyder-ide/qtpy>`_, but is supported on a best-effort basis only. To use it,
+    install it (``python -m pip install pyqt6``) and set the environment variable :code:`QT_API` to :code:`pyqt6`.
+    See the `qtpy README <https://github.com/spyder-ide/qtpy/blob/master/README.md>`_ for details.
 
 .. note::
     As of version 4.11.0, the CLI is also available through the ``python -m`` switch, for example:
