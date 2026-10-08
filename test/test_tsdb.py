@@ -76,14 +76,24 @@ class TestTsDB(unittest.TestCase):
         self.assertEqual(8, len(k), "Deviating number of listed keys = %d" % len(k))
 
     def test_list_subset_misc_criteria(self):
-        for tsfile in ("mooring.ts", "simo_p.ts"):
+        for tsfile in ("mooring.ts", "simo_p_out.ts"):
             self.db.load(os.path.join(self.data_directory, tsfile))
         # test 1
         k = self.db.list(names="Tension*", display=False)
         self.assertEqual(10, len(k), "Deviating number of listed keys = %d" % len(k))
         # test 2
-        k = self.db.list(names="simo_p.ts*line*", display=False)
+        k = self.db.list(names="simo_p_out.ts*line*", display=False)
         self.assertEqual(2, len(k), "Deviating number of listed keys = %d" % len(k))
+
+    def test_truncated_ts_lists_only_complete_series(self):
+        """A .ts file with an incomplete last record (#179): warn and list only the series that can be read."""
+        path = os.path.join(self.data_directory, "simo_p.ts")
+        with self.assertWarnsRegex(UserWarning, "holds 21 complete series.*lists 22.*Skipping hc_line_2"):
+            self.db.load(path)
+        names = [os.path.basename(k) for k in self.db.list(display=False)]
+        self.assertEqual(21, len(names))
+        self.assertNotIn("hc_line_2", names)
+        self.assertEqual(21, len(self.db.getm(names="*", store=False)))
 
     def test_list_subset_keep_specified_order(self):
         self.db.load(os.path.join(self.data_directory, "mooring.ts"))

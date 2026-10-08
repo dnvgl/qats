@@ -45,10 +45,10 @@ class TestAllReaders(unittest.TestCase):
             ("sima_witurb.bin", 23),
             # direct access files
             ("mooring.ts", 14),
-            ("simo_p.ts", 22),
+            ("simo_p.ts", 21),  # truncated: the last of the 22 series in the key file is incomplete (#179)
             ("simo_p_out.ts", 22),
-            ("simo_r1.ts", 22),
-            ("simo_r2.ts", 22),
+            ("simo_r1.ts", 21),  # truncated, as simo_p.ts
+            ("simo_r2.ts", 21),  # truncated, as simo_p.ts
             ("simo_trans.ts", 12),
             ("simo_n.tda", 6),
             ("decay.tda", 6),
