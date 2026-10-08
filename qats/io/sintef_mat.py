@@ -1,7 +1,7 @@
 """
 Readers for SINTEF Ocean test data exhange format based on the Matlab .mat file.
 
-Works for matlab file format version <=7.2 and >=7.3.
+Works for MAT file versions 4, 6, 7 and 7.3 (tested with the sample files in data/).
 """
 
 import fnmatch
