@@ -165,9 +165,6 @@ class TestSelectiveReading(unittest.TestCase):
                 n = len(keys)
                 full = full_db.getm(ind=list(range(n)), store=False, fullkey=True)
                 subsets = [[0], [n // 2], [n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))]
-                if filename.endswith(".csv"):
-                    # out of file order fails for .csv (#181), see test_csv_out_of_file_order
-                    subsets = [sorted(ind) for ind in subsets]
                 for ind in subsets:
                     db = TsDB.fromfile(path)  # nothing read yet
                     got = db.getm(ind=ind, store=False, fullkey=True)
@@ -177,7 +174,6 @@ class TestSelectiveReading(unittest.TestCase):
                         np.testing.assert_array_equal(ts.t, ref.t, err_msg=f"{keys[i]} (t, subset {ind})")
                         np.testing.assert_array_equal(ts.x, ref.x, err_msg=f"{keys[i]} (x, subset {ind})")
 
-    @unittest.expectedFailure  # #181: the .csv reader returns the columns in file order; remove when fixed
     def test_csv_out_of_file_order(self):
         path = os.path.abspath(os.path.join(self.data_directory, "example.csv"))
         full = TsDB.fromfile(path).getm(names="*", store=False)

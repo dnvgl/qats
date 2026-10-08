@@ -46,8 +46,12 @@ def read_data(path, ind=None):
     Returns
     -------
     array
-        Time and data
+        Time and data, with the columns in the order given by `ind`.
 
     """
     df = pd.read_csv(path, usecols=ind, sep=None, engine="python")  # pandas will infer the format e.g. delimiter.
+    if ind is not None:
+        # pandas returns the columns in file order, whatever the order of `usecols`
+        cols = sorted(set(ind))
+        df = df.iloc[:, [cols.index(i) for i in ind]]
     return df.T.to_numpy()
