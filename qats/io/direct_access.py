@@ -108,7 +108,7 @@ def _read_names(path):
     -----
     Keys are stored on ASCII file as one key per line. The file is terminated by END.
     """
-    with open(os.path.join(path, path), "r") as f:
+    with open(path, "r") as f:
         names = [line.strip() for line in f if not line.startswith(("**", "'")) and not line.upper().strip() == "END"]
 
     return names
