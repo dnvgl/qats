@@ -142,6 +142,11 @@ SELECTIVE_FILES = [
     "example.csv",
     "model_test_data.dat",
     "data.tdms",
+    # MATLAB, one per MAT file version: v7.3 (HDF5), v7 (compressed), v6, v4
+    "test4210.mat",
+    "test4210_v7.mat",
+    "test4210_v6.mat",
+    "test20320_ntnu.mat",
 ]
 
 
@@ -205,6 +210,18 @@ class TestIndependentReading(unittest.TestCase):
             ts = db.get(name=name, store=False)
             np.testing.assert_array_equal(ts.t, df.iloc[:, 0].to_numpy(), err_msg=f"{name} (t)")
             np.testing.assert_array_equal(ts.x, df[name].to_numpy(), err_msg=f"{name} (x)")
+
+    def test_mat_versions_equal(self):
+        """The same recording stored as MAT v7.3 (HDF5), v7 and v6 gives identical series."""
+        reference = TsDB.fromfile(os.path.join(self.data_directory, "test4210.mat")).getm(names="*", store=False)
+        self.assertEqual(len(reference), 40)
+        for filename in ("test4210_v7.mat", "test4210_v6.mat"):
+            with self.subTest(filename):
+                other = TsDB.fromfile(os.path.join(self.data_directory, filename)).getm(names="*", store=False)
+                self.assertEqual(list(other), list(reference))
+                for name, ts in reference.items():
+                    np.testing.assert_array_equal(other[name].t, ts.t, err_msg=f"{name} (t)")
+                    np.testing.assert_array_equal(other[name].x, ts.x, err_msg=f"{name} (x)")
 
     def test_ts_equals_numpy(self):
         """Direct access .ts: a header record, the time record, then one record per series in key file order."""

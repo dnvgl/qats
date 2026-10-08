@@ -20,7 +20,7 @@ The python library provides tools for:
 It was originally created to handle time series files exported from [SIMO](https://www.dnvgl.com/services/complex-multibody-calculations-simo-2311) 
 and [RIFLEX](https://www.dnvgl.com/services/riser-analysis-software-for-marine-riser-systems-riflex-2312). Now it also
 handles [SIMA](https://www.dnvgl.com/services/marine-operations-and-mooring-analysis-software-sima-2324) hdf5 (.h5) files, 
-Matlab (version < 7.3) .mat files, CSV files and more.  
+MATLAB .mat files (versions 4, 6, 7 and 7.3), CSV files and more.
 
 QATS also features a GUI which offers efficient and low threshold processing and visualization of time series. It is
 perfect for inspecting, comparing and reporting:
