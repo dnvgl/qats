@@ -8,8 +8,8 @@ import os
 import tempfile
 import tracemalloc
 import unittest
+import unittest.mock
 import warnings
-from unittest import mock
 
 import numpy as np
 
@@ -186,7 +186,7 @@ class TestPlugins(RegistryTestCase):
         """Fill the registry from scratch with the given (fake) plugin entry points."""
         registry._readers.clear()
         registry._loaded = False
-        with mock.patch("importlib.metadata.entry_points", return_value=entry_points) as patched:
+        with unittest.mock.patch("importlib.metadata.entry_points", return_value=entry_points) as patched:
             with self.assertLogs("qats.io.registry", level="WARNING") as logs:
                 registry.readers()
                 registry.logger.warning("end")  # assertLogs needs at least one record
