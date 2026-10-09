@@ -5,6 +5,8 @@ Readers pickle dataframe formatted time series files
 import numpy as np
 import pandas as pd
 
+from .base import Reader, _RowSource
+
 
 def read_pickle_names(path):
     """
@@ -95,3 +97,29 @@ def write_data(path, time: np.ndarray, data: dict):
     df.to_pickle(path)
 
     return
+
+
+class _PickleSource(_RowSource):
+    def _read_names(self):
+        return read_pickle_names(self.path)
+
+    def _read_rows(self, ind):
+        # the whole file is read in any case; keep only the requested rows
+        return read_data(self.path)[ind, :]
+
+
+class PickleReader(Reader):
+    """
+    Reader for pickled pandas DataFrames with time as index and one column per series (``.pkl``, ``.pickle``).
+
+    Only open pickle files from trusted sources: loading a pickle file can run arbitrary code.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "pickle"
+    description = "Pickled pandas DataFrame"
+    patterns = ("*.pkl", "*.pickle")
+
+    def open(self, path):
+        return _PickleSource(path)

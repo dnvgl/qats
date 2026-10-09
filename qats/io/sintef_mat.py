@@ -11,6 +11,8 @@ from typing import List, Tuple, Union
 import numpy as np
 from pymatreader import read_mat
 
+from .base import Reader, SeriesData, SeriesInfo, SourceFile
+
 
 def read_names(path):
     """
@@ -123,3 +125,42 @@ def _datenums_to_datetime(timearr):
     timearr = timearr.flatten()
     dtarray = np.array([convert(t) for t in timearr])
     return dtarray.reshape(was_shape)
+
+
+class _MatSource(SourceFile):
+    def __init__(self, path):
+        super().__init__(path)
+        self._timename = None
+        self._names = None
+
+    def _scan(self):
+        if self._names is None:
+            self._timename, self._names = read_names(self.path)
+
+    def series(self):
+        self._scan()
+        return [SeriesInfo(name) for name in self._names]
+
+    def read(self, names):
+        self._scan()
+        data = read_data(self.path, [self._timename, *names])
+        return [SeriesData(name, data[self._timename], data[name]) for name in names]
+
+    def _legacy_index(self, name):
+        """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""
+        return None
+
+
+class MatReader(Reader):
+    """
+    Reader for MATLAB files (``.mat``, versions 4, 6, 7 and 7.3) in the SINTEF Ocean test data exchange format.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "matlab"
+    description = "MATLAB (SINTEF Ocean test data exchange format)"
+    patterns = ("*.mat",)
+
+    def open(self, path):
+        return _MatSource(path)

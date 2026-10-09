@@ -4,6 +4,8 @@ Readers CSV formatted time series files
 
 import pandas as pd
 
+from .base import Reader, _RowSource
+
 
 def read_names(path):
     """
@@ -55,3 +57,26 @@ def read_data(path, ind=None):
         cols = sorted(set(ind))
         df = df.iloc[:, [cols.index(i) for i in ind]]
     return df.T.to_numpy()
+
+
+class _CsvSource(_RowSource):
+    def _read_names(self):
+        return read_names(self.path)
+
+    def _read_rows(self, ind):
+        return read_data(self.path, ind=ind)
+
+
+class CsvReader(Reader):
+    """
+    Reader for comma-separated files with the names on the header row and time in the first column (``.csv``).
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "csv"
+    description = "Comma-separated values"
+    patterns = ("*.csv",)
+
+    def open(self, path):
+        return _CsvSource(path)
