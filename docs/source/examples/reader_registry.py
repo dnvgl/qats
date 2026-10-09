@@ -22,6 +22,7 @@ print(find_reader(file_name).name)  # csv
 
 # choose the reader yourself, e.g. for a comma-separated file with another extension
 db = TsDB.fromfile(file_name, reader="csv")
+print(db.list(display=False, relative=True))  # surge, sway, heave, roll, pitch, yaw
 
 
 # A reader for a format of your own: a text file with the series names on the first line, the units on the second
