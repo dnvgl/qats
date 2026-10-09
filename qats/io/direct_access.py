@@ -3,12 +3,14 @@ Readers for various direct access formatted time series files
 """
 
 import os
+import warnings
 from array import array
 from struct import pack, unpack
 
 import numpy as np
 
 from .._validation import QatsValueError
+from .base import Reader, _RowSource
 
 
 def read_ts_names(path):
@@ -420,3 +422,61 @@ def write_ts_data(path, time: np.ndarray, data: dict):
         finally:
             # end key file (the with statement closes the files)
             fkey.write("END\n")
+
+
+class _TsSource(_RowSource):
+    def _read_names(self):
+        names = read_ts_names(os.path.splitext(self.path)[0] + ".key")
+        nts = _count_series(self.path)
+        if len(names) > nts:
+            # e.g. a file truncated by an interrupted write: list only the series that can be read
+            warnings.warn(
+                f"{self.path} holds {nts} complete series, but its key file lists {len(names)}. "
+                f"Skipping {', '.join(names[nts:])}.",
+                stacklevel=2,
+            )
+            names = names[:nts]
+        return names
+
+    def _read_rows(self, ind):
+        return read_ts_data(self.path, ind=ind)
+
+
+class TsReader(Reader):
+    """
+    Reader for SIMO/RIFLEX direct access files (``.ts``), with the series names on a key file (``.key``) of the
+    same name.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "direct-access-ts"
+    description = "Direct access time series (SIMO, RIFLEX)"
+    patterns = ("*.ts",)
+
+    def open(self, path):
+        return _TsSource(path)
+
+
+class _TdaSource(_RowSource):
+    def _read_names(self):
+        return read_tda_names(os.path.splitext(self.path)[0] + ".txt")
+
+    def _read_rows(self, ind):
+        return read_tda_data(self.path, ind=ind)
+
+
+class TdaReader(Reader):
+    """
+    Reader for SIMO S2X direct access files (``.tda``), with the series names on a key file (``.txt``) of the same
+    name.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "direct-access-tda"
+    description = "Direct access time series with info array (SIMO S2X)"
+    patterns = ("*.tda",)
+
+    def open(self, path):
+        return _TdaSource(path)
