@@ -13,6 +13,9 @@ import unittest
 import numpy as np
 
 from qats import TimeSeries, TsDB
+from qats.io import registry
+
+from .test_registry import RegistryTestCase, make_reader
 
 # todo: add tests for listing subset(s) based on specifying parameter `names` (with and wo param. `keys`)
 # todo: add test for getm() with fullkey=False (similar to test_get_many_correct_key, but with shorter key)
@@ -791,6 +794,81 @@ class TestExportRoundTrip(unittest.TestCase):
             # while the .dat source holds the time rounded to 8 decimals
             np.testing.assert_allclose(reloaded[name].t, ts.t, rtol=0, atol=1e-6, err_msg=f"{name} (t)")
             np.testing.assert_allclose(reloaded[name].x, ts.x, rtol=1e-12, err_msg=f"{name} (x)")
+
+
+class TestTsDBReaders(RegistryTestCase):
+    """TsDB reads files through the reader registry (#168)."""
+
+    def setUp(self):
+        super().setUp()
+        self.data_directory = os.path.join(os.path.dirname(__file__), "..", "data")
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def test_reader_by_name(self):
+        """A file whose name matches no reader is read with the reader given by name."""
+        path = os.path.join(self.tmp, "example.txt")
+        shutil.copyfile(os.path.join(self.data_directory, "example.csv"), path)
+        with self.assertRaises(NotImplementedError):
+            TsDB.fromfile(path)
+        db = TsDB.fromfile(path, reader="csv")
+        ref = TsDB.fromfile(os.path.join(self.data_directory, "example.csv"))
+        self.assertEqual([os.path.basename(k) for k in db.list()], [os.path.basename(k) for k in ref.list()])
+        np.testing.assert_array_equal(db.get(name="yaw").x, ref.get(name="yaw").x)
+
+    def test_reader_instance_not_registered(self):
+        db = TsDB()
+        path = os.path.join(self.tmp, "data.xyz")
+        open(path, "w").close()
+        db.load(path, reader=make_reader("unregistered")())
+        self.assertNotIn("unregistered", [r.name for r in registry.readers()])
+        ts = db.get(name="a")
+        self.assertEqual(ts.unit, "m")  # units from the reader reach the TimeSeries
+        np.testing.assert_array_equal(ts.x, [0.0, 1.0, 2.0])
+        self.assertIsNone(db.get(name="b").unit)
+
+    def test_reader_registered_in_script(self):
+        path = os.path.join(self.tmp, "data.xyz")
+        open(path, "w").close()
+        with self.assertRaises(NotImplementedError):
+            TsDB.fromfile(path)
+        registry.register(make_reader("script"))
+        db = TsDB.fromfile(path)
+        self.assertEqual([os.path.basename(k) for k in db.list()], ["a", "b"])
+        np.testing.assert_array_equal(db.get(name="b").x, [0.0, 1.0, 2.0])
+
+    def test_invalid_reader(self):
+        with self.assertRaises(TypeError):
+            TsDB.fromfile(os.path.join(self.data_directory, "mooring.ts"), reader=42)
+        with self.assertRaisesRegex(ValueError, "No reader named"):
+            TsDB.fromfile(os.path.join(self.data_directory, "mooring.ts"), reader="nope")
+
+    def test_register_indices_deprecated(self):
+        db = TsDB.fromfile(os.path.join(self.data_directory, "mooring.ts"))
+        with self.assertWarnsRegex(DeprecationWarning, r"TsDB\.register_indices is deprecated since QATS 5\.5\.0"):
+            indices = db.register_indices
+        self.assertEqual(list(indices.values()), list(range(1, 15)))
+        db = TsDB.fromfile(os.path.join(self.data_directory, "results_SIMA36.h5"))
+        with self.assertWarns(DeprecationWarning):
+            self.assertEqual(set(db.register_indices.values()), {None})
+
+    def test_rename_before_reading_by_name(self):
+        """Formats read by name (here .h5) can be read after renaming a series that has not been read yet."""
+        path = os.path.join(self.data_directory, "results_SIMA36.h5")
+        ref = TsDB.fromfile(path)
+        key = ref.list()[3]
+        name = key[len(os.path.abspath(path)) + 1 :]
+        db = TsDB.fromfile(path)
+        db.rename(name, "renamed")
+        ts = db.get(name="renamed")
+        self.assertEqual(ts.name, os.path.join(os.path.dirname(name), "renamed"))  # .h5 names include the groups
+        np.testing.assert_array_equal(ts.x, ref.get(name=key).x)
+
+    def test_store_false_keeps_nothing(self):
+        db = TsDB.fromfile(os.path.join(self.data_directory, "mooring.ts"))
+        for _ in range(2):
+            db.getm(names="*", store=False)
+            self.assertTrue(all(ts is None for ts in db.register.values()))
 
 
 if __name__ == "__main__":
