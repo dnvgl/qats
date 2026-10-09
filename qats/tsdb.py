@@ -594,9 +594,9 @@ class TsDB(object):
                     tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
 
             elif fext in (".pkl", ".pickle"):
-                data = read_pickle_data(parent)
+                data = read_pickle_data(parent)  # all series, so select by position on file
                 for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
+                    tslist[i] = TimeSeries(name, data[0, :], data[indices[i + 1], :], parent=parent)
 
             elif fext == ".tdms":
                 data = read_tdms_data(parent, names=names)
