@@ -7,6 +7,8 @@ import os
 import h5py
 import numpy as np
 
+from .base import Reader, SeriesData, SeriesInfo, SourceFile
+
 
 def read_names(path, verbose=False):
     """
@@ -220,3 +222,49 @@ def _timearray_info(dset):
         return timeinfo
     else:
         return None
+
+
+class _H5Source(SourceFile):
+    def __init__(self, path):
+        super().__init__(path)
+        self._names = None
+
+    def series(self):
+        if self._names is None:
+            self._names = read_names(self.path)
+        return [SeriesInfo(name) for name in self._names]
+
+    def read(self, names):
+        return [SeriesData(name, t, x) for name, (t, x) in zip(names, read_data(self.path, names=list(names)))]
+
+    def _legacy_index(self, name):
+        """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""
+        return None
+
+
+def _is_sima_series(name, obj):
+    """Visitor for `h5py.Group.visititems`: True (which stops the visit) for a dataset with SIMA's time attributes."""
+    if isinstance(obj, h5py.Dataset) and "start" in obj.attrs and "delta" in obj.attrs:
+        return True
+    return None
+
+
+class H5Reader(Reader):
+    """
+    Reader for HDF5 files exported from SIMA (``.h5``, ``.hdf5``), where each time series is a dataset with the
+    attributes ``start`` and ``delta`` describing its time.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "sima-h5"
+    description = "SIMA HDF5"
+    patterns = ("*.h5", "*.hdf5")
+
+    def can_read(self, path):
+        """True if the file holds at least one dataset with SIMA's time attributes."""
+        with h5py.File(path, "r") as f:
+            return bool(f.visititems(_is_sima_series))
+
+    def open(self, path):
+        return _H5Source(path)

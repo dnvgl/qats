@@ -4,6 +4,7 @@ from typing import List, Tuple, Union
 from nptdms import TdmsFile
 
 from .._validation import QatsValueError
+from .base import Reader, SeriesData, SeriesInfo, SourceFile
 
 
 def read_names(path):
@@ -99,3 +100,38 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
                     arrays.append([time, data])
 
     return arrays
+
+
+class _TdmsSource(SourceFile):
+    def __init__(self, path):
+        super().__init__(path)
+        self._names = None
+
+    def series(self):
+        if self._names is None:
+            self._names = read_names(self.path)
+        return [SeriesInfo(name) for name in self._names]
+
+    def read(self, names):
+        return [SeriesData(name, t, x) for name, (t, x) in zip(names, read_data(self.path, names=list(names)))]
+
+    def _legacy_index(self, name):
+        """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""
+        self.series()
+        return self._names.index(name) + 1
+
+
+class TdmsReader(Reader):
+    """
+    Reader for National Instruments TDMS files (``.tdms``), typically written by LabVIEW. Series are named
+    ``<group>\\<channel>``.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "tdms"
+    description = "National Instruments TDMS"
+    patterns = ("*.tdms",)
+
+    def open(self, path):
+        return _TdmsSource(path)

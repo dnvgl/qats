@@ -6,6 +6,34 @@
 
 
 
+:mod:`qats.io.registry`
+-----------------------
+
+.. automodule:: qats.io.registry
+    :members:
+
+    .. rubric:: Functions overview
+
+    .. autoautosummary:: qats.io.registry
+        :functions:
+
+    .. rubric:: API
+
+
+:mod:`qats.io.base`
+-------------------
+
+.. automodule:: qats.io.base
+    :members:
+
+    .. rubric:: Classes overview
+
+    .. autoautosummary:: qats.io.base
+        :classes:
+
+    .. rubric:: API
+
+
 :mod:`qats.io.csv`
 -----------------------
 
@@ -57,6 +85,20 @@
     .. rubric:: Functions overview
 
     .. autoautosummary:: qats.io.other
+        :functions:
+
+    .. rubric:: API
+
+
+:mod:`qats.io.pickle_format`
+----------------------------
+
+.. automodule:: qats.io.pickle_format
+    :members:
+
+    .. rubric:: Functions overview
+
+    .. autoautosummary:: qats.io.pickle_format
         :functions:
 
     .. rubric:: API

@@ -10,6 +10,8 @@ from struct import unpack
 import numpy as np
 from scipy.interpolate import interp1d
 
+from .base import Reader, _RowSource
+
 
 def read_sima_wind_names(path):
     """
@@ -355,3 +357,59 @@ def _name_suffices(txt):
         suffices[i] = suff
 
     return suffices
+
+
+def _sima_key_file(path):
+    """Key file of a SIMA .asc or .bin file: key_<name>.txt in the same directory."""
+    dirname, basename = os.path.split(path)
+    return os.path.join(dirname, "key_" + os.path.splitext(basename)[0] + ".txt")
+
+
+class _AsciiSource(_RowSource):
+    def _read_names(self):
+        return read_names(_sima_key_file(self.path))
+
+    def _read_rows(self, ind):
+        return read_ascii_data(self.path, ind=ind)
+
+
+class AsciiReader(Reader):
+    """
+    Reader for SIMA/RIFLEX ASCII result files (``.asc``), with the series described on a key file
+    ``key_<name>.txt``.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "sima-ascii"
+    description = "SIMA/RIFLEX ASCII results"
+    patterns = ("*.asc",)
+
+    def open(self, path):
+        return _AsciiSource(path)
+
+
+class _BinSource(_RowSource):
+    def _read_names(self):
+        if self.path.lower().endswith(("witurb.bin", "blresp.bin")):
+            return read_sima_wind_names(_sima_key_file(self.path))
+        return read_names(_sima_key_file(self.path))
+
+    def _read_rows(self, ind):
+        return read_bin_data(self.path, ind=ind)
+
+
+class BinReader(Reader):
+    """
+    Reader for SIMA/RIFLEX binary result files (``.bin``), with the series described on a key file
+    ``key_<name>.txt``. Wind turbine results (``*witurb.bin``, ``*blresp.bin``) have their own key file layout.
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "sima-bin"
+    description = "SIMA/RIFLEX binary results"
+    patterns = ("*.bin",)
+
+    def open(self, path):
+        return _BinSource(path)

@@ -6,6 +6,8 @@ import fnmatch
 
 import numpy as np
 
+from .base import Reader, _RowSource
+
 
 def read_dat_names(path):
     """
@@ -128,3 +130,27 @@ def write_dat_data(path, time: np.ndarray, data: dict, delim: str = "\t", skip_h
             if ((i != 0) and (i % 500 == 0)) or (i == len(time) - 1):
                 f.write(out)
                 out = ""
+
+
+class _DatSource(_RowSource):
+    def _read_names(self):
+        return read_dat_names(self.path)
+
+    def _read_rows(self, ind):
+        return read_dat_data(self.path, ind=ind)
+
+
+class DatReader(Reader):
+    """
+    Reader for ASCII files with the series column-wise, the names on the first non-comment line and time in the
+    first column (``.dat``).
+
+    .. versionadded :: 5.5.0
+    """
+
+    name = "dat"
+    description = "Column-wise ASCII time series"
+    patterns = ("*.dat",)
+
+    def open(self, path):
+        return _DatSource(path)
