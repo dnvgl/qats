@@ -169,6 +169,13 @@ class TsDB(object):
         Returns
         -------
         str
+
+        Notes
+        -----
+        .. versionchanged :: 5.5.0
+            The common path never includes a series name: it is the common path of the parts of the keys before the
+            series names. Before, series whose names differ only in case (e.g. "Surge" and "surge") gave a common
+            path ending with the name on Windows.
         """
         if self.n == 0:
             return ""
@@ -176,8 +183,11 @@ class TsDB(object):
             k = self.register_keys[0]
             return self._path_dirname(k)
         else:
+            # common path of the key directories, so that it never includes a series name, with separators inside
+            # square brackets protected
+            dirnames = {self._protect_brackets(self._path_dirname(k)) for k in self.register_keys}
             try:
-                return os.path.commonpath(self.register_keys)
+                return self._restore_brackets(os.path.commonpath(sorted(dirnames)))
             except ValueError:
                 # if paths contain both absolute and relative paths, the paths are on the different
                 # drives or if paths is empty.
@@ -396,6 +406,19 @@ class TsDB(object):
         return TsDB._restore_brackets(relpath)
 
     @staticmethod
+    def _fold_name(s):
+        """
+        Key or name pattern as compared by `list()`, the same on every platform: ignoring case, and with '/' and '\\'
+        equal. This is how keys were compared on Windows before 5.5.0, where most QATS users are.
+        """
+        return s.lower().replace("/", "\\")
+
+    @staticmethod
+    def _name_matches(key, pattern):
+        """Match a key with a name pattern (shell-style wildcards), as `list()` does, see `_fold_name`."""
+        return fnmatch.fnmatchcase(TsDB._fold_name(key), TsDB._fold_name(pattern))
+
+    @staticmethod
     def _reorder_namelist(namelist, names=None):
         """
         Re-order time series names to match order in which they were specified.
@@ -422,7 +445,7 @@ class TsDB(object):
         def get_index(m, patterns):
             """Return index of matched time series names."""
             try:
-                _ind = [fnmatch.fnmatch(m, pat) for pat in patterns].index(True)
+                _ind = [TsDB._name_matches(m, pat) for pat in patterns].index(True)
             except ValueError:
                 raise Exception("Unexpected error: could not find sorting index for key '%s'" % m)
             return _ind
@@ -1250,6 +1273,12 @@ class TsDB(object):
         -----
         Full identifier/key is obtained by joining the common path of all time series in db and the unique part of the
         identifiers.
+
+        Names are matched ignoring case, and with '/' and '\\' as equal, on every platform. The same applies to all
+        methods that take names, such as `get` and `getm`.
+
+        .. versionchanged :: 5.5.0
+            Matching ignores case on every platform. Before, it ignored case on Windows only.
         """
 
         def _remove_special_characters(strings):
@@ -1296,12 +1325,16 @@ class TsDB(object):
             else:
                 # add prefix *\\ (or */ in unix)
                 _prefix = "*" + os.path.sep
+
+            def is_full_key(n):
+                return self._fold_name(n).startswith(self._fold_name(common))
+
             if isinstance(names, str):
-                if not names.startswith(common):
+                if not is_full_key(names):
                     names = _prefix + names
                 names = [names]
             elif type(names) in (list, tuple):
-                names = [_prefix + n if not n.startswith(common) else n for n in names]
+                names = [_prefix + n if not is_full_key(n) else n for n in names]
             else:
                 raise TypeError(f"Parameter `names` should be of type str/list/tuple, not {type(names)}")
 
@@ -1313,7 +1346,7 @@ class TsDB(object):
             # match time series keys with specified time series name patterns
             match = []
             for name in _remove_special_characters(names):
-                match.extend(fnmatch.filter(keys_in_register, name))
+                match.extend(key for key in keys_in_register if self._name_matches(key, name))
 
         if relative:
             match = [self._path_relpath(_, common) for _ in match]
