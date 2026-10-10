@@ -1,0 +1,9 @@
+# Decay test, heave, model scale
+# Comment lines start with #. The first other line holds the names.
+Time     Heave[m]   Pitch[deg]
+0.00     0.1000     1.500
+0.05     0.0951     1.426
+0.10     0.0809     1.213
+0.15     0.0588     0.882
+0.20     0.0309     0.464
+0.25     0.0000     0.000
