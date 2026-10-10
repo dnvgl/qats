@@ -33,11 +33,6 @@ Rules:
 * **Numbers:** decimal point, not decimal comma. Scientific notation (``1.5e-3``) and ``nan`` are accepted.
 * **Line endings** may be Windows (CRLF) or Unix (LF).
 
-.. note::
-   A time column that is not first is not detected today: the first column is then read as time without an error
-   (`#199 <https://github.com/dnvgl/qats/issues/199>`_). On Windows a time column named e.g. ``TIME`` is accepted,
-   while on Linux and macOS the name must start with ``Time`` or ``time``.
-
 
 Comma-separated values (``.csv``)
 *********************************
@@ -57,8 +52,7 @@ Rules:
   other encodings.
 
 From Excel, save with **CSV UTF-8 (comma delimited)**. The plain "CSV (comma delimited)" uses a Windows encoding, and
-with some regional settings (e.g. Norwegian) Excel writes decimal commas. Both make the file unreadable for QATS today
-(`#200 <https://github.com/dnvgl/qats/issues/200>`_).
+with some regional settings (e.g. Norwegian) Excel writes decimal commas. QATS can't read either.
 
 
 Rules for both formats
