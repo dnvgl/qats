@@ -350,16 +350,38 @@ class TsDB(object):
         else:
             return os.path.basename(key)
 
+    # stand-ins for '/' and '\\' within square brackets, from the Unicode private use area so they can't clash with
+    # characters in file paths or series names
+    _BRACKETED_SEPARATORS = {"/": "", "\\": ""}
+
+    @staticmethod
+    def _protect_brackets(path):
+        """Replace '/' and '\\' within square brackets by stand-ins, so that os.path functions don't split on them."""
+        chars = []
+        depth = 0  # nesting level of square brackets
+        for char in path:
+            if char == "[":
+                depth += 1
+            elif char == "]":
+                depth = max(depth - 1, 0)
+            elif depth > 0:
+                char = TsDB._BRACKETED_SEPARATORS.get(char, char)
+            chars.append(char)
+        return "".join(chars)
+
+    @staticmethod
+    def _restore_brackets(path):
+        """Undo `_protect_brackets`."""
+        for char, standin in TsDB._BRACKETED_SEPARATORS.items():
+            path = path.replace(standin, char)
+        return path
+
     @staticmethod
     def _path_dirname(key):
         """
         As os.path.dirname, but does not split on '/' or '\\' if they are within square brackets.
         """
-        if "[" in key:
-            i = key.index("[")
-            return os.path.dirname(key[:i]) + key[i:]
-        else:
-            return os.path.dirname(key)
+        return TsDB._restore_brackets(os.path.dirname(TsDB._protect_brackets(key)))
 
     @staticmethod
     def _path_relpath(key, start=os.curdir):
@@ -370,11 +392,8 @@ class TsDB(object):
         """
         if not start:
             return key
-        if "[" in key:
-            i = key.index("[")
-            return os.path.relpath(key[:i], start) + key[i:]
-        else:
-            return os.path.relpath(key, start)
+        relpath = os.path.relpath(TsDB._protect_brackets(key), TsDB._protect_brackets(start))
+        return TsDB._restore_brackets(relpath)
 
     @staticmethod
     def _reorder_namelist(namelist, names=None):
