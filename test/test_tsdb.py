@@ -730,6 +730,23 @@ class TestTsDBBookkeeping(unittest.TestCase):
                 copied = TsDB.fromfile(self.source).copy(shallow=shallow)
                 self.assert_same_data(copied.get(name="Sway"), "Sway")
 
+    def test_copy_registers_match_keys(self):
+        """The registers of a copy have exactly the copy's keys, with the source file of each series (#192)."""
+        copied = TsDB.fromfile(self.source).copy(names=["Surge", "Sway"])
+        self.assertEqual(list(copied.register), copied.register_keys)
+        self.assertEqual(list(copied.register_parent), copied.register_keys)
+        self.assertEqual(list(copied._register_indices), copied.register_keys)
+        self.assertEqual(set(copied.register_parent.values()), {self.source})
+        self.assertEqual(list(copied._register_indices.values()), [1, 2])  # Surge and Sway on mooring.ts
+
+    def test_add_returns_key(self):
+        db = TsDB.fromfile(self.source)
+        ts = self.reference["Surge"].copy()
+        ts.name = "added"
+        key = db.add(ts)
+        self.assertEqual(key, db.register_keys[-1])
+        self.assertIs(db.register[key], ts)
+
     def test_update_from_unread_db(self):
         db = TsDB()
         db.update(TsDB.fromfile(self.source))
