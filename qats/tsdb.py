@@ -595,6 +595,10 @@ class TsDB(object):
         Key/identifier will be the name of the time series. If you want to change the key, just change the name before
         adding the TimeSeries to the db.
 
+        The key is the common path of the keys in the database (`common`) joined with the name. For names with groups
+        (e.g. "group\\series", as from .h5 files) this can repeat the group path, so give added series names without
+        path separators. To copy series between databases with their keys, use `copy` or `update`.
+
         .. versionchanged :: 5.5.0
             Returns the key.
 
@@ -665,16 +669,15 @@ class TsDB(object):
         ``shallow=False`` (the default).
 
         Specified timeseries that are not preloaded (stored), will be loaded during this procedure.
+
+        The time series keep their keys, file and position on file in the copy, as with `update`.
+
+        .. versionchanged :: 5.5.0
+            The copy keeps the keys of the source database. Before, each time series was registered under a new key,
+            built as by `add`, which repeated the group path for names with groups (e.g. from .h5 files).
         """
         new = TsDB(name=self.name)
-        container = self.getm(names=names, store=True, fullkey=True)
-        for key, ts in container.items():
-            if shallow is False:
-                ts = ts.copy()
-            # the copy has its own keys (see add()); keep the source file and index of each series under them
-            newkey = new.add(ts)
-            new.register_parent[newkey] = self.register_parent[key]
-            new._register_indices[newkey] = self._register_indices[key]
+        new.update(self, names=names, shallow=shallow)
         return new
 
     def create_common_time(self, names=None, twin=None, maxdt=None, strict=False):
@@ -1844,5 +1847,7 @@ class TsDB(object):
             self.register_keys.append(key)
             self.register_parent[key] = tsdb.register_parent[key]
             self._register_indices[key] = tsdb._register_indices[key]
+            if key in tsdb._source_names:
+                self._source_names[key] = tsdb._source_names[key]
 
         return
