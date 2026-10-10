@@ -13,9 +13,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from pymatreader import read_mat
 
 from qats import TsDB
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
+from qats.io.sintef_mat import read_units
 
 # todo: add test class for matlab
 
@@ -234,6 +236,32 @@ class TestIndependentReading(unittest.TestCase):
                 for name, ts in reference.items():
                     np.testing.assert_array_equal(other[name].t, ts.t, err_msg=f"{name} (t)")
                     np.testing.assert_array_equal(other[name].x, ts.x, err_msg=f"{name} (x)")
+
+    def test_mat_units(self):
+        """Units are read from chan_units, as stored on file, in every MAT version (#184)."""
+        path = os.path.join(self.data_directory, "test4210.mat")
+        raw = read_mat(path)  # read directly, without QATS
+        expected = dict(zip(raw["chan_names"], raw["chan_units"]))
+        self.assertEqual(expected["Time"], "s")
+        self.assertEqual(expected["WAVE1"], "m")
+        self.assertIn("m/s²", expected.values())
+
+        reference = TsDB.fromfile(path).getm(names="*", store=False)
+        self.assertEqual({name: ts.unit for name, ts in reference.items()}, {n: expected[n] for n in reference})
+        self.assertEqual(read_units(path), expected)
+
+        for filename, lost in (("test4210_v7.mat", {}), ("test4210_v6.mat", {"²": "�"})):
+            with self.subTest(filename):
+                other = TsDB.fromfile(os.path.join(self.data_directory, filename)).getm(names="*", store=False)
+                for name, ts in reference.items():
+                    # the v6 file was written with "²" already replaced by U+FFFD; QATS returns what is on file
+                    unit = ts.unit
+                    for char, stored in lost.items():
+                        unit = unit.replace(char, stored)
+                    self.assertEqual(other[name].unit, unit, name)
+
+        ntnu = TsDB.fromfile(os.path.join(self.data_directory, "test20320_ntnu.mat")).getm(names="*", store=False)
+        self.assertEqual({ts.unit for ts in ntnu.values()}, {None})  # one variable per series, no units on file
 
     def test_ts_equals_numpy(self):
         """Direct access .ts: a header record, the time record, then one record per series in key file order."""
