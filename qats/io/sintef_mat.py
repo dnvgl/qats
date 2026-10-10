@@ -35,8 +35,72 @@ def read_names(path):
     >>> tname, names = read_names('data.mat')
 
     """
-    data = read_data(path)
+    return _series_names(read_data(path), path)
 
+
+def read_units(path):
+    """
+    Read the units of the time series from SINTEF Ocean test data exhange format based on the Matlab .mat file.
+
+    Parameters
+    ----------
+    path : str
+        File path
+
+    Returns
+    -------
+    dict
+        Unit by name, for the time array and the time series that have a unit on file. Empty if the file holds no
+        units.
+
+    Notes
+    -----
+    Units are read from the variable ``chan_units`` (one unit per name in ``chan_names``). Files with one variable
+    per series hold no units.
+
+    The units are returned as stored. Non-ASCII characters lost when a file was written (e.g. ``²`` replaced by
+    ``\\ufffd`` in a version 6 file) cannot be restored.
+
+    .. versionadded :: 5.5.0
+
+    Examples
+    --------
+    >>> units = read_units('data.mat')
+    >>> units['Time']
+    's'
+    """
+    return _read_file(path)[1]
+
+
+def _read_file(path):
+    """Time series and units on file: (dict of arrays by name, dict of units by name)."""
+    data = read_mat(path)
+    units = dict()
+
+    if "chan_names" in data.keys():
+        # latest exhange format based on v.7.3 mat files
+        names = _as_list(data["chan_names"])
+        if "chan_units" in data.keys():
+            for name, unit in zip(names, _as_list(data["chan_units"])):
+                unit = str(unit).strip()
+                if unit:
+                    units[name] = unit
+        data = dict(zip(names, np.transpose(data["data"])))
+    else:
+        # exhange format based on v.7.2 mat files
+        ignored = ["comment", "fs", "test_num", "test_date", "__header__", "__version__", "__globals__"]
+        data = {k: v for k, v in data.items() if k not in ignored}
+
+    return data, units
+
+
+def _as_list(value):
+    """A cell array of strings as a list; pymatreader returns a single string for a cell array of one."""
+    return [value] if isinstance(value, str) else list(value)
+
+
+def _series_names(data, path):
+    """Name of the time array and the time series names, from the arrays on a file."""
     # identify time key, check that there is only one
     _tn = fnmatch.filter(data.keys(), "[Tt]ime*")
     if len(_tn) < 1:
@@ -77,17 +141,7 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
     >>> x1 = data[names[0]]  # first data series
 
     """
-    # ignore the data field (if it exists) which contains the time series data in
-    # latest file format
-    data = read_mat(path)
-
-    if "chan_names" in data.keys():
-        # latest exhange format based on v.7.3 mat files
-        data = dict(zip(data["chan_names"], np.transpose(data["data"])))
-    else:
-        # exhange format based on v.7.2 mat files
-        ignored = ["comment", "fs", "test_num", "test_date", "__header__", "__version__", "__globals__"]
-        data = {k: v for k, v in data.items() if k not in ignored}
+    data = _read_file(path)[0]
 
     if names is not None:
         return {k: v for k, v in data.items() if k in names}
@@ -132,19 +186,22 @@ class _MatSource(SourceFile):
         super().__init__(path)
         self._timename = None
         self._names = None
+        self._units = None
 
     def _scan(self):
         if self._names is None:
-            self._timename, self._names = read_names(self.path)
+            # names, time key and units from one read of the file
+            data, self._units = _read_file(self.path)
+            self._timename, self._names = _series_names(data, self.path)
 
     def series(self):
         self._scan()
-        return [SeriesInfo(name) for name in self._names]
+        return [SeriesInfo(name, self._units.get(name)) for name in self._names]
 
     def read(self, names):
         self._scan()
         data = read_data(self.path, [self._timename, *names])
-        return [SeriesData(name, data[self._timename], data[name]) for name in names]
+        return [SeriesData(name, data[self._timename], data[name], unit=self._units.get(name)) for name in names]
 
     def _legacy_index(self, name):
         """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""
