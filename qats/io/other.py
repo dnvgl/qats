@@ -24,8 +24,13 @@ def read_dat_names(path):
 
     Notes
     -----
-    The names are extracted from the header row (the first non-commented row). The comment character is '#'. Time is
-    assumed to be in the first column.
+    The names are extracted from the header row (the first non-commented row). The comment character is '#'. Time must
+    be in the first column, with a name starting with "time" in any case (e.g. "Time", "time" or "TIME[s]").
+
+    .. versionchanged :: 5.5.0
+        Raises KeyError if the time column is not the first column; before, the first column was read as time.
+        The name of the time column is matched case-insensitively on all platforms; before, "TIME" was accepted on
+        Windows only.
     """
     names = None
     with open(path) as f:
@@ -36,11 +41,18 @@ def read_dat_names(path):
                 break
 
     if names is not None:
-        # identify time key, check that there is only one
-        timekeys = fnmatch.filter(names, "[Tt]ime*")
-        if len(timekeys) < 1:
+        # identify the time column, which must be the first one
+        timecols = [i for i, name in enumerate(names) if name.lower().startswith("time")]
+        if len(timecols) < 1:
             raise KeyError(f"The file '{path}' does not contain a time vector")
-        elif len(timekeys) > 1:
+        elif timecols[0] != 0:
+            raise KeyError(
+                f"The time column '{names[timecols[0]]}' is column {timecols[0] + 1} on the file '{path}', "
+                "but must be the first column"
+            )
+        # other names starting with Time/time are rejected as duplicate time vectors (matched case-sensitively, as
+        # on Linux before 5.5.0, so that no file read before is rejected now)
+        if len([name for name in names if fnmatch.fnmatchcase(name, "[Tt]ime*")]) > 1:
             raise KeyError(f"The file '{path}' contains duplicate time vectors")
 
     # skip the time array name assumed to be in the first column
