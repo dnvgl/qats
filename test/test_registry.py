@@ -293,7 +293,8 @@ class TestRegistryEqualsLegacyDispatch(unittest.TestCase):
                 for d, (name, t, x) in zip(full, legacy):
                     np.testing.assert_array_equal(d.t, t, err_msg=f"{name} (t)")
                     np.testing.assert_array_equal(d.x, x, err_msg=f"{name} (x)")
-                    self.assertIsNone(d.unit)
+                    if not filename.endswith(".mat"):  # units are read from .mat files only (#184)
+                        self.assertIsNone(d.unit)
                 # subsets, also out of file order
                 for ind in ([n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))):
                     got = source.read([names[i] for i in ind])

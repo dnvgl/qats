@@ -133,6 +133,18 @@ Fit a parametric Weibull distribution to the largest 13% of the peak sample. Oft
     Comparison of empirical sample distribution and fitted parametric distribution on linearized scales.
 
 
+Units from MATLAB files
+***********************
+
+Files in the SINTEF Ocean test data exchange format store a unit for each channel, which QATS reads into
+``TimeSeries.unit``.
+
+.. literalinclude:: examples/mat_units.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Choose a file reader and add your own
 *************************************
 
