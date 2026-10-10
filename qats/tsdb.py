@@ -615,7 +615,12 @@ class TsDB(object):
         key = os.path.join(self.common, ts.name)
 
         if key in self.register.keys():
-            raise KeyError("The specified key is not unique: %s" % key)
+            parent = self.register_parent.get(key)
+            source = f" (from the file '{parent}')" if parent else ""
+            raise KeyError(
+                f"A time series named '{ts.name}' is already in the database{source}. "
+                "Give the time series another name before adding it."
+            )
 
         self.register[key] = ts
         self.register_parent[key] = None  # does not have a parent (file)

@@ -766,6 +766,23 @@ class TestTsDBBookkeeping(unittest.TestCase):
         self.assertEqual(key, db.register_keys[-1])
         self.assertIs(db.register[key], ts)
 
+    def test_add_existing_name(self):
+        """The error names the series and where the existing one comes from, not the internal key (#209)."""
+        db = TsDB.fromfile(self.source)
+        ts = self.reference["Surge"].copy()
+        with self.assertRaises(KeyError) as cm:
+            db.add(ts)
+        message = cm.exception.args[0]  # str() of a KeyError is the repr of its message
+        self.assertIn("A time series named 'Surge' is already in the database", message)
+        self.assertIn(f"from the file '{self.source}'", message)
+        self.assertIn("Give the time series another name", message)
+
+        added = self.reference["Sway"].copy()
+        added.name = "added"
+        db.add(added)
+        with self.assertRaisesRegex(KeyError, r"named 'added' is already in the database\. Give"):
+            db.add(added.copy())
+
     def test_update_from_unread_db(self):
         db = TsDB()
         db.update(TsDB.fromfile(self.source))
