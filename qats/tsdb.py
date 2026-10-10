@@ -1320,7 +1320,9 @@ class TsDB(object):
         Parameters
         ----------
         filenames : str or list or tuple
-            File names including suffix. Wildcards can also be used.
+            File names including suffix. Wildcards can also be used in a str. A str that is the path of an existing
+            file is loaded as is, also if it contains wildcard characters such as square brackets (e.g. "run[1].dat";
+            before 5.5.0 this was expanded as a pattern). File names in a list or tuple are never expanded.
         read: bool, optional
             If True, all time series are read from file and stored. The default is that they are read from file
             when requested by any of the `get` methods.
@@ -1339,6 +1341,9 @@ class TsDB(object):
         if isinstance(filenames, list) or isinstance(filenames, tuple):
             # expect that iterable contains set of file names, stored with absolute path
             files = [os.path.abspath(f) for f in filenames]
+        elif isinstance(filenames, str) and os.path.isfile(filenames):
+            # an existing file, also if its name contains wildcard characters such as square brackets
+            files = [os.path.abspath(filenames)]
         elif isinstance(filenames, str):
             # string is interpreted as a filename, possibly with wildcards, stored with absolute path
             files = [os.path.abspath(f) for f in glob.glob(filenames)]
