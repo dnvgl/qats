@@ -65,7 +65,7 @@ class TestDat(FileFormatTestCase):
         self.assert_series(self.read(path), self.expected)
 
     def test_time_name(self):
-        for name in ("Time", "time", "Time[s]", "time_s"):
+        for name in ("Time", "time", "Time[s]", "time_s", "TIME", "TIME[s]"):  # any case, on every platform (#199)
             with self.subTest(name):
                 path = self.write("a.dat", f"{name} surge heave\n0.0 1.0 10.0\n0.5 2.0 20.0\n")
                 self.assert_series(self.read(path), self.expected)
@@ -107,11 +107,18 @@ class TestDat(FileFormatTestCase):
         path = self.write("a.dat", "Time surge heave\n0.0 1.0 10.0\n0.5 2.0 20.0\n", newline="\r\n")
         self.assert_series(self.read(path), self.expected)
 
-    @unittest.expectedFailure  # #199: the first column is read as time without an error; remove when fixed
     def test_time_not_first(self):
-        path = self.write("a.dat", "surge Time heave\n1.0 0.0 10.0\n2.0 0.5 20.0\n")
-        with self.assertRaises(Exception):
-            TsDB.fromfile(path).getm(names="*", store=False)
+        """Before #199 was fixed, the first column was read as time without an error."""
+        for header in ("surge Time heave", "surge heave TIME"):
+            with self.subTest(header):
+                path = self.write("a.dat", f"{header}\n1.0 0.0 10.0\n2.0 0.5 20.0\n")
+                with self.assertRaisesRegex(KeyError, "is column [23] .* but must be the first column"):
+                    TsDB.fromfile(path)
+
+    def test_other_upper_case_time_name_is_a_series(self):
+        """Only Time*/time* count as duplicate time vectors, so no file read before #199 was fixed is rejected."""
+        path = self.write("a.dat", "Time surge TIMESTAMP\n0.0 1.0 5.0\n0.5 2.0 6.0\n")
+        self.assertEqual(list(self.read(path)), ["surge", "TIMESTAMP"])
 
 
 class TestCsv(FileFormatTestCase):

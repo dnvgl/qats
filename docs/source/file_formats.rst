@@ -27,8 +27,9 @@ Rules:
 * **Header:** the first line that is not a comment holds the names. It must not be blank.
 * **Names:** separated by spaces or tabs, so a name **cannot contain spaces**. Write ``Wave_elevation``, not
   ``Wave elevation``. Other characters are kept as part of the name, e.g. ``Heave[m]``.
-* **Time:** must be the **first** column, and its name must start with ``Time`` or ``time``. No other column name may
-  start with ``Time``/``time`` (``Timestamp`` would count as a second time column and the file is rejected).
+* **Time:** must be the **first** column, and its name must start with "time" in any case, e.g. ``Time``, ``time`` or
+  ``TIME[s]``. No other column name may start with ``Time`` or ``time`` (``Timestamp`` would count as a second time
+  column and the file is rejected).
 * **Values:** separated by spaces or tabs, any number of each. Every line must have one value per name.
 * **Numbers:** decimal point, not decimal comma. Scientific notation (``1.5e-3``) and ``nan`` are accepted.
 * **Line endings** may be Windows (CRLF) or Unix (LF).
@@ -72,8 +73,9 @@ Common errors
 =======================================================================  ===================================================
 Error                                                                    Likely cause
 =======================================================================  ===================================================
-``KeyError: The file ... does not contain a time vector`` (``.dat``)     The header doesn't start with ``Time``/``time``, or
-                                                                         there's a blank line before the header
+``KeyError: The file ... does not contain a time vector`` (``.dat``)     No name starts with "time", or there's a blank line
+                                                                         before the header
+``KeyError: The time column ... must be the first column`` (``.dat``)    Move the time column to the first column
 ``KeyError: The file ... contains duplicate time vectors`` (``.dat``)    More than one name starts with ``Time``/``time``
 ``ValueError: invalid column index ...`` (``.dat``)                      A name contains a space, or a line has fewer
                                                                          values than names
