@@ -82,14 +82,19 @@ def _load():
             reader = _instance(ep.load())
             if reader.api_version != READER_API_VERSION:
                 raise QatsValueError(
-                    f"it is written for reader API version {reader.api_version}, "
-                    f"but this QATS has version {READER_API_VERSION}"
+                    f"Reader {reader.name!r} ({type(reader).__name__}) is written for reader API version "
+                    f"{reader.api_version}, but this QATS supports version {READER_API_VERSION}"
                 )
             if reader.name in _readers:
-                raise QatsValueError(f"the reader name {reader.name!r} is already registered")
+                raise QatsValueError(
+                    f"Reader {reader.name!r} ({type(reader).__name__}) has the same name as the registered reader "
+                    f"{_readers[reader.name]!r}"
+                )
             _add(reader)
         except Exception as err:  # a broken plugin must not break QATS
-            logger.warning("Skipped the file reader plugin %r (%s): %s", ep.name, ep.value, err)
+            dist = getattr(ep, "dist", None)  # the installed package, to uninstall or upgrade
+            package = f" from the package {dist.name} {dist.version}" if dist is not None else ""
+            logger.warning("Skipped the file reader plugin %r (%s)%s: %s", ep.name, ep.value, package, err)
 
 
 def register(reader, replace=False):

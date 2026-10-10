@@ -66,10 +66,16 @@ def make_reader(name, patterns=("*.xyz",), priority=0, can_read=True):
     return type(f"Reader_{name}", (Reader,), attrs)
 
 
+class _FakeDistribution:
+    name = "qats-fake-plugin"
+    version = "1.2.3"
+
+
 class _FakeEntryPoint:
     def __init__(self, name, load):
         self.name = name
         self.value = f"fake_module:{name}"
+        self.dist = _FakeDistribution()
         self._load = load
 
     def load(self):
@@ -214,7 +220,11 @@ class TestPlugins(RegistryTestCase):
         )
         self.assertEqual(len(logged), 4)
         for name, text in zip(("import", "notareader", "version", "duplicate"), logged):
-            self.assertIn(f"Skipped the file reader plugin '{name}'", text)
+            self.assertIn(f"Skipped the file reader plugin '{name}' (fake_module:{name})", text)
+            self.assertIn("from the package qats-fake-plugin 1.2.3", text)
+        # the reason names the reader that was rejected
+        self.assertIn("Reader 'old' (Reader_old) is written for reader API version 2", logged[2])
+        self.assertIn("Reader 'csv' (Reader_csv) has the same name as the registered reader", logged[3])
         names = [r.name for r in registry.readers()]
         self.assertIn("good", names)
         self.assertNotIn("old", names)
