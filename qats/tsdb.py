@@ -585,10 +585,18 @@ class TsDB(object):
         ts : TimeSeries
             added TimeSeries object
 
+        Returns
+        -------
+        str
+            The key the time series is registered under.
+
         Notes
         -----
         Key/identifier will be the name of the time series. If you want to change the key, just change the name before
         adding the TimeSeries to the db.
+
+        .. versionchanged :: 5.5.0
+            Returns the key.
 
         """
         """
@@ -609,6 +617,7 @@ class TsDB(object):
         self.register_parent[key] = None  # does not have a parent (file)
         self._register_indices[key] = None  # ... and therefore has no index (yet)
         self.register_keys.append(key)
+        return key
 
     def clear(self, names=None, display=True):
         """
@@ -662,9 +671,10 @@ class TsDB(object):
         for key, ts in container.items():
             if shallow is False:
                 ts = ts.copy()
-            new.add(ts)
-            new.register_parent[key] = self.register_parent[key]
-            new._register_indices[key] = self._register_indices[key]
+            # the copy has its own keys (see add()); keep the source file and index of each series under them
+            newkey = new.add(ts)
+            new.register_parent[newkey] = self.register_parent[key]
+            new._register_indices[newkey] = self._register_indices[key]
         return new
 
     def create_common_time(self, names=None, twin=None, maxdt=None, strict=False):
