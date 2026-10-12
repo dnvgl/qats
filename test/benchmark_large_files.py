@@ -70,14 +70,16 @@ def generate_h5(folder, size_mb):
 
     npoints = int(size_mb * 1e6 / (8 * H5_DATASETS))
     path = folder / "large.h5"
-    # attributes and group names as in the sample file
+    # dataset attributes as in the sample file
     with h5py.File(DATA / H5_TEMPLATE, "r") as f:
         attrs = {}
 
         def first(name, obj):
+            # visititems stops at the first value other than None
             if isinstance(obj, h5py.Dataset) and "start" in obj.attrs:
                 attrs.update(obj.attrs)
                 return True
+            return None
 
         f.visititems(first)
     t = DT * np.arange(npoints)
