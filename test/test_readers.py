@@ -20,6 +20,8 @@ from pymatreader import read_mat
 from qats import TsDB
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
 from qats.io.sima import read_bin_data
+from qats.io.sintef_mat import read_data as read_mat_data
+from qats.io.sintef_mat import read_names as read_mat_names
 from qats.io.sintef_mat import read_units
 
 # todo: add test class for matlab
@@ -239,6 +241,26 @@ class TestIndependentReading(unittest.TestCase):
                 for name, ts in reference.items():
                     np.testing.assert_array_equal(other[name].t, ts.t, err_msg=f"{name} (t)")
                     np.testing.assert_array_equal(other[name].x, ts.x, err_msg=f"{name} (x)")
+
+    def test_mat_equals_full_read(self):
+        """Series read one at a time from a .mat file equal the rows of `data` from a full read of the file, in every
+        MAT version (#171: version 7.3 files are read per series)."""
+        for filename in ("test4210.mat", "test4210_v7.mat", "test4210_v6.mat"):
+            path = os.path.join(self.data_directory, filename)
+            raw = read_mat(path)  # the whole file, without QATS
+            expected = dict(zip(raw["chan_names"], np.transpose(raw["data"])))
+            with self.subTest(filename):
+                timename, names = read_mat_names(path)
+                self.assertEqual([timename, *names], list(expected))
+                data = read_mat_data(path)
+                self.assertEqual(list(data), list(expected))
+                for name, x in expected.items():
+                    np.testing.assert_array_equal(data[name], x, err_msg=name)
+                # a subset: returned in file order
+                subset = read_mat_data(path, [names[-1], timename, names[3]])
+                self.assertEqual(list(subset), [timename, names[3], names[-1]])
+                for name, x in subset.items():
+                    np.testing.assert_array_equal(x, expected[name], err_msg=f"{name} (subset)")
 
     def test_mat_units(self):
         """Units are read from chan_units, as stored on file, in every MAT version (#184)."""
