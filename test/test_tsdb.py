@@ -5,7 +5,9 @@ Module for testing TsDB class
 
 import contextlib
 import os
+import shutil
 import sys
+import tempfile
 import unittest
 
 import numpy as np
@@ -678,6 +680,107 @@ class TestTsDBDifferentDrives(unittest.TestCase):
         names = TsDB.fromfile(self.export_file).list(relative=True)
         self.assertEqual(len(names), 2)
         self.assertFalse(any(":" in n for n in names), names)
+
+
+class TestTsDBBookkeeping(unittest.TestCase):
+    """Lazy reading still finds the right data after the register is changed (#175)."""
+
+    @classmethod
+    def setUpClass(cls):
+        data_directory = os.path.join(os.path.dirname(__file__), "..", "data")
+        cls.source = os.path.abspath(os.path.join(data_directory, "mooring.ts"))
+        cls.reference = TsDB.fromfile(cls.source).getm(names="*", store=False)
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def assert_same_data(self, ts, name):
+        np.testing.assert_array_equal(ts.t, self.reference[name].t, err_msg=f"{name} (t)")
+        np.testing.assert_array_equal(ts.x, self.reference[name].x, err_msg=f"{name} (x)")
+
+    def copy_source(self, folder, key_file=True):
+        os.makedirs(os.path.join(self.tmp, folder))
+        shutil.copy(self.source, os.path.join(self.tmp, folder))
+        if key_file:
+            shutil.copy(self.source.replace(".ts", ".key"), os.path.join(self.tmp, folder))
+        return os.path.join(self.tmp, folder, "mooring.ts")
+
+    def test_rename_before_reading(self):
+        db = TsDB.fromfile(self.source)
+        db.rename("Surge", "Surge renamed")
+        self.assert_same_data(db.get(name="Surge renamed"), "Surge")
+
+    def test_copy_before_reading(self):
+        for shallow in (False, True):
+            with self.subTest(shallow=shallow):
+                copied = TsDB.fromfile(self.source).copy(shallow=shallow)
+                self.assert_same_data(copied.get(name="Sway"), "Sway")
+
+    def test_update_from_unread_db(self):
+        db = TsDB()
+        db.update(TsDB.fromfile(self.source))
+        self.assertEqual(db.n, len(self.reference))
+        self.assert_same_data(db.get(name="Heave"), "Heave")
+
+    def test_clear_then_read_others(self):
+        db = TsDB.fromfile(self.source)
+        db.clear(names="Surge", display=False)
+        self.assertEqual(db.n, len(self.reference) - 1)
+        self.assert_same_data(db.get(name="Sway"), "Sway")
+        self.assert_same_data(db.get(name="Mooring line 8"), "Mooring line 8")
+
+    def test_same_name_in_two_files(self):
+        first, second = self.copy_source("first"), self.copy_source("second")
+        db = TsDB()
+        db.load([first, second])
+        self.assertEqual(db.n, 2 * len(self.reference))
+        with self.assertRaises(ValueError):
+            db.get(name="Surge")  # not unique
+        for path in (first, second):
+            key = os.path.join(path, "Surge")
+            self.assert_same_data(db.getm(names=key, store=False, fullkey=True)[key], "Surge")
+
+    def test_missing_key_file(self):
+        path = self.copy_source("nokey", key_file=False)
+        with self.assertRaises(FileNotFoundError) as cm:
+            TsDB.fromfile(path)
+        self.assertIn("mooring.key", str(cm.exception))
+
+
+class TestExportRoundTrip(unittest.TestCase):
+    """Exported files read back with the same names and values (#175)."""
+
+    def setUp(self):
+        self.data_directory = os.path.join(os.path.dirname(__file__), "..", "data")
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def round_trip(self, source, extension, names):
+        db = TsDB.fromfile(os.path.join(self.data_directory, source))
+        original = db.getm(names=names, store=False)
+        path = os.path.join(self.tmp, "export" + extension)
+        db.export(path, names=names, verbose=False)
+        reloaded = TsDB.fromfile(path).getm(names="*", store=False)
+        return original, reloaded
+
+    def test_ts(self):
+        """.ts stores single precision, as do the source files used here."""
+        original, reloaded = self.round_trip("mooring.ts", ".ts", ["Surge", "Sway", "Mooring line 8"])
+        self.assertEqual(list(reloaded), list(original))
+        for name, ts in original.items():
+            np.testing.assert_allclose(reloaded[name].t, ts.t, rtol=1e-6, err_msg=f"{name} (t)")
+            np.testing.assert_allclose(reloaded[name].x, ts.x, rtol=1e-6, err_msg=f"{name} (x)")
+
+    def test_h5(self):
+        names = ["WaveC[m]", "Wave-S[m]", "Surge[m]"]
+        original, reloaded = self.round_trip("model_test_data.dat", ".h5", names)
+        self.assertEqual(sorted(reloaded), sorted(original))
+        for name, ts in original.items():
+            # .h5 stores the start time and time step, not the time array: the reloaded time is start + i * step,
+            # while the .dat source holds the time rounded to 8 decimals
+            np.testing.assert_allclose(reloaded[name].t, ts.t, rtol=0, atol=1e-6, err_msg=f"{name} (t)")
+            np.testing.assert_allclose(reloaded[name].x, ts.x, rtol=1e-12, err_msg=f"{name} (x)")
 
 
 if __name__ == "__main__":

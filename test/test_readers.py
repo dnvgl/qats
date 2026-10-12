@@ -130,5 +130,99 @@ class TestAllReaders(unittest.TestCase):
         )
 
 
+# one or two files per format; the series positions in these files are what the readers must get right
+SELECTIVE_FILES = [
+    "mooring.ts",
+    "simo_p_out.ts",
+    "decay.tda",
+    "n_elmtra.bin",
+    "wt_witurb.bin",
+    "results_SIMA36.h5",
+    "example_sima_h5_output_shrinked.h5",
+    "example.csv",
+    "model_test_data.dat",
+    "data.tdms",
+]
+
+
+class TestSelectiveReading(unittest.TestCase):
+    """Reading some series of a file gives the same arrays as reading all of them (#175)."""
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+
+    def test_subsets_equal_full_read(self):
+        for filename in SELECTIVE_FILES:
+            path = os.path.abspath(os.path.join(self.data_directory, filename))
+            with self.subTest(filename):
+                full_db = TsDB.fromfile(path)
+                keys = full_db.list()
+                n = len(keys)
+                full = full_db.getm(ind=list(range(n)), store=False, fullkey=True)
+                subsets = [[0], [n // 2], [n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))]
+                if filename.endswith(".csv"):
+                    # out of file order fails for .csv (#181), see test_csv_out_of_file_order
+                    subsets = [sorted(ind) for ind in subsets]
+                for ind in subsets:
+                    db = TsDB.fromfile(path)  # nothing read yet
+                    got = db.getm(ind=ind, store=False, fullkey=True)
+                    self.assertEqual(list(got), [keys[i] for i in ind], f"order of {ind}")
+                    for i in ind:
+                        ts, ref = got[keys[i]], full[keys[i]]
+                        np.testing.assert_array_equal(ts.t, ref.t, err_msg=f"{keys[i]} (t, subset {ind})")
+                        np.testing.assert_array_equal(ts.x, ref.x, err_msg=f"{keys[i]} (x, subset {ind})")
+
+    @unittest.expectedFailure  # #181: the .csv reader returns the columns in file order; remove when fixed
+    def test_csv_out_of_file_order(self):
+        path = os.path.abspath(os.path.join(self.data_directory, "example.csv"))
+        full = TsDB.fromfile(path).getm(names="*", store=False)
+        got = TsDB.fromfile(path).getm(ind=[5, 3, 0], store=False)
+        self.assertEqual(list(got), ["yaw", "roll", "surge"])
+        for name, ts in got.items():
+            np.testing.assert_array_equal(ts.x, full[name].x, err_msg=name)
+
+    def test_subset_by_name_equals_full_read(self):
+        path = os.path.abspath(os.path.join(self.data_directory, "mooring.ts"))
+        full = TsDB.fromfile(path).getm(names="*", store=False)
+        got = TsDB.fromfile(path).getm(names=["Mooring line 8", "Surge"], store=False)
+        self.assertEqual(list(got), ["Mooring line 8", "Surge"])
+        for name, ts in got.items():
+            np.testing.assert_array_equal(ts.x, full[name].x, err_msg=name)
+
+
+class TestIndependentReading(unittest.TestCase):
+    """QATS reads the same values as a direct read without QATS (#175)."""
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+
+    def test_csv_equals_pandas(self):
+        path = os.path.join(self.data_directory, "example.csv")
+        df = pd.read_csv(path, sep="\t")
+        db = TsDB.fromfile(path)
+        self.assertEqual([os.path.basename(k) for k in db.list()], list(df.columns[1:]))
+        for name in df.columns[1:]:
+            ts = db.get(name=name, store=False)
+            np.testing.assert_array_equal(ts.t, df.iloc[:, 0].to_numpy(), err_msg=f"{name} (t)")
+            np.testing.assert_array_equal(ts.x, df[name].to_numpy(), err_msg=f"{name} (x)")
+
+    def test_ts_equals_numpy(self):
+        """Direct access .ts: a header record, the time record, then one record per series in key file order."""
+        path = os.path.join(self.data_directory, "mooring.ts")
+        ndat = int(np.fromfile(path, dtype="<i4", count=1)[0])
+        records = np.fromfile(path, dtype="<f4").reshape(-1, ndat)
+        with open(os.path.join(self.data_directory, "mooring.key")) as f:
+            names = [line.strip() for line in f if line.strip() and not line.startswith(("**", "'"))]
+        # the first name in the key file is the time array
+        names = [name for name in names if name.upper() != "END"][1:]
+        db = TsDB.fromfile(path)
+        self.assertEqual([os.path.basename(k) for k in db.list()], names)
+        self.assertEqual(records.shape[0], len(names) + 2)  # header and time records
+        for i, name in enumerate(names):
+            ts = db.get(name=name, store=False)
+            np.testing.assert_array_equal(ts.t, records[1], err_msg=f"{name} (t)")
+            np.testing.assert_array_equal(ts.x, records[i + 2], err_msg=f"{name} (x)")
+
+
 if __name__ == "__main__":
     unittest.main()
