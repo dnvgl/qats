@@ -607,7 +607,12 @@ class TsDB(object):
                 source = self._sources[parent] = find_reader(parent).open(parent)
 
             data = source.read(file_names)
-            tslist = [TimeSeries(name, d.t, d.x, parent=parent, unit=d.unit) for name, d in zip(names, data)]
+            tslist = []
+            for i, name in enumerate(names):
+                # TimeSeries copies the arrays: drop the reader's copy at once, so that the series are not held twice
+                d, data[i] = data[i], None
+                tslist.append(TimeSeries(name, d.t, d.x, parent=parent, unit=d.unit))
+            del d
 
             # add to ordered dictionary (and store in db if specified)
             for key, ts in zip(keys, tslist):
