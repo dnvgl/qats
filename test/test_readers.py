@@ -6,9 +6,11 @@ generate any exceptions.
 """
 
 import os
+import struct
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 import numpy as np
@@ -17,6 +19,7 @@ from pymatreader import read_mat
 
 from qats import TsDB
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
+from qats.io.sima import read_bin_data
 from qats.io.sintef_mat import read_units
 
 # todo: add test class for matlab
@@ -262,6 +265,39 @@ class TestIndependentReading(unittest.TestCase):
 
         ntnu = TsDB.fromfile(os.path.join(self.data_directory, "test20320_ntnu.mat")).getm(names="*", store=False)
         self.assertEqual({ts.unit for ts in ntnu.values()}, {None})  # one variable per series, no units on file
+
+    def test_bin_equals_struct(self):
+        """SIMA/RIFLEX .bin: the same values as the reader before 5.5.0, which unpacked the whole file with struct
+        (#171). One record per time step: record length, time, the series, record length."""
+        for filename in ("n_elmfor.bin", "n_elmtra.bin", "wt_blresp.bin", "wt_witurb.bin", "sima_witurb.bin"):
+            path = os.path.join(self.data_directory, filename)
+            with open(path, "rb") as f:
+                content = f.read()
+            nrec = struct.unpack("i", content[:4])[0] // 4 + 2
+            ndat = len(content) // (4 * nrec)
+            expected = np.array(struct.unpack(("i" + "f" * (nrec - 2) + "i") * ndat, content))
+            expected = expected.reshape((ndat, nrec))[:, 1:-1].T
+            with self.subTest(filename):
+                np.testing.assert_array_equal(read_bin_data(path), expected)
+                ind = [0, nrec - 3, 2, 2, -1]  # time, the last series, a duplicate and a negative index
+                np.testing.assert_array_equal(read_bin_data(path, ind=ind), expected[ind])
+                # blocks of a few time steps, so that the last block is shorter
+                with unittest.mock.patch("qats.io.sima._BIN_CHUNK", 7 * nrec):
+                    np.testing.assert_array_equal(read_bin_data(path), expected)
+
+    def test_bin_incomplete_time_step(self):
+        """Bytes after the last complete time step are ignored with a warning."""
+        path = os.path.join(self.data_directory, "n_elmfor.bin")
+        expected = read_bin_data(path)
+        with tempfile.TemporaryDirectory() as tmp:
+            cut = os.path.join(tmp, "cut.bin")
+            with open(path, "rb") as f:
+                content = f.read()
+            with open(cut, "wb") as f:
+                f.write(content[:-10])
+            with self.assertWarnsRegex(UserWarning, "not a complete time step"):
+                data = read_bin_data(cut)
+        np.testing.assert_array_equal(data, expected[:, :-1])
 
     def test_ts_equals_numpy(self):
         """Direct access .ts: a header record, the time record, then one record per series in key file order."""
