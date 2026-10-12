@@ -8,7 +8,6 @@ import copy
 import fnmatch
 import glob
 import os
-import warnings
 from collections import OrderedDict, defaultdict
 from uuid import uuid4
 
@@ -16,27 +15,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from ._validation import QatsValueError
+from ._deprecation import warn_deprecated
+from ._validation import QatsTypeError, QatsValueError
 from .fatigue.rainflow import rebin as rebin_cycles
-from .io.csv import read_data as read_csv_data
-from .io.csv import read_names as read_csv_names
-from .io.direct_access import _count_series as count_ts_series
-from .io.direct_access import read_tda_data, read_tda_names, read_ts_data, read_ts_names, write_ts_data
-from .io.other import read_dat_data, read_dat_names, write_dat_data
-from .io.pickle_format import read_data as read_pickle_data
-from .io.pickle_format import read_pickle_names as read_pickle_names
+from .io.base import Reader
+from .io.direct_access import write_ts_data
+from .io.other import write_dat_data
 from .io.pickle_format import write_data as write_pickle_data
-from .io.sima import read_ascii_data as read_sima_ascii_data
-from .io.sima import read_bin_data as read_sima_bin_data
-from .io.sima import read_names as read_sima_names
-from .io.sima import read_sima_wind_names
-from .io.sima_h5 import read_data as read_sima_h5_data
-from .io.sima_h5 import read_names as read_sima_h5_names
+from .io.registry import find_reader
 from .io.sima_h5 import write_data as write_sima_h5_data
-from .io.sintef_mat import read_data as read_mat_data
-from .io.sintef_mat import read_names as read_mat_names
-from .io.tdms import read_data as read_tdms_data
-from .io.tdms import read_names as read_tdms_names
 from .ts import TimeSeries
 
 # todo: cross spectrum(scipy.signal.csd)
@@ -66,6 +53,10 @@ class TsDB(object):
         Parent file path by unique time series id.
     register_indices : OrderedDict
         Index of time series on parent file by unique time series id.
+
+        .. deprecated :: 5.5.0
+            Will be removed in 6.0. Files are read through the readers in `qats.io.registry`, which keep track of
+            the series on each file.
     register_keys : list
         Unique time series id.
 
@@ -76,9 +67,27 @@ class TsDB(object):
         self.name = name
         self.register = OrderedDict()  # dictionary of unique id and time series objects
         self.register_parent = OrderedDict()  # dictionary of unique id and parent name (source/file name)
-        self.register_indices = OrderedDict()  # dictionary of unique id and the time series index on parent file
+        self._register_indices = OrderedDict()  # unique id and time series index on parent file (until 6.0)
         self.register_keys = []  # register keys in the order the associated time series where loaded
-        self._timekeys = dict()  # register of time keys (only relevant for .mat files)
+        self._source_names = dict()  # unique id and the name of the time series on its parent file
+        self._sources = dict()  # parent file path and the qats.io.base.SourceFile used to read it
+
+    @property
+    def register_indices(self):
+        """
+        Index of time series on parent file by unique time series id.
+
+        .. deprecated :: 5.5.0
+            Will be removed in 6.0. Files are read through the readers in `qats.io.registry`, which keep track of
+            the series on each file.
+        """
+        warn_deprecated("TsDB.register_indices", since="5.5.0", removed_in="6.0")
+        return self._register_indices
+
+    @register_indices.setter
+    def register_indices(self, value):
+        warn_deprecated("TsDB.register_indices", since="5.5.0", removed_in="6.0")
+        self._register_indices = value
 
     def __contains__(self, item):
         if isinstance(item, str):
@@ -123,9 +132,12 @@ class TsDB(object):
         return _
 
     @classmethod
-    def fromfile(cls, filenames, read=False, verbose=False):
+    def fromfile(cls, filenames, read=False, verbose=False, reader=None):
         """
         Create TsDB instance from one ore more files.
+
+        .. versionchanged :: 5.5.0
+            Added the `reader` parameter.
 
         Parameters
         ----------
@@ -136,6 +148,8 @@ class TsDB(object):
             when requested by any of the `get*()` methods.
         verbose : bool, optional
             If True, print information to screen.
+        reader : str or qats.io.base.Reader, optional
+            Reader to use for all the files, see `load`.
 
         Returns
         -------
@@ -160,7 +174,7 @@ class TsDB(object):
         load : Includes notes of relevance for this method.
         """
         tsdb = cls("")
-        tsdb.load(filenames, read=read, verbose=verbose)
+        tsdb.load(filenames, read=read, verbose=verbose, reader=reader)
         return tsdb
 
     @property
@@ -541,70 +555,17 @@ class TsDB(object):
 
         # read requested keys, file by file
         for parent, keys in keys_by_parent.items():
+            # time series names (after any renaming) and their names on the file
             names = [key.replace(parent, "").lstrip(os.path.sep) for key in keys]
+            file_names = [self._source_names.get(key, name) for key, name in zip(keys, names)]
 
-            # extract parent file extension
-            fext = os.path.splitext(parent)[-1]
+            source = self._sources.get(parent)
+            if source is None:
+                # e.g. registers copied from another database: open the file again
+                source = self._sources[parent] = find_reader(parent).open(parent)
 
-            # indices of time series to be read
-            indices = [0] + [self.register_indices[key] for key in keys]
-
-            tslist = [None] * len(keys)
-
-            if fext == ".ts":
-                data = read_ts_data(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
-
-            elif fext == ".tda":
-                data = read_tda_data(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
-
-            elif fext == ".asc":
-                data = read_sima_ascii_data(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
-
-            elif fext == ".bin":
-                data = read_sima_bin_data(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
-
-            elif fext == ".dat":
-                data = read_dat_data(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
-
-            elif fext == ".mat":
-                _tk = self._timekeys[parent]
-                data = read_mat_data(parent, [_tk, *names])
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[_tk], data[name], parent=parent)
-
-            elif fext in (".h5", ".hdf5"):
-                data = read_sima_h5_data(parent, names=names)
-                for i, name in enumerate(names):
-                    timearr, arr = data[i]
-                    tslist[i] = TimeSeries(name, timearr, arr, parent=parent)
-
-            elif fext == ".csv":
-                data = read_csv_data(parent, ind=indices)
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[i + 1, :], parent=parent)
-
-            elif fext in (".pkl", ".pickle"):
-                data = read_pickle_data(parent)  # all series, so select by position on file
-                for i, name in enumerate(names):
-                    tslist[i] = TimeSeries(name, data[0, :], data[indices[i + 1], :], parent=parent)
-
-            elif fext == ".tdms":
-                data = read_tdms_data(parent, names=names)
-                for i, name in enumerate(names):
-                    timearr, arr = data[i]
-                    tslist[i] = TimeSeries(name, timearr, arr, parent=parent)
-            else:
-                raise NotImplementedError("Invalid file type: %s (ext = %s)" % (parent, fext))
+            data = source.read(file_names)
+            tslist = [TimeSeries(name, d.t, d.x, parent=parent, unit=d.unit) for name, d in zip(names, data)]
 
             # add to ordered dictionary (and store in db if specified)
             for key, ts in zip(keys, tslist):
@@ -646,7 +607,7 @@ class TsDB(object):
 
         self.register[key] = ts
         self.register_parent[key] = None  # does not have a parent (file)
-        self.register_indices[key] = None  # ... and therefore has no index (yet)
+        self._register_indices[key] = None  # ... and therefore has no index (yet)
         self.register_keys.append(key)
 
     def clear(self, names=None, display=True):
@@ -666,7 +627,8 @@ class TsDB(object):
         for k in match:
             _ = self.register.pop(k, None)
             _ = self.register_parent.pop(k, None)
-            _ = self.register_indices.pop(k, None)
+            _ = self._register_indices.pop(k, None)
+            _ = self._source_names.pop(k, None)
             _ = self.register_keys.pop(self.register_keys.index(k))
 
     def copy(self, names=None, shallow=False):
@@ -702,7 +664,7 @@ class TsDB(object):
                 ts = ts.copy()
             new.add(ts)
             new.register_parent[key] = self.register_parent[key]
-            new.register_indices[key] = self.register_indices[key]
+            new._register_indices[key] = self._register_indices[key]
         return new
 
     def create_common_time(self, names=None, twin=None, maxdt=None, strict=False):
@@ -1315,7 +1277,7 @@ class TsDB(object):
 
         return match
 
-    def load(self, filenames, read=False, verbose=False):
+    def load(self, filenames, read=False, verbose=False, reader=None):
         """
         Load time series from files
 
@@ -1328,9 +1290,22 @@ class TsDB(object):
             when requested by any of the `get` methods.
         verbose : bool, optional
             If True, print information to screen.
+        reader : str or qats.io.base.Reader, optional
+            Reader to use for all the files: the name of a registered reader (see `qats.io.registry.readers`) or a
+            reader instance. By default the reader is chosen from the file name, and the content if needed, see
+            `qats.io.registry.find_reader`.
+
+        Raises
+        ------
+        NotImplementedError
+            If no reader can read a file.
 
         Notes
         -----
+        .. versionchanged :: 5.5.0
+            Files are read through the reader registry (`qats.io.registry`), so readers from installed plugin
+            packages are used too. Added the `reader` parameter. File name patterns are matched case-insensitively.
+
         `read=True` may be time consuming and require high memory usage if applied for large files with many
         time series. However, if you will work with all the time series on files of moderate size, `read=True` can
         provide efficiency as you only access the file(s) once.
@@ -1353,85 +1328,33 @@ class TsDB(object):
 
         # read time series names and possibly also the data
         for thefile in files:
-            fext = os.path.splitext(thefile)[-1]
-            basename = os.path.basename(thefile)
-            dirname = os.path.dirname(thefile)
-
             if not os.path.isfile(thefile):
                 raise FileExistsError("Object is not a file: %s" % thefile)
 
-            if fext == ".ts":
-                # direct access format without info array
-                names = read_ts_names(thefile.replace(fext, ".key"))
-                nts = count_ts_series(thefile)
-                if len(names) > nts:
-                    # e.g. a file truncated by an interrupted write: list only the series that can be read
-                    warnings.warn(
-                        f"{thefile} holds {nts} complete series, but its key file lists {len(names)}. "
-                        f"Skipping {', '.join(names[nts:])}.",
-                        stacklevel=2,
-                    )
-                    names = names[:nts]
-
-            elif fext == ".tda":
-                # simo s2x direct access format (with info array)
-                names = read_tda_names(thefile.replace(fext, ".txt"))
-
-            elif fext == ".asc":
-                # simo-riflex, sima ascii
-                names = read_sima_names(os.path.join(dirname, "key_" + basename.replace(fext, ".txt")))
-
-            elif fext == ".bin":
-                _ = os.path.join(dirname, "key_" + basename.replace(fext, ".txt"))
-                if thefile.endswith("witurb.bin") or thefile.endswith("blresp.bin"):
-                    # wind turbine data and blade response is stored on .bin files but the corresponding
-                    # key file has a different structure than the ones associated with 'elmfor' and 'noddis'
-                    # .bin files
-                    names = read_sima_wind_names(_)
-                else:
-                    # riflex/simo, sima direct access format
-                    names = read_sima_names(_)
-
-            elif fext == ".dat":
-                # plain column wise ascii format
-                names = read_dat_names(thefile)
-
-            elif fext == ".mat":
-                # SINTEF Ocean test data export format based on Matlab .mat files.
-                _tk, names = read_mat_names(thefile)
-                self._timekeys[thefile] = _tk  # remember the name of the time array
-
-            elif fext in (".h5", ".hdf5"):
-                # sima h5
-                names = read_sima_h5_names(thefile)
-
-            elif fext == ".csv":
-                # column wise csv
-                names = read_csv_names(thefile)
-
-            elif fext == ".pkl" or fext == ".pickle":
-                # column wise pickle
-                names = read_pickle_names(thefile)
-
-            elif fext == ".tdms":
-                # National Instrument structured binary file format
-                names = read_tdms_names(thefile)
-
+            if isinstance(reader, Reader):
+                file_reader = reader
+            elif reader is None or isinstance(reader, str):
+                file_reader = find_reader(thefile, name=reader)
             else:
-                raise NotImplementedError("Invalid file type: %s" % thefile)
+                raise QatsTypeError(f"reader must be a reader name or a Reader instance, not: {type(reader)}")
+
+            # the source keeps what it needs to read the series later (names, positions, key files), but no data
+            source = file_reader.open(thefile)
+            names = [s.name for s in source.series()]
+            self._sources[thefile] = source
+            legacy_index = getattr(source, "_legacy_index", None)  # built-in readers only
 
             # update database register: unique id (key) consists of filename and time series name
-            # before the time series is loaded the register store the time series index on the file
-            # j +1 since record 0 is the time vector
-            for j, name in enumerate(names):
+            for name in names:
                 key = os.path.join(thefile, name)
                 # None until the time series is read and stored
                 self.register[key] = None
                 # Parent, i.e. source file
                 self.register_parent[key] = thefile
-                # Time series index on file, to speed up reading the time series, dummy for .mat files, +1 to skip time
-                ind = j + 1 if fext not in (".h5", ".hdf5", ".mat") else None
-                self.register_indices[key] = ind
+                # Time series index on file, kept for backwards compatibility until 6.0 (see `register_indices`)
+                self._register_indices[key] = legacy_index(name) if legacy_index is not None else None
+                # Name on file, used to read the series also after it has been renamed
+                self._source_names[key] = name
                 # time series names in the order the associated time series where loaded
                 self.register_keys.append(key)
 
@@ -1698,7 +1621,9 @@ class TsDB(object):
         # rename (change register)
         self.register[newkey] = self.register.pop(oldkey)
         self.register_parent[newkey] = self.register_parent.pop(oldkey)
-        self.register_indices[newkey] = self.register_indices.pop(oldkey)
+        self._register_indices[newkey] = self._register_indices.pop(oldkey)
+        if oldkey in self._source_names:
+            self._source_names[newkey] = self._source_names.pop(oldkey)
         self.register_keys[self.register_keys.index(oldkey)] = newkey
 
         # rename TimeSeries instance if it is pre-loaded
@@ -1908,6 +1833,6 @@ class TsDB(object):
             self.register[key] = ts
             self.register_keys.append(key)
             self.register_parent[key] = tsdb.register_parent[key]
-            self.register_indices[key] = tsdb.register_indices[key]
+            self._register_indices[key] = tsdb._register_indices[key]
 
         return

@@ -49,7 +49,8 @@ class _MemorySource(SourceFile):
 
     def read(self, names):
         t = np.arange(3.0)
-        return [SeriesData(name, t, t * (1 + i)) for i, name in enumerate(names)]
+        units = {s.name: s.unit for s in self.series()}
+        return [SeriesData(name, t, t * (1 + i), unit=units[name]) for i, name in enumerate(names)]
 
 
 def make_reader(name, patterns=("*.xyz",), priority=0, can_read=True):
