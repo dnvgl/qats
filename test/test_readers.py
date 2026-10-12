@@ -14,6 +14,7 @@ import numpy as np
 import pandas as pd
 
 from qats import TsDB
+from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
 
 # todo: add test class for matlab
 
@@ -235,6 +236,29 @@ class TestIndependentReading(unittest.TestCase):
             ts = db.get(name=name, store=False)
             np.testing.assert_array_equal(ts.t, records[1], err_msg=f"{name} (t)")
             np.testing.assert_array_equal(ts.x, records[i + 2], err_msg=f"{name} (x)")
+
+
+class TestNameReaders(unittest.TestCase):
+    """The direct-access name readers accept relative paths (#180)."""
+
+    def setUp(self):
+        self.data_directory = os.path.abspath(os.path.join(ROOT, "..", "data"))
+        self.cwd = os.getcwd()
+        os.chdir(self.data_directory)
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+
+    def test_relative_path(self):
+        for reader, filename in (
+            (read_ts_names, "mooring.key"),
+            (read_tda_names, "decay.txt"),
+            (read_dis_names, "mooring.key"),
+        ):
+            with self.subTest(reader.__name__):
+                names = reader(filename)
+                self.assertGreater(len(names), 0)
+                self.assertEqual(names, reader(os.path.join(self.data_directory, filename)))
 
 
 if __name__ == "__main__":
