@@ -7,6 +7,7 @@ generate any exceptions.
 
 import os
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -157,23 +158,37 @@ class TestSelectiveReading(unittest.TestCase):
     def setUp(self):
         self.data_directory = os.path.join(ROOT, "..", "data")
 
+    def assert_subsets_equal_full_read(self, path):
+        full_db = TsDB.fromfile(path)
+        keys = full_db.list()
+        n = len(keys)
+        full = full_db.getm(ind=list(range(n)), store=False, fullkey=True)
+        subsets = [[0], [n // 2], [n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))]
+        for ind in subsets:
+            db = TsDB.fromfile(path)  # nothing read yet
+            got = db.getm(ind=ind, store=False, fullkey=True)
+            self.assertEqual(list(got), [keys[i] for i in ind], f"order of {ind}")
+            for i in ind:
+                ts, ref = got[keys[i]], full[keys[i]]
+                np.testing.assert_array_equal(ts.t, ref.t, err_msg=f"{keys[i]} (t, subset {ind})")
+                np.testing.assert_array_equal(ts.x, ref.x, err_msg=f"{keys[i]} (x, subset {ind})")
+
     def test_subsets_equal_full_read(self):
         for filename in SELECTIVE_FILES:
             path = os.path.abspath(os.path.join(self.data_directory, filename))
             with self.subTest(filename):
-                full_db = TsDB.fromfile(path)
-                keys = full_db.list()
-                n = len(keys)
-                full = full_db.getm(ind=list(range(n)), store=False, fullkey=True)
-                subsets = [[0], [n // 2], [n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))]
-                for ind in subsets:
-                    db = TsDB.fromfile(path)  # nothing read yet
-                    got = db.getm(ind=ind, store=False, fullkey=True)
-                    self.assertEqual(list(got), [keys[i] for i in ind], f"order of {ind}")
-                    for i in ind:
-                        ts, ref = got[keys[i]], full[keys[i]]
-                        np.testing.assert_array_equal(ts.t, ref.t, err_msg=f"{keys[i]} (t, subset {ind})")
-                        np.testing.assert_array_equal(ts.x, ref.x, err_msg=f"{keys[i]} (x, subset {ind})")
+                self.assert_subsets_equal_full_read(path)
+
+    def test_pickle_subsets_equal_full_read(self):
+        """No pickle file in data/, so one is written here (#190)."""
+        t = np.linspace(0.0, 10.0, 101)
+        df = pd.DataFrame({f"s{j}": (j + 1) * np.sin(t + j) for j in range(6)}, index=t)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "series.pkl")
+            df.to_pickle(path)
+            self.assert_subsets_equal_full_read(path)
+            got = TsDB.fromfile(path).get(name="s4", store=False)
+            np.testing.assert_array_equal(got.x, df["s4"].to_numpy())
 
     def test_csv_out_of_file_order(self):
         path = os.path.abspath(os.path.join(self.data_directory, "example.csv"))
