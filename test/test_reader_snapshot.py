@@ -31,9 +31,26 @@ DATA = (ROOT / ".." / "data").resolve()
 SNAPSHOT = ROOT / "reader_snapshot.json"
 
 # file types QATS reads; any such file in data/ must have a snapshot
-EXTENSIONS = (".ts", ".tda", ".asc", ".bin", ".dat", ".mat", ".h5", ".hdf5", ".csv", ".pkl", ".pickle", ".tdms")
+EXTENSIONS = (
+    ".ts",
+    ".tda",
+    ".asc",
+    ".bin",
+    ".dat",
+    ".mat",
+    ".h5",
+    ".hdf5",
+    ".csv",
+    ".pkl",
+    ".pickle",
+    ".tdms",
+    ".out",
+    ".outb",
+)
 # files written to data/ by other tests while they run
 GENERATED = ("df_multiindex.pkl",)
+# files that no reader accepts, used to test the error
+UNSUPPORTED = ("unsupportedfile.out",)
 
 RTOL = 1e-10  # relative to the magnitude of the series, so that tiny platform differences do not fail
 
@@ -43,7 +60,10 @@ def data_files():
     return sorted(
         p.name
         for p in DATA.iterdir()
-        if p.is_file() and p.suffix.lower() in EXTENSIONS and p.name not in GENERATED and not p.name.startswith("_")
+        if p.is_file()
+        and p.suffix.lower() in EXTENSIONS
+        and p.name not in GENERATED + UNSUPPORTED
+        and not p.name.startswith("_")
     )
 
 

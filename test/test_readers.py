@@ -6,6 +6,7 @@ generate any exceptions.
 """
 
 import os
+import struct
 import sys
 import tempfile
 import unittest
@@ -16,7 +17,9 @@ import pandas as pd
 from pymatreader import read_mat
 
 from qats import TsDB
+from qats._validation import QatsValueError
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
+from qats.io.openfast import read_out_units, read_outb_data, read_outb_names, read_outb_units
 from qats.io.sintef_mat import read_units
 
 # todo: add test class for matlab
@@ -65,6 +68,15 @@ class TestAllReaders(unittest.TestCase):
             ("data.tdms", 4),
             # # pickle files
             ("df_multiindex.pkl", 4),
+            # openfast files
+            ("openfast_MinimalExample.out", 21),
+            ("openfast_MinimalExample.outb", 21),
+            ("openfast_FASTOutBin.outb", 10),
+            ("openfast_5MW_OC4Semi_Linear.outb", 15),
+            ("openfast_bd_driver.out", 6),
+            ("openfast_ifw_primary.out", 3),
+            ("openfast_md_driver.MD.out", 1),
+            ("openfast_FASTOut_Hydro.out", 1),
         ]
 
         # files to delete after testing is completed
@@ -151,6 +163,8 @@ SELECTIVE_FILES = [
     "test4210_v7.mat",
     "test4210_v6.mat",
     "test20320_ntnu.mat",
+    "openfast_MinimalExample.out",
+    "openfast_MinimalExample.outb",
 ]
 
 
@@ -302,6 +316,196 @@ class TestNameReaders(unittest.TestCase):
                 names = reader(filename)
                 self.assertGreater(len(names), 0)
                 self.assertEqual(names, reader(os.path.join(self.data_directory, filename)))
+
+
+SQRT_EPS32 = float(np.sqrt(np.finfo(np.float32).eps))
+
+
+def int16_step(x):
+    """
+    Resolution of a channel stored as int16 in an OpenFAST binary file: its range divided by 65535 (a range of at
+    least sqrt(eps) of float32, as OpenFAST's WrBinFAST scales nearly constant channels), plus the float32 rounding of
+    the values, which OpenFAST scales in single precision.
+    """
+    x = np.asarray(x)
+    rng = float(np.max(x) - np.min(x))
+    return max(rng, SQRT_EPS32) / 65535.0 + float(np.finfo(np.float32).eps) * float(np.max(np.abs(x)))
+
+
+def write_outb(path, fileid, t, x, names, units, trailing=b""):
+    """
+    Write an OpenFAST binary output file as OpenFAST's WrBinFAST does (NWTC_IO.f90): `x` has one row per channel,
+    `names` and `units` include time.
+    """
+    nchannels, nsteps = x.shape
+    lenname = max(len(s) for s in names + units) if fileid == 4 else 10
+    header = struct.pack("<h", fileid)
+    if fileid == 4:
+        header += struct.pack("<h", lenname)
+    header += struct.pack("<ii", nchannels, nsteps)
+    if fileid == 1:
+        # time packed in [-65536, 65535]
+        timescale = 131071.0 / (t[-1] - t[0])
+        timeoffset = -65536.0 - timescale * t[0]
+        header += struct.pack("<dd", timescale, timeoffset)
+    else:
+        header += struct.pack("<dd", t[0], t[1] - t[0])
+    if fileid != 3:
+        xmin, xmax = x.min(axis=1).astype(np.float32), x.max(axis=1).astype(np.float32)
+        rng = xmax - xmin
+        scale = np.float32(65535.0) / np.where(np.abs(rng) < SQRT_EPS32, np.float32(SQRT_EPS32), rng)
+        scale = scale.astype(np.float32)
+        offset = (np.float32(-32768.0) - scale * xmin).astype(np.float32)
+        header += scale.tobytes() + offset.tobytes()
+    description = b"Written by the QATS tests"
+    header += struct.pack("<i", len(description)) + description
+    header += "".join(s.ljust(lenname)[:lenname] for s in names).encode("latin-1")
+    header += "".join(s.ljust(lenname)[:lenname] for s in units).encode("latin-1")
+    if fileid == 1:
+        packed = np.rint(np.clip(timescale * t + timeoffset, -65536.0, 65535.0)).astype("<i4")
+        header += packed.tobytes()
+    if fileid == 3:
+        data = x.T.astype("<f8")
+    else:
+        scaled = (scale[:, np.newaxis] * x.astype(np.float32) + offset[:, np.newaxis]).astype(np.float32)
+        data = np.rint(np.clip(scaled, -32768.0, 32767.0)).T.astype("<i2")
+    with open(path, "wb") as f:
+        f.write(header + data.tobytes() + trailing)
+
+
+class TestOpenFast(unittest.TestCase):
+    """OpenFAST .out and .outb files (#169)."""
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+        t = np.arange(0.0, 20.0, 0.05)
+        self.t = t
+        self.x = np.vstack([10.0 * np.sin(t), 1e5 + 3.0 * np.cos(0.3 * t), np.full(t.size, 2.5), -(t**2)])
+        self.names = ["Time", "Wave1Elev", "FairTen1", "Const", "LongChannelName"]
+        self.units = ["(s)", "(m)", "(kN)", "(-)", "(kN-m)"]
+
+    def path(self, filename):
+        return os.path.join(self.data_directory, filename)
+
+    def test_published_value(self):
+        """The last GenPwr value in a file with constant time step (file format identifier 2), as in the OpenFAST
+        Python toolbox's own test of this file."""
+        db = TsDB.fromfile(self.path("openfast_FASTOutBin.outb"))
+        ts = db.get(name="GenPwr")
+        self.assertEqual(ts.unit, "kW")
+        self.assertEqual(ts.x[-1], 40.57663190807828)
+        self.assertEqual(ts.t.size, 201)
+        self.assertAlmostEqual(ts.t[-1], 1.0, places=12)
+
+    def test_text_equals_binary(self):
+        """The text and binary file from the same run hold the same channels, to the int16 resolution."""
+        text = TsDB.fromfile(self.path("openfast_MinimalExample.out")).getm(names="*", store=False)
+        binary = TsDB.fromfile(self.path("openfast_MinimalExample.outb")).getm(names="*", store=False)
+        self.assertEqual(list(text), list(binary))
+        self.assertEqual(len(text), 21)
+        for name, ts in text.items():
+            other = binary[name]
+            self.assertEqual(other.unit, ts.unit, name)
+            np.testing.assert_allclose(other.t, ts.t, rtol=0, atol=1e-12, err_msg=name)
+            np.testing.assert_allclose(other.x, ts.x, rtol=0, atol=int16_step(ts.x), err_msg=name)
+
+    def test_text_equals_numpy(self):
+        """The text file read directly: a header of 6 lines, names, units in parentheses, tab-separated values."""
+        path = self.path("openfast_MinimalExample.out")
+        with open(path) as f:
+            lines = f.readlines()
+        names = lines[6].rstrip("\n").split("\t")
+        units = lines[7].rstrip("\n").split("\t")
+        values = np.loadtxt(path, skiprows=8, unpack=True)
+        expected = {name: unit[1:-1] for name, unit in zip(names, units)}
+        self.assertEqual(expected["Time"], "s")
+        self.assertEqual(expected["RootMyc1"], "kN-m")
+        self.assertEqual(read_out_units(path), expected)
+        db = TsDB.fromfile(path)
+        self.assertEqual([os.path.basename(k) for k in db.list()], names[1:])
+        for i, name in enumerate(names[1:]):
+            ts = db.get(name=name, store=False)
+            self.assertEqual(ts.unit, expected[name])
+            np.testing.assert_array_equal(ts.t, values[0], err_msg=f"{name} (t)")
+            np.testing.assert_array_equal(ts.x, values[i + 1], err_msg=f"{name} (x)")
+
+    def test_text_variants(self):
+        """Header lines, padding and units vary between OpenFAST modules and versions."""
+        for filename, first, unit, n, t0 in (
+            ("openfast_bd_driver.out", "TipTDxr", "m", 10, 0.0),  # names padded with spaces before the tabs
+            ("openfast_ifw_primary.out", "Wind1VelX", "m/s", 10, 30.0),  # '##' header, space-separated
+            ("openfast_md_driver.MD.out", "FAIRTEN1", "N", 599, 0.1),  # 'These predictions were generated by'
+            ("openfast_FASTOut_Hydro.out", "Wave1Elev", "m", 5, 0.0),  # 'This output file was closed' at the end
+        ):
+            with self.subTest(filename):
+                ts = TsDB.fromfile(self.path(filename)).get(ind=0, store=False)
+                self.assertEqual(ts.name, first)
+                self.assertEqual(ts.unit, unit)
+                self.assertEqual(ts.t.size, n)
+                self.assertEqual(ts.t[0], t0)
+        self.assertEqual(read_out_units(self.path("openfast_FASTOut_Hydro.out"))["Time"], "sec")
+        np.testing.assert_array_equal(
+            TsDB.fromfile(self.path("openfast_FASTOut_Hydro.out")).get(ind=0).x, [0.0, 10.0, 0.0, -10.0, 0.0]
+        )
+
+    def test_uncompressed(self):
+        """Uncompressed files (file format identifier 3) hold float64 values, also with a single time step."""
+        for filename, n, nsteps in (
+            ("openfast_5MW_OC4Semi_Linear.outb", 15, 101),
+            ("openfast_5MW_OC3Mnpl_Linear.outb", 44, 1),
+        ):
+            with self.subTest(filename):
+                data = read_outb_data(self.path(filename))
+                self.assertEqual(data.shape, (n + 1, nsteps))
+                self.assertEqual(data[0, 0], 0.0)
+
+    def test_written_files(self):
+        """Files written as OpenFAST does, in every binary format, give back the series to their resolution."""
+        with tempfile.TemporaryDirectory() as tmp:
+            for fileid in (1, 2, 3, 4):
+                with self.subTest(fileid=fileid):
+                    path = os.path.join(tmp, f"fileid{fileid}.outb")
+                    write_outb(path, fileid, self.t, self.x, self.names, self.units)
+                    lenname = 15 if fileid == 4 else 10  # names cut to 10 characters before file format 4
+                    self.assertEqual(read_outb_names(path), [s[:lenname] for s in self.names[1:]])
+                    self.assertEqual(list(read_outb_units(path).values()), ["s", "m", "kN", "-", "kN-m"])
+                    data = read_outb_data(path)
+                    # time: stored to half its resolution (file format 1), or from first time and step
+                    atol = 0.5 * (self.t[-1] - self.t[0]) / 131071.0 if fileid == 1 else 1e-12
+                    np.testing.assert_allclose(data[0], self.t, rtol=0, atol=atol)
+                    for x, y in zip(self.x, data[1:]):
+                        atol = 0.0 if fileid == 3 else int16_step(x)
+                        np.testing.assert_allclose(y, x, rtol=0, atol=atol)
+                    # a subset, out of file order and with time last
+                    np.testing.assert_array_equal(read_outb_data(path, ind=[3, 1, 0]), data[[3, 1, 0]])
+
+    def test_trailing_bytes_ignored(self):
+        """Data on file after the last time step is ignored, as in files found in practice."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "trailing.outb")
+            write_outb(path, 4, self.t, self.x, self.names, self.units, trailing=b"\x01\x02\x03")
+            self.assertEqual(read_outb_data(path).shape, (5, self.t.size))
+
+    def test_cut_off_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "cut.outb")
+            write_outb(path, 4, self.t, self.x, self.names, self.units)
+            with open(path, "rb") as f:
+                content = f.read()
+            with open(path, "wb") as f:
+                f.write(content[:-10])
+            with self.assertRaisesRegex(QatsValueError, "requires"):
+                read_outb_data(path)
+
+    def test_fortran_exponent(self):
+        """Fortran writes exponents with three digits without the 'E', e.g. '1.234-100'."""
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "small.out")
+            with open(path, "w") as f:
+                f.write("\nPredictions were generated on 01-Jan-2026 using OpenFAST\n\n\n\n\n")
+                f.write("Time\tX\n(s)\t(m)\n0.0\t1.5E+00\n0.1\t1.234-100\n0.2\t2.0+100\n")
+            ts = TsDB.fromfile(path).get(name="X")
+            np.testing.assert_array_equal(ts.x, [1.5, 1.234e-100, 2.0e100])
 
 
 if __name__ == "__main__":

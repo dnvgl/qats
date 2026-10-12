@@ -145,6 +145,19 @@ Files in the SINTEF Ocean test data exchange format store a unit for each channe
    :lines: 1-
 
 
+Read OpenFAST results
+*********************
+
+QATS reads OpenFAST text (``.out``) and binary (``.outb``) output files, also those written by the module drivers, with
+the channel units. Binary files usually store each channel as 16-bit integers scaled to the channel's range, so their
+values are accurate to about 1/65535 of that range.
+
+.. literalinclude:: examples/openfast.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Choose a file reader and add your own
 *************************************
 

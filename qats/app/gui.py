@@ -938,6 +938,7 @@ class Qats(QMainWindow):
             "CSV file with header (*.csv);;"
             "Technical Data Management Streaming files (*.tdms);;"
             "DataFrame Pickle file (*.pkl *.pickle);;"
+            "OpenFAST output files (*.out *.outb);;"
             "All Files (*)",
         )
 
