@@ -1567,22 +1567,23 @@ class Qats(QMainWindow):
         newdb : TsDB
             Time series database
         """
-        # merge the loaded time series into the database
+        # merge the loaded time series into the database, unread: each series is read when it is first plotted
         try:
-            self.db.update(newdb)
+            self.db.update(newdb, read=False)
         except KeyError:
             logging.error("The time series are not unique. You have probably loaded this file already.")
             return
 
         # fill item model with time series by unique id (common path is removed)
         names = self.db.list(names="*", relative=True, display=False)
+        common = self.db.common  # once: it goes through all keys
         self.db_source_model.clear()  # clear before re-adding
         for name in names:
             # set each item as unchecked initially
             item = QStandardItem(name)
             item.setCheckState(Qt.Unchecked)
             item.setCheckable(True)
-            item.setToolTip(os.path.join(self.db.common, name))
+            item.setToolTip(os.path.join(common, name))
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             self.db_source_model.appendRow(item)
 

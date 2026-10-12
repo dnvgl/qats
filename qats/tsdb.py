@@ -383,6 +383,8 @@ class TsDB(object):
     @staticmethod
     def _protect_brackets(path):
         """Replace '/' and '\\' within square brackets by stand-ins, so that os.path functions don't split on them."""
+        if "[" not in path:
+            return path  # most paths: nothing to protect
         chars = []
         depth = 0  # nesting level of square brackets
         for char in path:
@@ -1884,7 +1886,7 @@ class TsDB(object):
 
         return df
 
-    def update(self, tsdb, names=None, shallow=False):
+    def update(self, tsdb, names=None, shallow=False, read=True):
         """
         Update TsDB with speicified keys/names from other TsDB instance.
 
@@ -1897,24 +1899,38 @@ class TsDB(object):
         shallow: bool, optional
             If False (default), the copied TimeSeries objects do not point back to the TimeSeries instances in the
             source TsDB.
+        read: bool, optional
+            If True (default), time series that are not yet read in the other TsDB are read from file. If False, they
+            are added unread, and read from their file when first requested, as after ``load(..., read=False)``.
 
+        Notes
+        -----
+        .. versionadded :: 5.5.0
+            The `read` parameter.
         """
         if not isinstance(tsdb, TsDB):
             raise TypeError("expected TsDB instance, got: %s" % type(tsdb))
 
-        container = tsdb.getm(names=names, fullkey=True)
+        if read:
+            container = tsdb.getm(names=names, fullkey=True)
+        else:
+            # None for the series that are not read yet
+            container = {key: tsdb.register[key] for key in tsdb.list(names=names, display=False, relative=False)}
         for key, ts in container.items():
             if key in self.register.keys():
                 raise KeyError("The specified key is not unique: %s" % key)
 
-            if shallow is False:
+            if ts is not None and shallow is False:
                 ts = ts.copy()
 
             self.register[key] = ts
             self.register_keys.append(key)
-            self.register_parent[key] = tsdb.register_parent[key]
+            parent = self.register_parent[key] = tsdb.register_parent[key]
             self._register_indices[key] = tsdb._register_indices[key]
             if key in tsdb._source_names:
                 self._source_names[key] = tsdb._source_names[key]
+            if ts is None and parent in tsdb._sources:
+                # the opened file (names and positions, no data), so that it is not scanned again when read
+                self._sources.setdefault(parent, tsdb._sources[parent])
 
         return

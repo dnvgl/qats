@@ -3,10 +3,10 @@
 Benchmark of loading and reading large result files (#171).
 
 Generates large SIMA/RIFLEX ``.bin``, SIMA ``.h5`` and MATLAB ``.mat`` (v7.3) files with the structure of the sample
-files in ``data/``, then measures the time and peak memory of listing the series (``TsDB.load``), reading one series
-and reading all series. Each run is a new Python process. The peak memory is what Python and numpy allocate during
-the case (traced with tracemalloc in a separate run, since tracing slows it down); memory allocated inside the HDF5
-library is not included.
+files in ``data/``, then measures the time and peak memory of listing the series (``TsDB.load``), reading one series,
+reading all series, and opening the file in the GUI until its series are listed (offscreen). Each run is a new Python
+process. The peak memory is what Python and numpy allocate during the case (traced with tracemalloc in a separate run,
+since tracing slows it down); memory allocated inside the HDF5 library is not included.
 
 The generated files are large and are not committed. Usage::
 
@@ -20,6 +20,7 @@ disk.
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -116,7 +117,29 @@ def generate_mat(folder, size_mb):
 
 
 GENERATORS = {"bin": generate_bin, "h5": generate_h5, "mat": generate_mat}
-CASES = ("load", "read one", "read all")
+CASES = ("load", "read one", "read all", "gui")
+GUI_TIMEOUT = 600.0  # seconds
+
+
+def _gui_load(path):
+    """Open a file in the GUI as the open dialog and drag-and-drop do; return when the series list is filled."""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from qtpy.QtWidgets import QApplication
+
+    from qats.app.gui import Qats
+
+    app = QApplication.instance() or QApplication([])
+    window = Qats()
+    app.processEvents()
+    start = time.perf_counter()
+    window.load_files([str(path)])
+    # the names are listed in a worker thread; the list is filled on the main thread when the worker is done
+    while window.db_proxy_model.rowCount() == 0 or window.threadpool.activeThreadCount() > 0:
+        app.processEvents()
+        if time.perf_counter() - start > GUI_TIMEOUT:
+            raise TimeoutError(f"the GUI did not list the series in {GUI_TIMEOUT} s")
+    seconds = time.perf_counter() - start
+    return seconds, window.db_proxy_model.rowCount()
 
 
 def run_case(path, case, memory):
@@ -130,14 +153,18 @@ def run_case(path, case, memory):
     registry.readers()  # load the reader modules (and their imports) before the clock starts
     if memory:
         tracemalloc.start()
-    start = time.perf_counter()
-    db = TsDB()
-    db.load(path)
-    if case == "read one":
-        db.get(ind=db.n // 2, store=False)
-    elif case == "read all":
-        db.getm(ind=list(range(db.n)), store=False)
-    result = {"seconds": time.perf_counter() - start, "series": db.n}
+    if case == "gui":
+        seconds, n = _gui_load(path)
+        result = {"seconds": seconds, "series": n}
+    else:
+        start = time.perf_counter()
+        db = TsDB()
+        db.load(path)
+        if case == "read one":
+            db.get(ind=db.n // 2, store=False)
+        elif case == "read all":
+            db.getm(ind=list(range(db.n)), store=False)
+        result = {"seconds": time.perf_counter() - start, "series": db.n}
     if memory:
         result["memory"] = tracemalloc.get_traced_memory()[1] / 1e6
     print(json.dumps(result))
