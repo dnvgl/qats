@@ -89,6 +89,7 @@ Table of contents
    :maxdepth: 2
 
    getting_started
+   file_formats
    examples
    gui
    api/index
