@@ -350,12 +350,13 @@ def write_outb(path, fileid, t, x, names, units, trailing=b""):
         header += struct.pack("<dd", timescale, timeoffset)
     else:
         header += struct.pack("<dd", t[0], t[1] - t[0])
+    # int16 scaling of each channel to its range (not stored in uncompressed files)
+    xmin, xmax = x.min(axis=1).astype(np.float32), x.max(axis=1).astype(np.float32)
+    rng = xmax - xmin
+    scale = np.float32(65535.0) / np.where(np.abs(rng) < SQRT_EPS32, np.float32(SQRT_EPS32), rng)
+    scale = scale.astype(np.float32)
+    offset = (np.float32(-32768.0) - scale * xmin).astype(np.float32)
     if fileid != 3:
-        xmin, xmax = x.min(axis=1).astype(np.float32), x.max(axis=1).astype(np.float32)
-        rng = xmax - xmin
-        scale = np.float32(65535.0) / np.where(np.abs(rng) < SQRT_EPS32, np.float32(SQRT_EPS32), rng)
-        scale = scale.astype(np.float32)
-        offset = (np.float32(-32768.0) - scale * xmin).astype(np.float32)
         header += scale.tobytes() + offset.tobytes()
     description = b"Written by the QATS tests"
     header += struct.pack("<i", len(description)) + description
