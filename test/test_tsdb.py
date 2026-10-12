@@ -739,6 +739,25 @@ class TestTsDBBookkeeping(unittest.TestCase):
         self.assertEqual(set(copied.register_parent.values()), {self.source})
         self.assertEqual(list(copied._register_indices.values()), [1, 2])  # Surge and Sway on mooring.ts
 
+    def test_copy_keeps_keys(self):
+        """A copy has the source keys, so names with groups (.h5) are not repeated in its keys (#196)."""
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "results_SIMA36.h5"))
+        source = TsDB.fromfile(path)
+        keys = source.register_keys[:3]
+        for shallow in (False, True):
+            with self.subTest(shallow=shallow):
+                copied = source.copy(names=keys, shallow=shallow)
+                self.assertEqual(copied.register_keys, keys)
+                for key in keys:
+                    np.testing.assert_array_equal(copied.get(name=key).x, source.get(name=key).x)
+
+    def test_copy_same_names_as_before(self):
+        """Keeping the source keys doesn't change the names users see: relative names and series names."""
+        source = TsDB.fromfile(self.source)
+        copied = source.copy(names=["Surge", "Sway"])
+        self.assertEqual(copied.list(display=False, relative=True), ["Surge", "Sway"])
+        self.assertEqual([ts.name for ts in copied.getl(names="*")], ["Surge", "Sway"])
+
     def test_add_returns_key(self):
         db = TsDB.fromfile(self.source)
         ts = self.reference["Surge"].copy()
