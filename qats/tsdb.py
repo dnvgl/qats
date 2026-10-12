@@ -8,6 +8,7 @@ import copy
 import fnmatch
 import glob
 import os
+import warnings
 from collections import OrderedDict, defaultdict
 from uuid import uuid4
 
@@ -19,6 +20,7 @@ from ._validation import QatsValueError
 from .fatigue.rainflow import rebin as rebin_cycles
 from .io.csv import read_data as read_csv_data
 from .io.csv import read_names as read_csv_names
+from .io.direct_access import _count_series as count_ts_series
 from .io.direct_access import read_tda_data, read_tda_names, read_ts_data, read_ts_names, write_ts_data
 from .io.other import read_dat_data, read_dat_names, write_dat_data
 from .io.pickle_format import read_data as read_pickle_data
@@ -1361,6 +1363,15 @@ class TsDB(object):
             if fext == ".ts":
                 # direct access format without info array
                 names = read_ts_names(thefile.replace(fext, ".key"))
+                nts = count_ts_series(thefile)
+                if len(names) > nts:
+                    # e.g. a file truncated by an interrupted write: list only the series that can be read
+                    warnings.warn(
+                        f"{thefile} holds {nts} complete series, but its key file lists {len(names)}. "
+                        f"Skipping {', '.join(names[nts:])}.",
+                        stacklevel=2,
+                    )
+                    names = names[:nts]
 
             elif fext == ".tda":
                 # simo s2x direct access format (with info array)

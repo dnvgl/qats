@@ -114,6 +114,35 @@ def _read_names(path):
     return names
 
 
+def _count_series(path, ifmt="i"):
+    """
+    Count the complete series records on a binary direct access file.
+
+    Parameters
+    ----------
+    path : str
+        File path (relative or absolute)
+    ifmt : str, optional
+        Format to decode binary integers, see `_read_data`
+
+    Returns
+    -------
+    int
+        Number of complete series records, excluding the header and time records
+
+    Notes
+    -----
+    The count is based on the file size, as in `_read_data`. An incomplete last record, e.g. from an interrupted
+    write, is not counted.
+    """
+    nbytes = 4
+    with open(path, "rb") as f:
+        ndat = int(unpack(ifmt, f.read(nbytes))[0])  # number of time steps per array
+        f.seek(0, 2)  # go to end of file
+        epos = f.tell()
+    return max(epos // (ndat * nbytes) - 2, 0)
+
+
 def read_ts_data(path, ind=None, verbose=False):
     """
     Read time series from binary direct access formatted '.ts' file.
