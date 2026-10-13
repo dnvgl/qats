@@ -247,20 +247,17 @@ def read_ascii_data(path, ind=None, verbose=False):
     specified. I.e. if ``ind=[0,10,2,3]``, then the response array with index `10` on ascii file is obtained from
     ``data[1,:]``.
 
+    Lines starting with '#' are skipped. The file has no header line: every other line is a time step.
+
+    .. versionchanged :: 5.5.0
+        The first time step is read. Before, the first line that was not a comment was skipped as if it were a
+        header, so the first time step on the file was lost.
     """
     if verbose:
         print("Reading %s ..." % path)
 
-    # read
-    with open(path, "r") as f:
-        # skip commmented lines at start of file
-        for line in f:
-            if not line.startswith("#"):
-                # skip all comment lines
-                break
-
-        # load data from the remaining rows as an array
-        data = np.loadtxt(f, skiprows=0, usecols=ind, unpack=True)
+    # every line that is not a comment is a time step (the names are on the key file)
+    data = np.loadtxt(path, comments="#", usecols=ind, unpack=True)
 
     # info
     if verbose:

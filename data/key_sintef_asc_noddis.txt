@@ -1,0 +1,93 @@
+
+   R I F L E X  -  KEY FILE
+   ------------------------
+
+
+   This key-file describes the contents of : sintef_asc_noddis.asc
+   The format of sintef_asc_noddis.asc is ASCII
+   The file sintef_asc_noddis.asc contains a time series of nodal-displacements
+   The nodal-displacements are stored in columns on sintef_asc_noddis.asc
+
+   Column no. 1 contains the time.
+
+
+   For each node the following applies : 
+
+   DOF 1 = displacement in x - direction
+   DOF 2 = displacement in y - direction
+   DOF 3 = displacement in z - direction
+
+
+   The response is stored as follows
+
+   Line       Local     Local      No. of         Stored in
+    Id        segment   node       responses      column(s)
+   ----------------------------------------------------------
+ Risea63d        1         1           3         2   -      4
+ Risea63d        1         2           3         5   -      7
+ Risea63d        1         3           3         8   -     10
+ Risea63d        1         4           3        11   -     13
+ Risea63d        1         5           3        14   -     16
+ Risea63d        1         6           3        17   -     19
+ Risea63d        2         1           3        20   -     22
+ Risea63d        2         2           3        23   -     25
+ Risea63d        2         3           3        26   -     28
+ Risea63d        2         4           3        29   -     31
+ Risea63d        2         5           3        32   -     34
+ Risea63d        2         6           3        35   -     37
+ Risea63d        2         7           3        38   -     40
+ Risea63d        2         8           3        41   -     43
+ Risea63d        2         9           3        44   -     46
+ Risea63d        2        10           3        47   -     49
+ Risea63d        2        11           3        50   -     52
+ Risea63d        2        12           3        53   -     55
+ Risea63d        2        13           3        56   -     58
+ Risea63d        2        14           3        59   -     61
+ Risea63d        2        15           3        62   -     64
+ Risea63d        2        16           3        65   -     67
+ Risea63d        2        17           3        68   -     70
+ Risea63d        2        18           3        71   -     73
+ Risea63d        2        19           3        74   -     76
+ Risea63d        2        20           3        77   -     79
+ Risea63d        2        21           3        80   -     82
+ Risea63d        3         1           3        83   -     85
+ Risea63d        3         2           3        86   -     88
+ Risea63d        3         3           3        89   -     91
+ Risea63d        3         4           3        92   -     94
+ Risea63d        3         5           3        95   -     97
+ Risea63d        3         6           3        98   -    100
+ Risea63d        3         7           3       101   -    103
+ Risea63d        3         8           3       104   -    106
+ Risea63d        3         9           3       107   -    109
+ Risea63d        3        10           3       110   -    112
+ Risea63d        3        11           3       113   -    115
+ Risea63d        3        12           3       116   -    118
+ Risea63d        3        13           3       119   -    121
+ Risea63d        3        14           3       122   -    124
+ Risea63d        3        15           3       125   -    127
+ Risea63d        3        16           3       128   -    130
+ Risea63d        3        17           3       131   -    133
+ Risea63d        3        18           3       134   -    136
+ Risea63d        3        19           3       137   -    139
+ Risea63d        3        20           3       140   -    142
+ Risea63d        3        21           3       143   -    145
+ Risea63d        3        22           3       146   -    148
+ Risea63d        3        23           3       149   -    151
+ Risea63d        3        24           3       152   -    154
+ Risea63d        3        25           3       155   -    157
+ Risea63d        3        26           3       158   -    160
+ Risea63d        3        27           3       161   -    163
+ Risea63d        3        28           3       164   -    166
+ Risea63d        3        29           3       167   -    169
+ Risea63d        3        30           3       170   -    172
+ Risea63d        3        31           3       173   -    175
+ Risea63d        3        32           3       176   -    178
+ Risea63d        3        33           3       179   -    181
+ Risea63d        3        34           3       182   -    184
+ Risea63d        3        35           3       185   -    187
+ Risea63d        3        36           3       188   -    190
+ Risea63d        3        37           3       191   -    193
+ Risea63d        3        38           3       194   -    196
+ Risea63d        3        39           3       197   -    199
+ Risea63d        3        40           3       200   -    202
+ Risea63d        3        41           3       203   -    205

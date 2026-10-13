@@ -47,12 +47,16 @@ class TestAllReaders(unittest.TestCase):
             ("results_SIMA35.h5", 774),
             ("results_SIMA36.h5", 774),
             ("results_SIMA37dev.h5", 774),
+            ("sintef_noddis.h5", 204),
             # sima bin files (riflex)
             ("n_elmfor.bin", 27),
             ("n_elmtra.bin", 162),
             ("wt_blresp.bin", 21),
             ("wt_witurb.bin", 23),
             ("sima_witurb.bin", 23),
+            ("sintef_bin_noddis.bin", 204),
+            # sima ascii files
+            ("sintef_asc_noddis.asc", 204),
             # direct access files
             ("mooring.ts", 14),
             ("simo_p.ts", 21),  # truncated: the last of the 22 series in the key file is incomplete (#179)
@@ -157,8 +161,11 @@ SELECTIVE_FILES = [
     "decay.tda",
     "n_elmtra.bin",
     "wt_witurb.bin",
+    "sintef_bin_noddis.bin",
+    "sintef_asc_noddis.asc",
     "results_SIMA36.h5",
     "example_sima_h5_output_shrinked.h5",
+    "sintef_noddis.h5",
     "example.csv",
     "model_test_data.dat",
     "data.tdms",
@@ -350,6 +357,55 @@ class TestIndependentReading(unittest.TestCase):
             ts = db.get(name=name, store=False)
             np.testing.assert_array_equal(ts.t, records[1], err_msg=f"{name} (t)")
             np.testing.assert_array_equal(ts.x, records[i + 2], err_msg=f"{name} (x)")
+
+
+class TestSimaFormats(unittest.TestCase):
+    """
+    The same SIMA nodal displacements (204 series, 200 time steps) as .asc, .bin and .h5, provided by SINTEF Ocean
+    (#183). The .bin file stores single precision, and so does the .h5 file; the .asc file has the same values with
+    more digits.
+    """
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+        asc_file = os.path.join(self.data_directory, "sintef_asc_noddis.asc")
+        self.asc = TsDB.fromfile(asc_file).getm(names="*", store=False)
+
+    def test_asc_equals_numpy(self):
+        """Every line of the .asc file is a time step, the first one included."""
+        raw = np.loadtxt(os.path.join(self.data_directory, "sintef_asc_noddis.asc"), unpack=True)
+        self.assertEqual(raw.shape, (205, 200))
+        self.assertEqual(raw[0, 0], 0.5)
+        self.assertEqual(len(self.asc), 204)
+        for i, (name, ts) in enumerate(self.asc.items()):
+            np.testing.assert_array_equal(ts.t, raw[0], err_msg=f"{name} (t)")
+            np.testing.assert_array_equal(ts.x, raw[i + 1], err_msg=f"{name} (x)")
+
+    def test_bin_equals_asc(self):
+        binary = TsDB.fromfile(os.path.join(self.data_directory, "sintef_bin_noddis.bin")).getm(names="*", store=False)
+        self.assertEqual(list(binary), list(self.asc))
+        for name, ts in self.asc.items():
+            np.testing.assert_array_equal(binary[name].t, ts.t, err_msg=f"{name} (t)")
+            np.testing.assert_array_equal(binary[name].x, ts.x.astype(np.float32), err_msg=f"{name} (x)")
+
+    def test_h5_equals_asc(self):
+        """The .h5 series are named by segment, node and direction; the key file gives the matching .asc column."""
+        h5 = TsDB.fromfile(os.path.join(self.data_directory, "sintef_noddis.h5"))
+        self.assertEqual(h5.n, 204)
+        directions = {"Xd": "x", "Yd": "y", "Zd": "z"}
+        for name, ts in self.asc.items():
+            # e.g. Risea63d_Seg002_No005_Yd -> segment_2\node_5\Displacement in y - direction
+            _, segment, node, direction = name.split("_")
+            h5_name = "\\".join(
+                (
+                    f"segment_{int(segment[3:])}",
+                    f"node_{int(node[2:])}",
+                    f"Displacement in {directions[direction]} - direction",
+                )
+            )
+            other = h5.get(name=h5_name, store=False)
+            np.testing.assert_array_equal(other.t, ts.t, err_msg=f"{h5_name} (t)")
+            np.testing.assert_array_equal(other.x, ts.x.astype(np.float32), err_msg=f"{h5_name} (x)")
 
 
 class TestNameReaders(unittest.TestCase):
