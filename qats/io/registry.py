@@ -38,6 +38,7 @@ _BUILTIN_READERS = (
     "qats.io.csv:CsvReader",
     "qats.io.pickle_format:PickleReader",
     "qats.io.tdms:TdmsReader",
+    "qats.io.openfast:OpenFastReader",
 )
 
 logger = logging.getLogger(__name__)

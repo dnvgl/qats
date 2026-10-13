@@ -26,6 +26,7 @@ from qats.io.direct_access import (
     read_ts_names,
     write_ts_data,
 )
+from qats.io.openfast import read_out_data, read_out_names, read_outb_data, read_outb_names
 from qats.io.other import read_dat_data, read_dat_names
 from qats.io.pickle_format import read_data as read_pickle_data
 from qats.io.pickle_format import read_pickle_names
@@ -100,7 +101,7 @@ class TestRegistry(RegistryTestCase):
     def test_builtin_readers(self):
         names = [r.name for r in registry.readers()]
         self.assertEqual(
-            names[:10],
+            names[:11],
             [
                 "direct-access-ts",
                 "direct-access-tda",
@@ -112,6 +113,7 @@ class TestRegistry(RegistryTestCase):
                 "csv",
                 "pickle",
                 "tdms",
+                "openfast",
             ],
         )
         for reader in registry.readers():
@@ -185,6 +187,24 @@ class TestRegistry(RegistryTestCase):
         reader = registry.get_reader("sima-h5")
         self.assertFalse(reader.can_read(str(DATA / "test4210.mat")))
         self.assertTrue(reader.can_read(str(DATA / "results_SIMA36.h5")))
+
+    def test_openfast_does_not_take_other_out_files(self):
+        """Other tools also write .out files: the OpenFAST reader checks the content (#169)."""
+        reader = registry.get_reader("openfast")
+        self.assertTrue(reader.can_read(str(DATA / "openfast_MinimalExample.out")))
+        self.assertTrue(reader.can_read(str(DATA / "openfast_MinimalExample.outb")))
+        self.assertFalse(reader.can_read(str(DATA / "unsupportedfile.out")))  # empty
+        with tempfile.TemporaryDirectory() as tmp:
+            table = os.path.join(tmp, "table.out")  # a time table without OpenFAST's header lines
+            with open(table, "w") as f:
+                f.write("Time\tX\n(s)\t(m)\n0.0\t1.0\n0.1\t2.0\n")
+            self.assertFalse(reader.can_read(table))
+            binary = os.path.join(tmp, "other.outb")
+            with open(binary, "wb") as f:
+                f.write(np.arange(100, dtype="<i2").tobytes())  # file format identifier 0
+            self.assertFalse(reader.can_read(binary))
+            with self.assertRaisesRegex(NotImplementedError, "content"):
+                registry.find_reader(table)
 
 
 class TestPlugins(RegistryTestCase):
@@ -267,6 +287,12 @@ def read_legacy(path):
     elif fext == ".csv":
         names = read_csv_names(path)
         data = read_csv_data(path, ind=list(range(len(names) + 1)))
+    elif fext == ".out":
+        names = read_out_names(path)
+        data = read_out_data(path, ind=list(range(len(names) + 1)))
+    elif fext == ".outb":
+        names = read_outb_names(path)
+        data = read_outb_data(path, ind=list(range(len(names) + 1)))
     elif fext in (".pkl", ".pickle"):
         names = read_pickle_names(path)
         data = read_pickle_data(path)
@@ -293,7 +319,7 @@ class TestRegistryEqualsLegacyDispatch(unittest.TestCase):
                 for d, (name, t, x) in zip(full, legacy):
                     np.testing.assert_array_equal(d.t, t, err_msg=f"{name} (t)")
                     np.testing.assert_array_equal(d.x, x, err_msg=f"{name} (x)")
-                    if not filename.endswith(".mat"):  # units are read from .mat files only (#184)
+                    if not filename.endswith((".mat", ".out", ".outb")):  # units are read from these files only
                         self.assertIsNone(d.unit)
                 # subsets, also out of file order
                 for ind in ([n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))):
