@@ -13,6 +13,7 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
+import h5py
 import numpy as np
 import pandas as pd
 from pymatreader import read_mat
@@ -22,6 +23,7 @@ from qats._validation import QatsValueError
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
 from qats.io.openfast import read_out_units, read_outb_data, read_outb_names, read_outb_units
 from qats.io.sima import read_bin_data
+from qats.io.sima_h5 import read_names as read_h5_names
 from qats.io.sintef_mat import read_data as read_mat_data
 from qats.io.sintef_mat import read_names as read_mat_names
 from qats.io.sintef_mat import read_units
@@ -357,6 +359,33 @@ class TestIndependentReading(unittest.TestCase):
             ts = db.get(name=name, store=False)
             np.testing.assert_array_equal(ts.t, records[1], err_msg=f"{name} (t)")
             np.testing.assert_array_equal(ts.x, records[i + 2], err_msg=f"{name} (x)")
+
+
+class TestH5NameOrder(unittest.TestCase):
+    """
+    SIMA .h5 names are listed breadth first, each group in h5py's order: the order of creation if the file keeps it,
+    as files from recent SIMA versions do, else name order.
+    """
+
+    @staticmethod
+    def write(path, track_order):
+        with h5py.File(path, "w", track_order=track_order) as f:
+            line = f.create_group("line", track_order=track_order)
+            for node in (1, 2, 10, 11):  # name order: node_1, node_10, node_11, node_2
+                group = line.create_group(f"node_{node}", track_order=track_order)
+                for direction in ("x", "y"):
+                    group.create_dataset(direction, data=np.zeros(3)).attrs.update({"start": 0.0, "delta": 0.1})
+            line.create_dataset("top", data=np.zeros(3)).attrs.update({"start": 0.0, "delta": 0.1})
+
+    def test_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for track_order, nodes in ((True, (1, 2, 10, 11)), (False, (1, 10, 11, 2))):
+                with self.subTest(track_order=track_order):
+                    path = os.path.join(tmp, f"order_{track_order}.h5")
+                    self.write(path, track_order)
+                    # breadth first: the dataset directly in 'line' comes before those one level deeper
+                    expected = ["line\\top"] + [f"line\\node_{n}\\{d}" for n in nodes for d in ("x", "y")]
+                    self.assertEqual(read_h5_names(path), expected)
 
 
 class TestSimaFormats(unittest.TestCase):

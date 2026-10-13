@@ -3,6 +3,7 @@ Readers for HDF5 formatted time series files exported from SIMA
 """
 
 import os
+from collections import deque
 
 import h5py
 import numpy as np
@@ -37,26 +38,23 @@ def read_names(path, verbose=False):
     n_dsets = 0
     n_groups = 0
 
-    # one pass over the objects in the file with h5py's low-level interface, which is several times faster than
-    # looking up each object through h5py.File for files with many datasets (#171)
+    # breadth first through the groups, each in h5py's order: the order of creation if the file keeps it (e.g. node_2
+    # before node_10), else name order. Through h5py's low-level interface, which is several times faster than
+    # looking up each object through h5py.File for files with many datasets (#171).
     with h5py.File(path, "r") as f:
-        fid = f.id
-
-        def visit(name):
-            nonlocal n_dsets, n_groups
-            oid = h5py.h5o.open(fid, name)
-            if isinstance(oid, h5py.h5d.DatasetID):
-                n_dsets += 1
-                # a time series has SIMA's time attributes (see _timearray_info)
-                if h5py.h5a.exists(oid, b"start") and h5py.h5a.exists(oid, b"delta"):
-                    names.append(name.decode("utf-8", "surrogateescape"))
-            elif isinstance(oid, h5py.h5g.GroupID):
-                n_groups += 1
-
-        h5py.h5o.visit(fid, visit)
-
-    # breadth-first order, the order of the names before 5.5.0: by depth, and in name order within each depth
-    names.sort(key=lambda name: (name.count("/"), name.split("/")))
+        groups = deque([(b"", h5py.h5g.open(f.id, b"/"))])
+        while groups:
+            prefix, gid = groups.popleft()
+            for name in gid:
+                oid = h5py.h5o.open(gid, name)
+                if isinstance(oid, h5py.h5d.DatasetID):
+                    n_dsets += 1
+                    # a time series has SIMA's time attributes (see _timearray_info)
+                    if h5py.h5a.exists(oid, b"start") and h5py.h5a.exists(oid, b"delta"):
+                        names.append((prefix + name).decode("utf-8", "surrogateescape"))
+                elif isinstance(oid, h5py.h5g.GroupID):
+                    n_groups += 1
+                    groups.append((prefix + name + b"/", oid))
 
     if verbose:
         print("   no. of groups      : %4d" % n_groups + "   (incl. subgroups)")
