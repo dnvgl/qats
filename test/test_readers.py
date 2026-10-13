@@ -11,6 +11,7 @@ import sys
 import tempfile
 import unittest
 import unittest.mock
+import warnings
 from pathlib import Path
 
 import h5py
@@ -20,6 +21,7 @@ from pymatreader import read_mat
 
 from qats import TsDB
 from qats._validation import QatsValueError
+from qats.io import registry
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
 from qats.io.openfast import read_out_units, read_outb_data, read_outb_names, read_outb_units
 from qats.io.sima import read_bin_data
@@ -27,6 +29,8 @@ from qats.io.sima_h5 import read_names as read_h5_names
 from qats.io.sintef_mat import read_data as read_mat_data
 from qats.io.sintef_mat import read_names as read_mat_names
 from qats.io.sintef_mat import read_units
+
+from .test_reader_snapshot import data_files
 
 # todo: add test class for matlab
 
@@ -359,6 +363,68 @@ class TestIndependentReading(unittest.TestCase):
             ts = db.get(name=name, store=False)
             np.testing.assert_array_equal(ts.t, records[1], err_msg=f"{name} (t)")
             np.testing.assert_array_equal(ts.x, records[i + 2], err_msg=f"{name} (x)")
+
+
+class TestReaderGroups(unittest.TestCase):
+    """
+    Readers give the groups of a series as parts, separately from its name; TsDB names the series by both joined with
+    a backslash, as before (#215).
+    """
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+
+    def series(self, path):
+        return registry.find_reader(path).open(path).series()
+
+    def test_h5(self):
+        series = self.series(os.path.join(self.data_directory, "sintef_noddis.h5"))
+        self.assertEqual(series[0].group, ("RiserLine", "segment_1", "node_1"))
+        self.assertEqual(series[0].name, "Displacement in x - direction")
+        self.assertEqual(len({(s.group, s.name) for s in series}), 204)  # unique within the file
+
+    def test_tdms(self):
+        series = self.series(os.path.join(self.data_directory, "data.tdms"))
+        self.assertEqual([s.group for s in series], [("Wagon 55",)] * 4)
+        self.assertEqual(series[0].name, "Wagon Master Position")
+
+    def test_formats_without_groups(self):
+        for filename in data_files():
+            if os.path.splitext(filename)[1] in (".h5", ".hdf5", ".tdms"):
+                continue
+            with self.subTest(filename), warnings.catch_warnings():
+                warnings.simplefilter("ignore")  # truncated .ts files warn
+                self.assertEqual({s.group for s in self.series(os.path.join(self.data_directory, filename))}, {()})
+
+    def test_read_returns_group_and_name(self):
+        path = os.path.join(self.data_directory, "sintef_noddis.h5")
+        source = registry.find_reader(path).open(path)
+        series = source.series()
+        requested = [series[5], series[0], series[5]]  # out of file order, and a series twice
+        got = source.read(requested)
+        self.assertEqual([(d.group, d.name) for d in got], [(s.group, s.name) for s in requested])
+        np.testing.assert_array_equal(got[0].x, got[2].x)
+
+    def test_tdms_names_with_slash_and_backslash(self):
+        """Separators within a channel name belong to the name: a backslash could not be read before."""
+        from nptdms import ChannelObject, TdmsWriter
+
+        t = np.arange(3.0)
+        channels = {"Acc[m/s^2]": t * 2.0, "Force\\x": t * 3.0}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "groups.tdms")
+            with TdmsWriter(path) as writer:
+                objects = [ChannelObject("Rig", "time", t)]
+                objects += [ChannelObject("Rig", name, x) for name, x in channels.items()]
+                writer.write_segment(objects)
+            series = self.series(path)
+            self.assertEqual([(s.group, s.name) for s in series], [(("Rig",), name) for name in channels])
+            # TsDB names: group and name joined with a backslash (after the file path, which keys start with)
+            db = TsDB.fromfile(path)
+            self.assertEqual([k[len(path) + 1 :] for k in db.register_keys], ["Rig\\Acc[m/s^2]", "Rig\\Force\\x"])
+            for name, x in channels.items():
+                ts = db.get(name="Rig\\" + name, store=False)
+                np.testing.assert_array_equal(ts.x, x, err_msg=name)
 
 
 class TestH5NameOrder(unittest.TestCase):

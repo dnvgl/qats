@@ -18,7 +18,7 @@ import pandas as pd
 from ._deprecation import warn_deprecated
 from ._validation import QatsTypeError, QatsValueError
 from .fatigue.rainflow import rebin as rebin_cycles
-from .io.base import Reader
+from .io.base import Reader, SeriesInfo
 from .io.direct_access import write_ts_data
 from .io.other import write_dat_data
 from .io.pickle_format import write_data as write_pickle_data
@@ -69,7 +69,7 @@ class TsDB(object):
         self.register_parent = OrderedDict()  # dictionary of unique id and parent name (source/file name)
         self._register_indices = OrderedDict()  # unique id and time series index on parent file (until 6.0)
         self.register_keys = []  # register keys in the order the associated time series where loaded
-        self._source_names = dict()  # unique id and the name of the time series on its parent file
+        self._source_names = dict()  # unique id and the series on its parent file (SeriesInfo, as listed by the reader)
         self._sources = dict()  # parent file path and the qats.io.base.SourceFile used to read it
 
     @property
@@ -599,16 +599,16 @@ class TsDB(object):
 
         # read requested keys, file by file
         for parent, keys in keys_by_parent.items():
-            # time series names (after any renaming) and their names on the file
+            # time series names (after any renaming) and the series on the file, as listed by the reader
             names = [key.replace(parent, "").lstrip(os.path.sep) for key in keys]
-            file_names = [self._source_names.get(key, name) for key, name in zip(keys, names)]
+            file_series = [self._source_names.get(key) or SeriesInfo(name) for key, name in zip(keys, names)]
 
             source = self._sources.get(parent)
             if source is None:
                 # e.g. registers copied from another database: open the file again
                 source = self._sources[parent] = find_reader(parent).open(parent)
 
-            data = source.read(file_names)
+            data = source.read(file_series)
             tslist = []
             for i, name in enumerate(names):
                 # TimeSeries copies the arrays: drop the reader's copy at once, so that the series are not held twice
@@ -1425,12 +1425,14 @@ class TsDB(object):
 
             # the source keeps what it needs to read the series later (names, positions, key files), but no data
             source = file_reader.open(thefile)
-            names = [s.name for s in source.series()]
+            series = source.series()
+            # the groups and the name joined with backslash on all platforms, as the readers did before 5.5.0
+            names = ["\\".join((*s.group, s.name)) for s in series]
             self._sources[thefile] = source
             legacy_index = getattr(source, "_legacy_index", None)  # built-in readers only
 
             # update database register: unique id (key) consists of filename and time series name
-            for name in names:
+            for s, name in zip(series, names):
                 key = os.path.join(thefile, name)
                 # None until the time series is read and stored
                 self.register[key] = None
@@ -1438,8 +1440,8 @@ class TsDB(object):
                 self.register_parent[key] = thefile
                 # Time series index on file, kept for backwards compatibility until 6.0 (see `register_indices`)
                 self._register_indices[key] = legacy_index(name) if legacy_index is not None else None
-                # Name on file, used to read the series also after it has been renamed
-                self._source_names[key] = name
+                # The series as listed by the reader (group and name), used to read it also after it has been renamed
+                self._source_names[key] = s
                 # time series names in the order the associated time series where loaded
                 self.register_keys.append(key)
 

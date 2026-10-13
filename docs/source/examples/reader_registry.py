@@ -37,12 +37,13 @@ class _UnitTableFile(SourceFile):
         names, units = self._header()
         return [SeriesInfo(name, unit) for name, unit in zip(names, units)]
 
-    def read(self, names):
+    def read(self, series):
+        # `series` are SeriesInfo objects listed by series(); a format with groups would also use their `group`
         all_names, units = self._header()
         data = np.loadtxt(self.path, skiprows=2, unpack=True)
         return [
-            SeriesData(name, data[0], data[all_names.index(name) + 1], unit=units[all_names.index(name)])
-            for name in names
+            SeriesData(s.name, data[0], data[all_names.index(s.name) + 1], unit=units[all_names.index(s.name)])
+            for s in series
         ]
 
 
