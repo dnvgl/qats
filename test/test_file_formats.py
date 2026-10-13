@@ -56,10 +56,7 @@ class TestDocumentedExamples(FileFormatTestCase):
         """The example saved by Excel with Norwegian regional settings holds the same values as example.csv."""
         got = self.read(str(FORMATS / "example_excel.csv"))
         reference = self.read(str(FORMATS / "example.csv"))
-        self.assertEqual(list(got), ["Bølgehøyde", "Jag"])
-        for name, other in zip(got, reference):
-            np.testing.assert_array_equal(got[name][0], reference[other][0])
-            np.testing.assert_array_equal(got[name][1], reference[other][1])
+        self.assert_series(got, reference)
 
 
 class TestDat(FileFormatTestCase):
@@ -155,8 +152,8 @@ class TestCsv(FileFormatTestCase):
     def test_utf8_with_and_without_bom(self):
         for encoding in ("utf-8", "utf-8-sig"):
             with self.subTest(encoding):
-                path = self.write("a.csv", "Tid,bølge\n0.0,1.0\n0.5,2.0\n", encoding=encoding)
-                self.assertEqual(list(self.read(path)), ["bølge"])
+                path = self.write("a.csv", "Time,Acc[m/s²]\n0.0,1.0\n0.5,2.0\n", encoding=encoding)
+                self.assertEqual(list(self.read(path)), ["Acc[m/s²]"])
 
     def test_line_endings(self):
         path = self.write("a.csv", "Time,surge,heave\n0.0,1.0,10.0\n0.5,2.0,20.0\n", newline="\r\n")
@@ -166,8 +163,9 @@ class TestCsv(FileFormatTestCase):
 
     def test_windows_encoding(self):
         """Excel's "CSV (comma delimited)" writes Windows-1252: read when the file is not UTF-8."""
-        path = self.write("a.csv", "Tid,bølge,ærø\n0.0,1.0,3.0\n0.5,2.0,4.0\n", encoding="cp1252")
-        self.assert_series(self.read(path), {"bølge": ([0.0, 0.5], [1.0, 2.0]), "ærø": ([0.0, 0.5], [3.0, 4.0])})
+        path = self.write("a.csv", "Time,Acc[m/s²],Temperature[°C]\n0.0,1.0,3.0\n0.5,2.0,4.0\n", encoding="cp1252")
+        expected = {"Acc[m/s²]": ([0.0, 0.5], [1.0, 2.0]), "Temperature[°C]": ([0.0, 0.5], [3.0, 4.0])}
+        self.assert_series(self.read(path), expected)
 
     def test_decimal_comma(self):
         """With ';' as separator, as Excel writes with e.g. Norwegian regional settings, a decimal comma is read."""
@@ -181,8 +179,8 @@ class TestCsv(FileFormatTestCase):
 
     def test_norwegian_excel(self):
         """Windows-1252, ';' and decimal commas together, with Windows line endings."""
-        path = self.write("a.csv", "Tid;bølge\n0,0;1,5\n0,5;2,5\n", encoding="cp1252", newline="\r\n")
-        self.assert_series(self.read(path), {"bølge": ([0.0, 0.5], [1.5, 2.5])})
+        path = self.write("a.csv", "Time;Temperature[°C]\n0,0;1,5\n0,5;2,5\n", encoding="cp1252", newline="\r\n")
+        self.assert_series(self.read(path), {"Temperature[°C]": ([0.0, 0.5], [1.5, 2.5])})
 
     def test_comment_lines_before_header(self):
         path = self.write(
@@ -203,7 +201,7 @@ class TestCsv(FileFormatTestCase):
 
     def test_time_only(self):
         """A file with only a time column is an error, not a series named after part of the time column (#222)."""
-        for header in ("Time", "t", "Tid"):
+        for header in ("Time", "t", "time_s"):
             with self.subTest(header):
                 path = self.write("a.csv", f"{header}\n0.0\n0.5\n")
                 with self.assertRaisesRegex(ValueError, r"no comma, semicolon, tab or space between the names"):
