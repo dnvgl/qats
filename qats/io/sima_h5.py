@@ -34,7 +34,27 @@ def read_names(path, verbose=False):
     if verbose:
         print("Identifying datasets on %s ..." % path)
 
-    names = []  # list of dataset names/keys (only for data sets that are time series)
+    series, n_groups, n_dsets = _scan(path)
+
+    if verbose:
+        print("   no. of groups      : %4d" % n_groups + "   (incl. subgroups)")
+        print("   no. of datasets    : %4d" % n_dsets)
+        print("   no. of time series : %4d" % len(series) + "   (datasets interpreted as time series)")
+
+    # groups and name joined with backslash
+    return ["\\".join((*group, name)) for group, name in series]
+
+
+def _decode(name):
+    return name.decode("utf-8", "surrogateescape")
+
+
+def _scan(path):
+    """
+    The time series on a file as (groups, name), the groups a tuple from the top of the file, and the number of groups
+    and datasets on the file.
+    """
+    series = []
     n_dsets = 0
     n_groups = 0
 
@@ -42,29 +62,21 @@ def read_names(path, verbose=False):
     # before node_10), else name order. Through h5py's low-level interface, which is several times faster than
     # looking up each object through h5py.File for files with many datasets (#171).
     with h5py.File(path, "r") as f:
-        groups = deque([(b"", h5py.h5g.open(f.id, b"/"))])
+        groups = deque([((), h5py.h5g.open(f.id, b"/"))])
         while groups:
-            prefix, gid = groups.popleft()
+            parents, gid = groups.popleft()
             for name in gid:
                 oid = h5py.h5o.open(gid, name)
                 if isinstance(oid, h5py.h5d.DatasetID):
                     n_dsets += 1
                     # a time series has SIMA's time attributes (see _timearray_info)
                     if h5py.h5a.exists(oid, b"start") and h5py.h5a.exists(oid, b"delta"):
-                        names.append((prefix + name).decode("utf-8", "surrogateescape"))
+                        series.append((parents, _decode(name)))
                 elif isinstance(oid, h5py.h5g.GroupID):
                     n_groups += 1
-                    groups.append((prefix + name + b"/", oid))
+                    groups.append(((*parents, _decode(name)), oid))
 
-    if verbose:
-        print("   no. of groups      : %4d" % n_groups + "   (incl. subgroups)")
-        print("   no. of datasets    : %4d" % n_dsets)
-        print("   no. of time series : %4d" % len(names) + "   (datasets interpreted as time series)")
-
-    # replace all slashes with backslash
-    names = [_.replace("/", "\\") for _ in names]
-
-    return names
+    return series, n_groups, n_dsets
 
 
 def read_data(path, names=None, verbose=False):
@@ -110,6 +122,11 @@ def read_data(path, names=None, verbose=False):
 
     # correct slashes
     names = [_.replace("\\", "/") for _ in names]
+    return _read_datasets(path, names)
+
+
+def _read_datasets(path, names):
+    """Time and values of the datasets at the given HDF5 paths ('/' between groups), as [t, x] lists."""
     arrays = []
 
     with h5py.File(path, "r") as f:
@@ -227,11 +244,12 @@ class _H5Source(SourceFile):
 
     def series(self):
         if self._names is None:
-            self._names = read_names(self.path)
-        return [SeriesInfo(name) for name in self._names]
+            self._names = _scan(self.path)[0]
+        return [SeriesInfo(name, group=group) for group, name in self._names]
 
-    def read(self, names):
-        return [SeriesData(name, t, x) for name, (t, x) in zip(names, read_data(self.path, names=list(names)))]
+    def read(self, series):
+        paths = ["/".join((*s.group, s.name)) for s in series]
+        return [SeriesData(s.name, t, x, group=s.group) for s, (t, x) in zip(series, _read_datasets(self.path, paths))]
 
     def _legacy_index(self, name):
         """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""

@@ -48,10 +48,9 @@ class _MemorySource(SourceFile):
     def series(self):
         return [SeriesInfo("a", "m"), SeriesInfo("b")]
 
-    def read(self, names):
+    def read(self, series):
         t = np.arange(3.0)
-        units = {s.name: s.unit for s in self.series()}
-        return [SeriesData(name, t, t * (1 + i), unit=units[name]) for i, name in enumerate(names)]
+        return [SeriesData(s.name, t, t * (1 + i), unit=s.unit) for i, s in enumerate(series)]
 
 
 def make_reader(name, patterns=("*.xyz",), priority=0, can_read=True):
@@ -311,11 +310,13 @@ class TestRegistryEqualsLegacyDispatch(unittest.TestCase):
                 warnings.simplefilter("ignore")  # truncated .ts files warn
                 legacy = read_legacy(path)
                 source = registry.find_reader(path).open(path)
-                names = [s.name for s in source.series()]
+                series = source.series()
+                # the groups and the name joined with backslash: the names of the series before 5.5.0
+                names = ["\\".join((*s.group, s.name)) for s in series]
                 self.assertEqual(names, [n for n, _, _ in legacy])
                 n = len(names)
-                full = source.read(names)
-                self.assertEqual([d.name for d in full], names)
+                full = source.read(series)
+                self.assertEqual([(d.group, d.name) for d in full], [(s.group, s.name) for s in series])
                 for d, (name, t, x) in zip(full, legacy):
                     np.testing.assert_array_equal(d.t, t, err_msg=f"{name} (t)")
                     np.testing.assert_array_equal(d.x, x, err_msg=f"{name} (x)")
@@ -323,8 +324,8 @@ class TestRegistryEqualsLegacyDispatch(unittest.TestCase):
                         self.assertIsNone(d.unit)
                 # subsets, also out of file order
                 for ind in ([n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))):
-                    got = source.read([names[i] for i in ind])
-                    self.assertEqual([d.name for d in got], [names[i] for i in ind])
+                    got = source.read([series[i] for i in ind])
+                    self.assertEqual([(d.group, d.name) for d in got], [(series[i].group, series[i].name) for i in ind])
                     for d, i in zip(got, ind):
                         np.testing.assert_array_equal(d.x, legacy[i][2], err_msg=f"{names[i]} (subset {ind})")
 
@@ -335,7 +336,7 @@ class TestRegistryEqualsLegacyDispatch(unittest.TestCase):
             path = str(DATA / filename)
             with self.subTest(filename):
                 source = registry.find_reader(path).open(path)
-                names = [s.name for s in source.series()]
+                names = ["\\".join((*s.group, s.name)) for s in source.series()]
                 indices = [source._legacy_index(name) for name in names]
                 if os.path.splitext(filename)[-1] in expected_none:
                     self.assertEqual(indices, [None] * len(names))
@@ -354,7 +355,7 @@ class TestSourceKeepsNoData(unittest.TestCase):
             path = os.path.join(tmp, "large.ts")
             write_ts_data(path, t, data)
             source = registry.find_reader(path).open(path)
-            names = [s.name for s in source.series()]
+            names = source.series()
             # the first read fills the struct module's cache of compiled formats ("f" * n, about 6 MB here),
             # which is not data and is kept whatever the reader does
             source.read(names)

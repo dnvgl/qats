@@ -403,8 +403,8 @@ class _OpenFastSource(_RowSource):
     def series(self):
         return [SeriesInfo(s.name, self._units[s.name]) for s in super().series()]
 
-    def read(self, names):
-        data = super().read(names)
+    def read(self, series):
+        data = super().read(series)
         return [SeriesData(d.name, d.t, d.x, unit=self._units[d.name]) for d in data]
 
     def _legacy_index(self, name):
