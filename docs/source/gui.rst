@@ -28,5 +28,9 @@ Import time series from file
     Here 41 time series from two files (different format) are imported. The first file is imported using the file open
     dialogue (hotkey *CTRL+I*) and the second by drag-and-drop. Finally the time series database is cleared (hotkey *Ctrl+Del*).
 
+The file open dialogue lists every file format QATS can read, including formats added by installed reader plugins
+(see :ref:`examples`). Files that no reader can read, whether opened or dropped, are reported in the log window; the
+other files are imported.
+
 
 

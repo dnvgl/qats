@@ -2,6 +2,8 @@
 Module with functions for handling file operations and calculations. Made for multithreading.
 """
 
+import os
+
 import numpy as np
 
 from ..fatigue.rainflow import rebin as rebin_cycles
@@ -237,6 +239,66 @@ def import_from_file(files):
     db = TsDB()
     db.load(files, read=False)
     return db
+
+
+def import_files(files):
+    """
+    Import time series files one by one, so that a file that cannot be read does not stop the others.
+
+    Parameters
+    ----------
+    files : list
+        File names
+
+    Returns
+    -------
+    TsDB
+        Time series data base with the files that could be read
+    dict
+        Reason by file name, for the files that could not be read
+
+    Notes
+    -----
+    .. versionadded :: 5.5.0
+    """
+    db = TsDB()
+    failed = dict()
+    for file in files:
+        if os.path.isdir(file):
+            failed[file] = "it is a folder, not a file"
+            continue
+        try:
+            db.load(file, read=False)
+        except Exception as err:  # e.g. no reader for the file, or a damaged file: report it and load the others
+            failed[file] = str(err)
+    return db, failed
+
+
+def file_dialog_filters(readers):
+    """
+    Name filters for a file dialog, from file format readers.
+
+    Parameters
+    ----------
+    readers : list of qats.io.base.Reader
+        Readers, e.g. from `qats.io.registry.readers`.
+
+    Returns
+    -------
+    str
+        Filters separated by ';;': all supported files first, then one per reader sorted by description, then all
+        files.
+
+    Notes
+    -----
+    .. versionadded :: 5.5.0
+    """
+    patterns = []  # of all readers, without repeats
+    filters = []
+    for reader in sorted(readers, key=lambda r: r.description.lower()):
+        filters.append(f"{reader.description} ({' '.join(reader.patterns)})")
+        patterns.extend(p for p in reader.patterns if p not in patterns)
+    return ";;".join([f"All supported files ({' '.join(patterns)})", *filters, "All files (*)"])
 
 
 def read_timeseries(db, names):
