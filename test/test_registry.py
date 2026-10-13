@@ -5,6 +5,7 @@ Tests of the file format reader registry, `qats.io.registry` (#168).
 
 import gc
 import os
+import re
 import tempfile
 import tracemalloc
 import unittest
@@ -16,6 +17,9 @@ import numpy as np
 from qats._validation import QatsValueError
 from qats.io import registry
 from qats.io.base import READER_API_VERSION, Reader, SeriesData, SeriesInfo, SourceFile
+from qats.io.bladed import read_data as read_bladed_data
+from qats.io.bladed import read_header as read_bladed_header
+from qats.io.bladed import read_names as read_bladed_names
 from qats.io.csv import read_data as read_csv_data
 from qats.io.csv import read_names as read_csv_names
 from qats.io.direct_access import (
@@ -100,7 +104,7 @@ class TestRegistry(RegistryTestCase):
     def test_builtin_readers(self):
         names = [r.name for r in registry.readers()]
         self.assertEqual(
-            names[:11],
+            names[:12],
             [
                 "direct-access-ts",
                 "direct-access-tda",
@@ -113,6 +117,7 @@ class TestRegistry(RegistryTestCase):
                 "pickle",
                 "tdms",
                 "openfast",
+                "bladed",
             ],
         )
         for reader in registry.readers():
@@ -292,6 +297,11 @@ def read_legacy(path):
     elif fext == ".outb":
         names = read_outb_names(path)
         data = read_outb_data(path, ind=list(range(len(names) + 1)))
+    elif re.fullmatch(r"\.%\d+", fext):
+        # the group name and the series name joined, as TsDB names Bladed series
+        group = read_bladed_header(path)["GENLAB"]
+        names = [rf"{group}\{name}" for name in read_bladed_names(path)]
+        data = read_bladed_data(path)
     elif fext in (".pkl", ".pickle"):
         names = read_pickle_names(path)
         data = read_pickle_data(path)
@@ -320,7 +330,8 @@ class TestRegistryEqualsLegacyDispatch(unittest.TestCase):
                 for d, (name, t, x) in zip(full, legacy):
                     np.testing.assert_array_equal(d.t, t, err_msg=f"{name} (t)")
                     np.testing.assert_array_equal(d.x, x, err_msg=f"{name} (x)")
-                    if not filename.endswith((".mat", ".out", ".outb")):  # units are read from these files only
+                    # units are read from .mat, OpenFAST and Bladed (.%NN) files only
+                    if not filename.endswith((".mat", ".out", ".outb")) and "%" not in filename:
                         self.assertIsNone(d.unit)
                 # subsets, also out of file order
                 for ind in ([n - 1], [n - 1, n // 2, 0], list(range(n - 1, max(n - 6, -1), -1))):
