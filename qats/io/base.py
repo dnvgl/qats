@@ -26,17 +26,25 @@ class SeriesInfo:
     Parameters
     ----------
     name : str
-        Series name, unique within the file.
+        Series name, without the groups it is in.
     unit : str, optional
         Unit of the series values, if the file holds it.
+    group : tuple of str, optional
+        The groups the series is in, from the top of the file, for formats with groups (e.g. HDF5). Empty for formats
+        without groups.
 
     Notes
     -----
+    The group and name together are unique within the file. `TsDB` names the series by its groups and name joined
+    with a backslash, e.g. ``Riser\\segment_1\\Axial force`` for ``group=("Riser", "segment_1")`` and
+    ``name="Axial force"``.
+
     .. versionadded :: 5.5.0
     """
 
     name: str
     unit: str | None = None
+    group: tuple[str, ...] = ()
 
 
 @dataclass
@@ -56,6 +64,8 @@ class SeriesData:
         Unit of the values, if the file holds it.
     meta : dict, optional
         Other information about the series from the file.
+    group : tuple of str, optional
+        The groups the series is in, as in `SeriesInfo`.
 
     Notes
     -----
@@ -67,6 +77,7 @@ class SeriesData:
     x: np.ndarray
     unit: str | None = None
     meta: dict = field(default_factory=dict)
+    group: tuple[str, ...] = ()
 
 
 class SourceFile(ABC):
@@ -103,19 +114,19 @@ class SourceFile(ABC):
         """
 
     @abstractmethod
-    def read(self, names: list[str]) -> list[SeriesData]:
+    def read(self, series: list[SeriesInfo]) -> list[SeriesData]:
         """
         Read series from the file.
 
         Parameters
         ----------
-        names : list of str
-            Names of the series to read, as listed by `series`.
+        series : list of SeriesInfo
+            The series to read, as listed by `series`. A series may be requested more than once.
 
         Returns
         -------
         list of SeriesData
-            The requested series, in the requested order.
+            The requested series, in the requested order, with the name and group they were requested with.
         """
 
     def __repr__(self):
@@ -219,8 +230,9 @@ class _RowSource(SourceFile):
         self._scan()
         return [SeriesInfo(name) for name in self._names]
 
-    def read(self, names):
+    def read(self, series):
         self._scan()
+        names = [s.name for s in series]  # formats without groups: the name identifies the series
         unique = list(dict.fromkeys(names))  # the format functions need distinct positions
         rows = self._read_rows([0] + [self._positions[name] for name in unique])
         # an array of its own for each series instead of rows of one array, so that the caller can free each series

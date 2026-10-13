@@ -29,10 +29,13 @@ def read_names(path):
     if not os.path.isfile(path):
         raise FileNotFoundError("file not found: %s" % path)
 
-    f = TdmsFile(path)
-    names = [f"{g.name}\\{c.name}" for g in f.groups() for c in f[g.name].channels() if c.name.lower() != "time"]
+    return [f"{group}\\{channel}" for group, channel in _channels(path)]
 
-    return names
+
+def _channels(path):
+    """The time series on a file as (group, channel) names; channels named 'time' are time arrays, not series."""
+    f = TdmsFile(path)
+    return [(g.name, c.name) for g in f.groups() for c in f[g.name].channels() if c.name.lower() != "time"]
 
 
 def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
@@ -65,13 +68,20 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
     else:
         raise TypeError("`names` must be str/list/tuple, got: %s" % type(names))
 
+    channels = []
+    for name in names:
+        # assuming an object hierarchy with depth 2 'group-channel'
+        if not (len(name.split("\\")) == 2):
+            raise QatsValueError(f"Unable to parse group name and channel name from {name}.")
+        channels.append(tuple(name.split("\\")))
+    return _read_channels(path, channels)
+
+
+def _read_channels(path, channels):
+    """Time and values of the given (group, channel) names, as [t, x] lists."""
     arrays = []
     with TdmsFile.open(path) as f:
-        for name in names:
-            # assuming an object hierarchy with depth 2 'group-channel'
-            if not (len(name.split("\\")) == 2):
-                raise QatsValueError(f"Unable to parse group name and channel name from {name}.")
-            group_name, channel_name = name.split("\\")
+        for group_name, channel_name in channels:
             group = f[group_name]
             channel = group[channel_name]
             data = channel[:]
@@ -105,26 +115,27 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
 class _TdmsSource(SourceFile):
     def __init__(self, path):
         super().__init__(path)
-        self._names = None
+        self._channels = None
 
     def series(self):
-        if self._names is None:
-            self._names = read_names(self.path)
-        return [SeriesInfo(name) for name in self._names]
+        if self._channels is None:
+            self._channels = _channels(self.path)
+        return [SeriesInfo(channel, group=(group,)) for group, channel in self._channels]
 
-    def read(self, names):
-        return [SeriesData(name, t, x) for name, (t, x) in zip(names, read_data(self.path, names=list(names)))]
+    def read(self, series):
+        arrays = _read_channels(self.path, [(s.group[0], s.name) for s in series])
+        return [SeriesData(s.name, t, x, group=s.group) for s, (t, x) in zip(series, arrays)]
 
     def _legacy_index(self, name):
         """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""
         self.series()
-        return self._names.index(name) + 1
+        return [f"{group}\\{channel}" for group, channel in self._channels].index(name) + 1
 
 
 class TdmsReader(Reader):
     """
-    Reader for National Instruments TDMS files (``.tdms``), typically written by LabVIEW. Series are named
-    ``<group>\\<channel>``.
+    Reader for National Instruments TDMS files (``.tdms``), typically written by LabVIEW. Each channel is a series in
+    its group; `TsDB` names it ``<group>\\<channel>``.
 
     .. versionadded :: 5.5.0
     """

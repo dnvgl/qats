@@ -260,8 +260,9 @@ class _MatSource(SourceFile):
         self._scan()
         return [SeriesInfo(name, self._units.get(name)) for name in self._names]
 
-    def read(self, names):
+    def read(self, series):
         self._scan()
+        names = [s.name for s in series]  # no groups in .mat files
         data = read_data(self.path, [self._timename, *names])
         return [SeriesData(name, data[self._timename], data[name], unit=self._units.get(name)) for name in names]
 
