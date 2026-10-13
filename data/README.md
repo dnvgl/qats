@@ -14,9 +14,6 @@ the same SIMA result, the nodal displacements of a flexible riser (204 series, 2
 | `sintef_bin_noddis.bin`, `key_sintef_bin_noddis.txt` | SIMA/RIFLEX binary results and key file |
 | `sintef_noddis.h5` | SIMA HDF5 |
 
-The files are renamed. In the key files, the path of the result file on the computer that wrote it is replaced by
-the file name; nothing else is changed.
-
 ## Files from other projects
 
 The OpenFAST files are copied unchanged, apart from their names, from the projects below. They are licensed under the
