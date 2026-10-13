@@ -1,0 +1,2 @@
+# Bladed sample headers (data/*.%NN) are kept byte for byte as DNV publishes them: no line ending conversion
+data/*.%[0-9]* -text

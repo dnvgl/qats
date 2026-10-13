@@ -5,12 +5,15 @@ The module utilizes TsDB.fromfile and .get() to read at least one time series fr
 generate any exceptions.
 """
 
+import json
 import os
+import shutil
 import struct
 import sys
 import tempfile
 import unittest
 import unittest.mock
+import warnings
 from pathlib import Path
 
 import h5py
@@ -20,6 +23,10 @@ from pymatreader import read_mat
 
 from qats import TsDB
 from qats._validation import QatsValueError
+from qats.io import registry
+from qats.io.bladed import read_data as read_bladed_data
+from qats.io.bladed import read_header as read_bladed_header
+from qats.io.bladed import read_names as read_bladed_names
 from qats.io.direct_access import read_dis_names, read_tda_names, read_ts_names
 from qats.io.openfast import read_out_units, read_outb_data, read_outb_names, read_outb_units
 from qats.io.sima import read_bin_data
@@ -27,6 +34,8 @@ from qats.io.sima_h5 import read_names as read_h5_names
 from qats.io.sintef_mat import read_data as read_mat_data
 from qats.io.sintef_mat import read_names as read_mat_names
 from qats.io.sintef_mat import read_units
+
+from .test_reader_snapshot import data_files
 
 # todo: add test class for matlab
 
@@ -87,6 +96,9 @@ class TestAllReaders(unittest.TestCase):
             ("openfast_ifw_primary.out", 3),
             ("openfast_md_driver.MD.out", 1),
             ("openfast_FASTOut_Hydro.out", 1),
+            # bladed files
+            ("powprod.%04", 9),
+            ("estop.%15", 16),
         ]
 
         # files to delete after testing is completed
@@ -178,6 +190,8 @@ SELECTIVE_FILES = [
     "test20320_ntnu.mat",
     "openfast_MinimalExample.out",
     "openfast_MinimalExample.outb",
+    "powprod.%04",
+    "estop.%15",
 ]
 
 
@@ -359,6 +373,184 @@ class TestIndependentReading(unittest.TestCase):
             ts = db.get(name=name, store=False)
             np.testing.assert_array_equal(ts.t, records[1], err_msg=f"{name} (t)")
             np.testing.assert_array_equal(ts.x, records[i + 2], err_msg=f"{name} (x)")
+
+
+class TestBladed(unittest.TestCase):
+    """
+    Bladed output groups (#174), against the values DNV's Bladed Results API gives for the same files
+    (bladed_reference.json, from dnv-bladed-results 2.2.2, which runs on Windows only).
+    """
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+
+    def path(self, filename):
+        return os.path.join(self.data_directory, filename)
+
+    def copy_group(self, header, new_header, edit=None, data=None):
+        """Copy a sample output group to the temporary folder: the header, changed by `edit`, and its data file."""
+        with open(self.path(header), encoding="latin-1") as f:
+            text = f.read()
+        data_file = read_bladed_header(self.path(header))["FILE"]
+        text = edit(text) if edit else text
+        with open(os.path.join(self.tmp, new_header), "w", encoding="latin-1", newline="") as f:
+            f.write(text)
+        target = os.path.join(self.tmp, data_file)
+        if data is None:
+            shutil.copy(self.path(data_file), target)
+        else:
+            data.tofile(target)
+        return os.path.join(self.tmp, new_header)
+
+    def test_results_api(self):
+        with open(os.path.join(ROOT, "bladed_reference.json"), encoding="utf-8") as f:
+            reference = json.load(f)
+        for filename in ("powprod.%04", "estop.%15"):
+            expected = reference[filename]
+            with self.subTest(filename):
+                source = registry.find_reader(self.path(filename)).open(self.path(filename))
+                series = source.series()
+                self.assertEqual([s.name for s in series], list(expected["series"]))
+                self.assertEqual({s.group for s in series}, {(expected["group"],)})
+                for s, d in zip(series, source.read(series)):
+                    ref = expected["series"][s.name]
+                    self.assertEqual(s.unit, ref["unit"], s.name)
+                    self.assertEqual(d.unit, ref["unit"], s.name)
+                    # float32 values on file: the same numbers as the API, also as float64
+                    for key, value in (("first", d.x[0]), ("last", d.x[-1]), ("min", d.x.min()), ("max", d.x.max())):
+                        self.assertEqual(value, ref[key], f"{s.name} ({key})")
+                    self.assertAlmostEqual(d.x.mean(), ref["mean"], delta=1e-12 * max(abs(ref["mean"]), 1.0))
+                    time = expected["time"]
+                    self.assertEqual(d.t.size, time["n"])
+                    self.assertEqual(d.t[0], time["first"])
+                    self.assertAlmostEqual(d.t[1] - d.t[0], time["step"], places=15)
+                    self.assertAlmostEqual(d.t[-1], time["last"], places=12)
+
+    def test_names_in_tsdb(self):
+        """TsDB names a series by its group and name, and three-dimensional groups by variable and station."""
+        powprod, estop = (os.path.abspath(self.path(f)) for f in ("powprod.%04", "estop.%15"))
+        db = TsDB.fromfile([powprod, estop])
+        self.assertEqual(db.n, 9 + 16)
+        self.assertIn(os.path.join(powprod, "Control variables\\Demanded power"), db.register_keys)
+        group = "Blade 1 Loads: Principal elastic axes"
+        self.assertIn(
+            os.path.join(estop, f"{group}\\Blade 1 Mx (Principal elastic axes) @ 16.0741 m"), db.register_keys
+        )
+        ts = db.get(name="*Blade 1 Fz (Principal elastic axes) @ 0 m")
+        self.assertEqual(ts.unit, "N")
+
+    def test_not_a_time_series(self):
+        """A group whose last axis isn't time is a Bladed file, but gives an error that says why."""
+        self.assertEqual(registry.find_reader(self.path("lin1.%31")).name, "bladed")
+        with self.assertRaisesRegex(ValueError, r"'Blade 1 Absolute motion'.*not a time series.*'Wind speed'.*'LIST'"):
+            TsDB.fromfile(self.path("lin1.%31"))
+
+    def test_double_precision(self):
+        """R*8 data: the same values as R*4."""
+        single = read_bladed_data(self.path("estop.%15"))
+        values = np.fromfile(self.path("estop.$15"), dtype="<f4").astype("<f8")
+        path = self.copy_group("estop.%15", "estop.%15", edit=lambda t: t.replace("R*4", "R*8"), data=values)
+        np.testing.assert_array_equal(read_bladed_data(path), single)
+
+    def test_text_labels(self):
+        """A second axis with text labels (AXIMETH 1, e.g. tower members) names the series by label."""
+
+        def edit(text):
+            # the header is read in text mode, so lines end with '\n' here, whatever the file has
+            old, new = "AXIMETH\t3\nAXIVAL\t0.0000000 16.0741005", "AXIMETH\t1\nAXITICK\t'Root' 'Mid span'"
+            self.assertIn(old, text)
+            return text.replace(old, new)
+
+        path = self.copy_group("estop.%15", "estop.%15", edit=edit)
+        mx = "Blade 1 Mx (Principal elastic axes)"
+        self.assertEqual(read_bladed_names(path)[:2], [f"{mx} @ Root", f"{mx} @ Mid span"])
+        np.testing.assert_array_equal(read_bladed_data(path), read_bladed_data(self.path("estop.%15")))
+
+    def test_three_digit_group_number(self):
+        path = self.copy_group("powprod.%04", "powprod.%104")
+        self.assertEqual(registry.find_reader(path).name, "bladed")
+        self.assertEqual(TsDB.fromfile(path).n, 9)
+
+    def test_missing_or_short_data_file(self):
+        path = self.copy_group("powprod.%04", "powprod.%04", data=np.zeros(100, dtype="<f4"))
+        with self.assertRaisesRegex(ValueError, r"holds 100 values, but .* requires 13509"):
+            read_bladed_data(path)
+        os.remove(os.path.join(self.tmp, "powprod.$04"))
+        with self.assertRaisesRegex(ValueError, r"does not exist"):
+            read_bladed_data(path)
+
+    def test_other_files_declined(self):
+        path = os.path.join(self.tmp, "notes.%12")
+        with open(path, "w") as f:
+            f.write("Notes on run 12\nwind speed 12 m/s\n")
+        self.assertFalse(registry.get_reader("bladed").can_read(path))
+        with self.assertRaisesRegex(NotImplementedError, "content"):
+            registry.find_reader(path)
+
+
+class TestReaderGroups(unittest.TestCase):
+    """
+    Readers give the groups of a series as parts, separately from its name; TsDB names the series by both joined with
+    a backslash, as before (#215).
+    """
+
+    def setUp(self):
+        self.data_directory = os.path.join(ROOT, "..", "data")
+
+    def series(self, path):
+        return registry.find_reader(path).open(path).series()
+
+    def test_h5(self):
+        series = self.series(os.path.join(self.data_directory, "sintef_noddis.h5"))
+        self.assertEqual(series[0].group, ("RiserLine", "segment_1", "node_1"))
+        self.assertEqual(series[0].name, "Displacement in x - direction")
+        self.assertEqual(len({(s.group, s.name) for s in series}), 204)  # unique within the file
+
+    def test_tdms(self):
+        series = self.series(os.path.join(self.data_directory, "data.tdms"))
+        self.assertEqual([s.group for s in series], [("Wagon 55",)] * 4)
+        self.assertEqual(series[0].name, "Wagon Master Position")
+
+    def test_formats_without_groups(self):
+        for filename in data_files():
+            # formats with groups: HDF5, TDMS and Bladed (.%NN, the output group)
+            if os.path.splitext(filename)[1] in (".h5", ".hdf5", ".tdms") or "%" in filename:
+                continue
+            with self.subTest(filename), warnings.catch_warnings():
+                warnings.simplefilter("ignore")  # truncated .ts files warn
+                self.assertEqual({s.group for s in self.series(os.path.join(self.data_directory, filename))}, {()})
+
+    def test_read_returns_group_and_name(self):
+        path = os.path.join(self.data_directory, "sintef_noddis.h5")
+        source = registry.find_reader(path).open(path)
+        series = source.series()
+        requested = [series[5], series[0], series[5]]  # out of file order, and a series twice
+        got = source.read(requested)
+        self.assertEqual([(d.group, d.name) for d in got], [(s.group, s.name) for s in requested])
+        np.testing.assert_array_equal(got[0].x, got[2].x)
+
+    def test_tdms_names_with_slash_and_backslash(self):
+        """Separators within a channel name belong to the name: a backslash could not be read before."""
+        from nptdms import ChannelObject, TdmsWriter
+
+        t = np.arange(3.0)
+        channels = {"Acc[m/s^2]": t * 2.0, "Force\\x": t * 3.0}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "groups.tdms")
+            with TdmsWriter(path) as writer:
+                objects = [ChannelObject("Rig", "time", t)]
+                objects += [ChannelObject("Rig", name, x) for name, x in channels.items()]
+                writer.write_segment(objects)
+            series = self.series(path)
+            self.assertEqual([(s.group, s.name) for s in series], [(("Rig",), name) for name in channels])
+            # TsDB names: group and name joined with a backslash (after the file path, which keys start with)
+            db = TsDB.fromfile(path)
+            self.assertEqual([k[len(path) + 1 :] for k in db.register_keys], ["Rig\\Acc[m/s^2]", "Rig\\Force\\x"])
+            for name, x in channels.items():
+                ts = db.get(name="Rig\\" + name, store=False)
+                np.testing.assert_array_equal(ts.x, x, err_msg=name)
 
 
 class TestH5NameOrder(unittest.TestCase):
