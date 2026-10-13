@@ -158,6 +158,18 @@ values are accurate to about 1/65535 of that range.
    :lines: 1-
 
 
+Read Bladed results
+*******************
+
+Bladed writes each output group as a header file (``.%NN``) and a data file (``.$NN``); open the header. Units are
+given in SI. Groups with a second axis, such as stations along a blade, give one series per variable and station.
+
+.. literalinclude:: examples/bladed.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Choose a file reader and add your own
 *************************************
 

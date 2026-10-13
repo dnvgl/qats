@@ -1,0 +1,225 @@
+{
+ "_source": "DNV Bladed Results API, dnv-bladed-results 2.2.2 (PyPI), demo runs UsageExamples/Runs/demo: per series the SI unit (None for Unitless) and statistics of the values, and the time array; see test_readers.TestBladed",
+ "estop.%15": {
+  "group": "Blade 1 Loads: Principal elastic axes",
+  "time": {
+   "n": 624,
+   "first": 0.0,
+   "step": 0.039999999,
+   "last": 24.919999377
+  },
+  "series": {
+   "Blade 1 Mx (Principal elastic axes) @ 0 m": {
+    "unit": "Nm",
+    "first": 1143644.125,
+    "last": 57962.37890625,
+    "min": -1164323.125,
+    "max": 1590873.625,
+    "mean": 27916.4497388693
+   },
+   "Blade 1 Mx (Principal elastic axes) @ 16.0741 m": {
+    "unit": "Nm",
+    "first": 184339.3125,
+    "last": 20691.90625,
+    "min": -449643.5625,
+    "max": 536701.625,
+    "mean": 3290.975215887412
+   },
+   "Blade 1 My (Principal elastic axes) @ 0 m": {
+    "unit": "Nm",
+    "first": 2646570.0,
+    "last": -77210.59375,
+    "min": -1596215.25,
+    "max": 2646570.0,
+    "mean": 236371.37063892072
+   },
+   "Blade 1 My (Principal elastic axes) @ 16.0741 m": {
+    "unit": "Nm",
+    "first": 999417.625,
+    "last": -15382.939453125,
+    "min": -613610.0,
+    "max": 999417.625,
+    "mean": 59351.16560104566
+   },
+   "Blade 1 Mxy (Principal elastic axes) @ 0 m": {
+    "unit": "Nm",
+    "first": 2883098.25,
+    "last": 96545.90625,
+    "min": 664.5926513671875,
+    "max": 2883098.25,
+    "mean": 554567.8235471677
+   },
+   "Blade 1 Mxy (Principal elastic axes) @ 16.0741 m": {
+    "unit": "Nm",
+    "first": 1016275.875,
+    "last": 25783.517578125,
+    "min": 1607.849853515625,
+    "max": 1016275.875,
+    "mean": 171410.03020105607
+   },
+   "Blade 1 Mz (Principal elastic axes) @ 0 m": {
+    "unit": "Nm",
+    "first": -16572.05859375,
+    "last": -1879.27001953125,
+    "min": -20202.40234375,
+    "max": 17100.875,
+    "mean": 122.16733931272458
+   },
+   "Blade 1 Mz (Principal elastic axes) @ 16.0741 m": {
+    "unit": "Nm",
+    "first": -9139.341796875,
+    "last": -24.898704528808594,
+    "min": -11177.3330078125,
+    "max": 10435.0224609375,
+    "mean": 76.95975724798747
+   },
+   "Blade 1 Fx (Principal elastic axes) @ 0 m": {
+    "unit": "N",
+    "first": 114489.0390625,
+    "last": -8623.814453125,
+    "min": -71594.7578125,
+    "max": 114846.078125,
+    "mean": 15838.63689869795
+   },
+   "Blade 1 Fx (Principal elastic axes) @ 16.0741 m": {
+    "unit": "N",
+    "first": 90998.390625,
+    "last": -1088.3690185546875,
+    "min": -49028.78515625,
+    "max": 90998.390625,
+    "mean": 6989.140708285838
+   },
+   "Blade 1 Fy (Principal elastic axes) @ 0 m": {
+    "unit": "N",
+    "first": -71632.65625,
+    "last": -3019.541748046875,
+    "min": -99990.21875,
+    "max": 74253.90625,
+    "mean": 336.61898527389917
+   },
+   "Blade 1 Fy (Principal elastic axes) @ 16.0741 m": {
+    "unit": "N",
+    "first": -22117.75390625,
+    "last": -1945.8055419921875,
+    "min": -54822.44140625,
+    "max": 37487.39453125,
+    "mean": -129.33433282681
+   },
+   "Blade 1 Fxy (Principal elastic axes) @ 0 m": {
+    "unit": "N",
+    "first": 135051.75,
+    "last": 9137.166015625,
+    "min": 899.2384033203125,
+    "max": 137428.21875,
+    "mean": 34976.52600332407
+   },
+   "Blade 1 Fxy (Principal elastic axes) @ 16.0741 m": {
+    "unit": "N",
+    "first": 93647.7578125,
+    "last": 2229.508056640625,
+    "min": 128.91061401367188,
+    "max": 93647.7578125,
+    "mean": 16671.38273373628
+   },
+   "Blade 1 Fz (Principal elastic axes) @ 0 m": {
+    "unit": "N",
+    "first": 278055.0,
+    "last": 63993.4296875,
+    "min": -4901.02001953125,
+    "max": 418025.4375,
+    "mean": 114425.01831387251
+   },
+   "Blade 1 Fz (Principal elastic axes) @ 16.0741 m": {
+    "unit": "N",
+    "first": 196392.296875,
+    "last": 22498.74609375,
+    "min": 10216.7763671875,
+    "max": 260736.265625,
+    "mean": 64977.50157126402
+   }
+  }
+ },
+ "powprod.%04": {
+  "group": "Control variables",
+  "time": {
+   "n": 1501,
+   "first": 0.0,
+   "step": 0.039999999,
+   "last": 59.999998500000004
+  },
+  "series": {
+   "Time from start of simulation": {
+    "unit": "s",
+    "first": 7.0,
+    "last": 67.0,
+    "min": 7.0,
+    "max": 67.0,
+    "mean": 37.0
+   },
+   "Demanded power": {
+    "unit": "W",
+    "first": 0.0,
+    "last": 0.0,
+    "min": 0.0,
+    "max": 0.0,
+    "mean": 0.0
+   },
+   "Measured power": {
+    "unit": "W",
+    "first": 2021196.0,
+    "last": 1843199.5,
+    "min": 1708027.25,
+    "max": 2049030.75,
+    "mean": 1963467.4855096603
+   },
+   "Demanded generator speed": {
+    "unit": "rad/s",
+    "first": 157.07949829101562,
+    "last": 157.07949829101562,
+    "min": 157.07949829101562,
+    "max": 157.07949829101562,
+    "mean": 157.07949829101562
+   },
+   "Measured generator speed": {
+    "unit": "rad/s",
+    "first": 158.70030212402344,
+    "last": 157.3310089111328,
+    "min": 154.5084991455078,
+    "max": 159.80105590820312,
+    "mean": 157.14080881707116
+   },
+   "Nominal pitch angle": {
+    "unit": "rad",
+    "first": -0.03490655496716499,
+    "last": -0.03490655496716499,
+    "min": -0.0352218896150589,
+    "max": 0.07783514261245728,
+    "mean": 0.013369400302112769
+   },
+   "Demanded generator torque": {
+    "unit": "Nm",
+    "first": 13396.634765625,
+    "last": 12293.1953125,
+    "min": 11606.4326171875,
+    "max": 13403.0,
+    "mean": 13151.82276138824
+   },
+   "Nominal wind speed at hub position": {
+    "unit": "m/s",
+    "first": 11.950963973999023,
+    "last": 10.059906959533691,
+    "min": 8.548154830932617,
+    "max": 16.887760162353516,
+    "mean": 12.492785719376576
+   },
+   "Measured shaft power": {
+    "unit": "W",
+    "first": 2127574.75,
+    "last": 1940210.0,
+    "min": 1797923.375,
+    "max": 2156874.5,
+    "mean": 2066807.906978681
+   }
+  }
+ }
+}

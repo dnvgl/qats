@@ -17,6 +17,7 @@ Update the reference only when a change in what QATS reads is intended, and revi
 import json
 import math
 import os
+import re
 import sys
 import unittest
 import warnings
@@ -49,8 +50,11 @@ EXTENSIONS = (
 )
 # files written to data/ by other tests while they run
 GENERATED = ("df_multiindex.pkl",)
-# files that no reader accepts, used to test the error
-UNSUPPORTED = ("unsupportedfile.out",)
+# Bladed header files: .%NN with a group number of two or more digits
+BLADED = re.compile(r"\.%\d+")
+# files that can't be read, used to test the error: no reader accepts the first; the second is a Bladed group
+# that is not a time series
+UNSUPPORTED = ("unsupportedfile.out", "lin1.%31")
 
 RTOL = 1e-10  # relative to the magnitude of the series, so that tiny platform differences do not fail
 
@@ -61,7 +65,7 @@ def data_files():
         p.name
         for p in DATA.iterdir()
         if p.is_file()
-        and p.suffix.lower() in EXTENSIONS
+        and (p.suffix.lower() in EXTENSIONS or BLADED.fullmatch(p.suffix))
         and p.name not in GENERATED + UNSUPPORTED
         and not p.name.startswith("_")
     )

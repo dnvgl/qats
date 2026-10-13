@@ -34,6 +34,20 @@
     .. rubric:: API
 
 
+:mod:`qats.io.bladed`
+---------------------
+
+.. automodule:: qats.io.bladed
+    :members:
+
+    .. rubric:: Functions overview
+
+    .. autoautosummary:: qats.io.bladed
+        :functions:
+
+    .. rubric:: API
+
+
 :mod:`qats.io.csv`
 -----------------------
 

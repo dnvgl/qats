@@ -33,3 +33,14 @@ Apache License 2.0, a copy of which is in [LICENSE-OpenFAST](LICENSE-OpenFAST).
 
 Copied from OpenFAST/r-test at commit `dd5feaaaa500ba7283140107806300d551cff0a7` and OpenFAST/openfast_toolbox at
 commit `54e6f3acb7b04254ccb6e8e4b9bdd06368f40168`.
+
+The Bladed files are copied unchanged, also their names, from the demo runs in DNV's
+[`dnv-bladed-results`](https://pypi.org/project/dnv-bladed-results/) 2.2.2 (`UsageExamples/Runs/demo`), licensed under
+the MIT License, a copy of which is in [LICENSE-dnv-bladed-results](LICENSE-dnv-bladed-results). Each header
+(`.%NN`) names its data file (`.$NN`) and holds statistics of the data, so neither is changed.
+
+| Files | Source | Content |
+| --- | --- | --- |
+| `powprod.%04`, `powprod.$04` | `powprod/` | Control variables: 9 series, 1,501 time steps |
+| `estop.%15`, `estop.$15` | `estop/` | Blade 1 loads at 2 stations: 8 variables × 2 stations, 624 time steps |
+| `lin1.%31`, `lin1.$31` | `lin1/` | Blade 1 absolute motion against wind speed: not a time series |
