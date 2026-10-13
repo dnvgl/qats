@@ -46,9 +46,6 @@ extensions = [
     # 'sphinx.ext.imgmath',
     # 'sphinx.ext.ifconfig',
     # 'sphinx.ext.coverage',
-    #
-    # 23.12.2022/enlo: added myst-parser to enable rendering of CHANGELOG.md as part of Sphinx docs.
-    "myst_parser",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -58,7 +55,7 @@ extensions = [
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = [".rst", ".md"]  # source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The master toctree document.
 master_doc = "index"

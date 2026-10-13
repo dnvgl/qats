@@ -103,7 +103,7 @@ python -m qats config --link-app
 
 * [**Source**](https://github.com/dnvgl/qats)
 * [**Issues**](https://github.com/dnvgl/qats/issues)
-* [**Changelog**](https://github.com/dnvgl/qats/releases)
+* [**Release notes**](https://github.com/dnvgl/qats/releases)
 * [**Documentation**](https://qats.readthedocs.io)
 * [**Download**](https://pypi.org/project/qats/)
 

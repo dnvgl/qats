@@ -45,7 +45,6 @@ dev = [
 ]
 docs = [
     "furo>=2024.8.6",
-    "myst-parser>=3.0.1",
     "sphinx>=7.1.2",
 ]
 
