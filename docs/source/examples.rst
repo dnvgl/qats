@@ -158,6 +158,25 @@ values are accurate to about 1/65535 of that range.
    :lines: 1-
 
 
+Post-process OrcaFlex results
+*****************************
+
+OrcaFlex results are read through Orcina's Python interface, ``OrcFxAPI``, which computes each result on request: for
+an object, a variable and, for lines, a point along the line. A short script extracts the time histories you need
+into a ``TsDB``; from there, statistics, extremes and fatigue work as for any other file, and the series can be
+exported to a file the QATS GUI opens. The same pattern works for any simulation tool with a Python interface.
+
+.. note::
+
+   This example requires OrcaFlex with a licence and the ``OrcFxAPI`` package, so it is not run when the
+   documentation is built. It was written for OrcaFlex 11.6.
+
+.. literalinclude:: examples/orcaflex.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Choose a file reader and add your own
 *************************************
 
