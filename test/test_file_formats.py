@@ -52,6 +52,15 @@ class TestDocumentedExamples(FileFormatTestCase):
         self.assertEqual(list(got), ["Wave elevation", "Surge"])
         np.testing.assert_array_equal(got["Surge"][1], [1.2, 1.21, 1.23, 1.26, 1.3, 1.35])
 
+    def test_example_excel_csv(self):
+        """The example saved by Excel with Norwegian regional settings holds the same values as example.csv."""
+        got = self.read(str(FORMATS / "example_excel.csv"))
+        reference = self.read(str(FORMATS / "example.csv"))
+        self.assertEqual(list(got), ["Bølgehøyde", "Jag"])
+        for name, other in zip(got, reference):
+            np.testing.assert_array_equal(got[name][0], reference[other][0])
+            np.testing.assert_array_equal(got[name][1], reference[other][1])
+
 
 class TestDat(FileFormatTestCase):
     expected = {"surge": ([0.0, 0.5], [1.0, 2.0]), "heave": ([0.0, 0.5], [10.0, 20.0])}
@@ -153,21 +162,49 @@ class TestCsv(FileFormatTestCase):
         path = self.write("a.csv", "Time,surge,heave\n0.0,1.0,10.0\n0.5,2.0,20.0\n", newline="\r\n")
         self.assert_series(self.read(path), self.expected)
 
-    # limitations documented on the page; when #200 changes them, update the page too
+    # files written by Excel on Windows (#200)
 
-    def test_windows_encoding_fails(self):
-        path = self.write("a.csv", "Tid,bølge\n0.0,1.0\n0.5,2.0\n", encoding="cp1252")
-        with self.assertRaises(UnicodeDecodeError):
+    def test_windows_encoding(self):
+        """Excel's "CSV (comma delimited)" writes Windows-1252: read when the file is not UTF-8."""
+        path = self.write("a.csv", "Tid,bølge,ærø\n0.0,1.0,3.0\n0.5,2.0,4.0\n", encoding="cp1252")
+        self.assert_series(self.read(path), {"bølge": ([0.0, 0.5], [1.0, 2.0]), "ærø": ([0.0, 0.5], [3.0, 4.0])})
+
+    def test_decimal_comma(self):
+        """With ';' as separator, as Excel writes with e.g. Norwegian regional settings, a decimal comma is read."""
+        path = self.write("a.csv", "Time;surge;heave\n0,0;1,5;-2,25\n0,5;2,5;1,0E-3\n")
+        expected = {"surge": ([0.0, 0.5], [1.5, 2.5]), "heave": ([0.0, 0.5], [-2.25, 1.0e-3])}
+        self.assert_series(self.read(path), expected)
+
+    def test_semicolon_with_decimal_point(self):
+        path = self.write("a.csv", "Time;surge\n0.0;1.5\n0.5;2.5\n")
+        self.assert_series(self.read(path), {"surge": ([0.0, 0.5], [1.5, 2.5])})
+
+    def test_norwegian_excel(self):
+        """Windows-1252, ';' and decimal commas together, with Windows line endings."""
+        path = self.write("a.csv", "Tid;bølge\n0,0;1,5\n0,5;2,5\n", encoding="cp1252", newline="\r\n")
+        self.assert_series(self.read(path), {"bølge": ([0.0, 0.5], [1.5, 2.5])})
+
+    def test_comment_lines_before_header(self):
+        path = self.write(
+            "a.csv", "# exported from rig 3\n# second line\nTime,surge,heave\n0.0,1.0,10.0\n0.5,2.0,20.0\n"
+        )
+        self.assert_series(self.read(path), self.expected)
+
+    def test_decimal_comma_with_comma_separator(self):
+        """More values than names: an error, not shifted columns with wrong values."""
+        path = self.write("a.csv", "Time,surge\n0,0,1,5\n0,5,2,5\n")
+        with self.assertRaisesRegex(ValueError, r"4 values on its first data row but 2 names.*need ';'"):
             TsDB.fromfile(path)
 
-    def test_decimal_comma_fails(self):
-        path = self.write("a.csv", "Time;surge\n0,0;1,5\n0,5;2,5\n")
-        with self.assertRaisesRegex(TypeError, "must be integers or floats"):
-            TsDB.fromfile(path).getm(names="*", store=False)
+    def test_trailing_separator(self):
+        """A separator at the end of the data rows (an empty extra value) is not an error."""
+        path = self.write("a.csv", "Time,surge,heave\n0.0,1.0,10.0,\n0.5,2.0,20.0,\n")
+        self.assert_series(self.read(path), self.expected)
 
-    def test_comment_line_fails(self):
-        path = self.write("a.csv", "# comment\nTime,surge\n0.0,1.0\n0.5,2.0\n")
-        with self.assertRaisesRegex(TypeError, "time must be given as array of floats"):
+    def test_value_not_a_number(self):
+        """The error names the column, the data row and the value."""
+        path = self.write("a.csv", "Time,surge,heave\n0.0,1.0,\n0.5,abc,20.0\n")
+        with self.assertRaisesRegex(ValueError, r"not a number in column 'surge', data row 2: 'abc'"):
             TsDB.fromfile(path).getm(names="*", store=False)
 
 
