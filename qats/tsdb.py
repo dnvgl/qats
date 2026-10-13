@@ -824,7 +824,7 @@ class TsDB(object):
         Currently implemented file formats
          - direct access format (.ts)
          - column-wise ascii file with single header line defining the keys (.dat) (comment character is #)
-         - SIMA hdf file (.h5).
+         - SIMA hdf file (.h5 or .hdf5).
          - pickle file (.pkl or .pickle) with time series stored in a pandas dataframe (index is the common time array).
 
         If `force_common_time` is True and the time arrays of the specified time series are not equal, the time series
@@ -837,6 +837,9 @@ class TsDB(object):
         time series is removed before writing the identifiers to key file (applies to .ts format) or ascii file header.
         Note that in this case the keys are modified so that path separators ('/' and '\\') are replaced by
         underscore ('_').
+
+        .. versionchanged :: 5.5.0
+            SIMA hdf files can also be written with the extension .hdf5, which `load` already read.
         """
         # todo: export(): include `header` parameter; text string that is included on top of key file
 
@@ -900,7 +903,7 @@ class TsDB(object):
         elif ext == ".dat":  # write ascii file
             write_dat_data(filename, common_time_array, container, delim=delim, skip_header=skip_header)
 
-        elif ext == ".h5":
+        elif ext in (".h5", ".hdf5"):
             write_sima_h5_data(filename, container)
 
         elif ext in (".pkl", ".pickle"):

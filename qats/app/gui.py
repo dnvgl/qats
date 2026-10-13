@@ -904,7 +904,7 @@ class Qats(QMainWindow):
             "",
             "Direct access file (*.ts);;"
             "ASCII file with header (*.dat);;"
-            "SIMA H5 file (*.h5);;"
+            "SIMA H5 file (*.h5 *.hdf5);;"
             "DataFrame Pickle file (*.pkl *.pickle);;"
             "All Files (*)",
         )
