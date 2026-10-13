@@ -29,7 +29,7 @@ It was originally created to handle time series files exported from `SIMO <https
 and `RIFLEX <https://www.dnvgl.com/services/riser-analysis-software-for-marine-riser-systems-riflex-2312>`_. Now it also
 handles `SIMA <https://www.dnvgl.com/services/marine-operations-and-mooring-analysis-software-sima-2324>`_ hdf5 (.h5) files,
 MATLAB .mat files (versions 4, 6, 7 and 7.3), `OpenFAST <https://github.com/OpenFAST/openfast>`_ .out and .outb
-files, CSV files and more. If you need handlers for other formats, create a feature
+files, Bladed output (.%NN and .$NN), CSV files and more. If you need handlers for other formats, create a feature
 request (issue) or make it yourself and create a pull request.
 
 See :ref:`examples` for more examples on how to invoke QATS in your own scripts to do more advance operations. :ref:`api`

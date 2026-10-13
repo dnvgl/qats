@@ -13,6 +13,24 @@
 ["B1r29c5_YLrotationTotalmotion", 2000, 0.0, 999.5, 0.5, -0.993031680584, 1.3237375021, 0.17487058987, 0.46900298257],
 ["B1r29c6_ZGrotationTotalmotion", 2000, 0.0, 999.5, 0.5, -2.82286906242, 2.69759368896, -0.266036912364, 1.10977314144]
 ],
+"estop.%15": [
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Mx (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, -1164323.125, 1590873.625, 27916.4497389, 404720.922533],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Mx (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, -449643.5625, 536701.625, 3290.97521589, 119857.345288],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 My (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, -1596215.25, 2646570.0, 236371.370639, 706145.367868],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 My (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, -613610.0, 999417.625, 59351.165601, 245072.320877],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Mxy (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, 664.592651367, 2883098.25, 554567.823547, 641518.189739],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Mxy (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, 1607.84985352, 1016275.875, 171410.030201, 220404.670256],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Mz (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, -20202.4023438, 17100.875, 122.167339313, 5276.81454901],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Mz (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, -11177.3330078, 10435.0224609, 76.959757248, 3589.56071396],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fx (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, -71594.7578125, 114846.078125, 15838.6368987, 36325.9447796],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fx (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, -49028.7851562, 90998.390625, 6989.14070829, 22502.5239631],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fy (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, -99990.21875, 74253.90625, 336.618985274, 27355.5971146],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fy (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, -54822.4414062, 37487.3945312, -129.334332827, 11847.6716681],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fxy (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, 899.23840332, 137428.21875, 34976.5260033, 33098.6602369],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fxy (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, 128.910614014, 93647.7578125, 16671.3827337, 20436.749179],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fz (Principal elastic axes) @ 0 m", 624, 0.0, 24.919999377, 0.039999999, -4901.02001953, 418025.4375, 114425.018314, 118965.365079],
+["Blade 1 Loads: Principal elastic axes\\Blade 1 Fz (Principal elastic axes) @ 16.0741 m", 624, 0.0, 24.919999377, 0.039999999, 10216.7763672, 260736.265625, 64977.5015713, 80210.7203784]
+],
 "example.csv": [
 ["surge", 152584, 0.0, 762.9150362, 0.005, -111.6028679, -87.17578385, -103.44613878, 2.25818504899],
 ["sway", 152584, 0.0, 762.9150362, 0.005, -10.30989614, 3.044270924, -3.03041730961, 2.95463019195],
@@ -461,6 +479,17 @@
 ],
 "openfast_md_driver.MD.out": [
 ["FAIRTEN1", 599, 0.1, 59.9, 0.1, 207997.16, 1790693.8, 1144775.62856, 204733.271191]
+],
+"powprod.%04": [
+["Control variables\\Time from start of simulation", 1501, 0.0, 59.9999985, 0.039999999, 7.0, 67.0, 37.0, 17.3320512302],
+["Control variables\\Demanded power", 1501, 0.0, 59.9999985, 0.039999999, 0.0, 0.0, 0.0, 0.0],
+["Control variables\\Measured power", 1501, 0.0, 59.9999985, 0.039999999, 1708027.25, 2049030.75, 1963467.48551, 85223.0942812],
+["Control variables\\Demanded generator speed", 1501, 0.0, 59.9999985, 0.039999999, 157.079498291, 157.079498291, 157.079498291, 0.0],
+["Control variables\\Measured generator speed", 1501, 0.0, 59.9999985, 0.039999999, 154.508499146, 159.801055908, 157.140808817, 1.03264170024],
+["Control variables\\Nominal pitch angle", 1501, 0.0, 59.9999985, 0.039999999, -0.0352218896151, 0.0778351426125, 0.0133694003021, 0.0335782238132],
+["Control variables\\Demanded generator torque", 1501, 0.0, 59.9999985, 0.039999999, 11606.4326172, 13403.0, 13151.8227614, 538.697853888],
+["Control variables\\Nominal wind speed at hub position", 1501, 0.0, 59.9999985, 0.039999999, 8.54815483093, 16.8877601624, 12.4927857194, 1.55217158674],
+["Control variables\\Measured shaft power", 1501, 0.0, 59.9999985, 0.039999999, 1797923.375, 2156874.5, 2066807.90698, 89708.5216747]
 ],
 "results_SIMA341.h5": [
 ["Simple_Flexible_Riser\\Initial\\Dynamic\\RiserLine\\segment_1\\element_1\\Axial force", 200, 0.5, 100.0, 0.5, 73661.8347168, 96158.821106, 84806.5532303, 7762.95538737],
