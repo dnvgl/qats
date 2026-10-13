@@ -621,6 +621,25 @@ class TestTsDB(unittest.TestCase):
             f.close()
         # should not raise errors
 
+    def test_export_reload_h5(self):
+        """Export to SIMA hdf files with either extension and read them back (#193)."""
+        self.db.load(os.path.join(self.data_directory, "mooring.ts"))
+        names = ["Surge", "Sway", "Heave"]
+        for ext in (".h5", ".hdf5"):
+            with self.subTest(ext), tempfile.TemporaryDirectory() as tmp:
+                fnout = os.path.join(tmp, "exported" + ext)
+                with contextlib.redirect_stdout(None):
+                    self.db.export(fnout, names=names)
+                db2 = TsDB.fromfile(fnout)
+                # HDF5 lists its datasets in name order
+                self.assertEqual(db2.list(display=False, relative=True), sorted(names))
+                for name in names:
+                    ts1, ts2 = self.db.get(name=name), db2.get(name=name, store=False)
+                    np.testing.assert_array_equal(ts2.x, ts1.x, err_msg=name)
+                    # time is stored as first time and time step, so the single precision rounding of the time in
+                    # the .ts file is lost
+                    np.testing.assert_allclose(ts2.t, ts1.t, rtol=np.finfo(np.float32).eps, atol=0, err_msg=name)
+
     def test_stats_dataframe(self):
         """Test that stats dataframe is correctly constructed"""
         fn = os.path.join(self.data_directory, "mooring.ts")

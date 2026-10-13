@@ -53,6 +53,7 @@ from matplotlib.figure import Figure
 
 from .. import __version__
 from .._validation import QatsValueError
+from ..io import registry
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
 from .funcs import (
@@ -62,7 +63,8 @@ from .funcs import (
     calculate_stats,
     calculate_trace,
     export_to_file,
-    import_from_file,
+    file_dialog_filters,
+    import_files,
     read_timeseries,
 )
 from .logger import QLogger
@@ -625,7 +627,8 @@ class Qats(QMainWindow):
         """
         Event handler for dragging objects over main window. Overrides method in QWidget.
         """
-        if event.mimeData().hasUrls():
+        # any local file: files that no reader can read are reported in the log window when dropped
+        if event.mimeData().hasUrls() and any(u.isLocalFile() for u in event.mimeData().urls()):
             event.accept()
         else:
             event.ignore()
@@ -634,7 +637,8 @@ class Qats(QMainWindow):
         """
         Event handler for dropping objects over main window. Overrides method in QWidget.
         """
-        files = [u.toLocalFile() for u in event.mimeData().urls()]
+        # Qt gives '/' as separator on all platforms: use the platform's, as in the rest of QATS (and the log)
+        files = [os.path.normpath(u.toLocalFile()) for u in event.mimeData().urls() if u.isLocalFile()]
         self.load_files(files)
 
     def filter_settings(self):
@@ -692,19 +696,35 @@ class Qats(QMainWindow):
             self.set_status("Importing %d file(s)...." % len(files))
 
             # Pass the function to execute, args, kwargs are passed to the run function
-            worker = Worker(import_from_file, list(files))
+            worker = Worker(import_files, list(files))
 
             # pipe exceptions to logger (NB: like this because logging module cannot be used in pyqt QThreads)
             worker.signals.error.connect(self.log_thread_exception)
 
-            # grab results and merge into model
-            worker.signals.result.connect(self.update_model)
+            # grab results, report files that could not be read and merge the others into model
+            worker.signals.result.connect(self.files_imported)
 
             # update model and status bar once finished
             worker.signals.finished.connect(self.set_status)
 
             # Execute
             self.threadpool.start(worker)
+
+    def files_imported(self, result):
+        """
+        Report the files that could not be read, and add the time series of the others to the model.
+
+        Parameters
+        ----------
+        result : tuple
+            Time series database and the reason by file name for the files that could not be read, as returned by
+            `import_files`.
+        """
+        newdb, failed = result
+        for file, reason in failed.items():
+            logging.error("Could not load %s: %s" % (file, reason))
+        if newdb.n:
+            self.update_model(newdb)
 
     def load_settings(self):
         """Load settings from file."""
@@ -884,7 +904,7 @@ class Qats(QMainWindow):
             "",
             "Direct access file (*.ts);;"
             "ASCII file with header (*.dat);;"
-            "SIMA H5 file (*.h5);;"
+            "SIMA H5 file (*.h5 *.hdf5);;"
             "DataFrame Pickle file (*.pkl *.pickle);;"
             "All Files (*)",
         )
@@ -924,23 +944,8 @@ class Qats(QMainWindow):
         dlg.setWindowIcon(self.icon)
         dlg.setViewMode(QFileDialog.Detail)  # https://doc.qt.io/qtforpython-6/PySide6/QtWidgets/QFileDialog.html
 
-        files, _ = dlg.getOpenFileNames(
-            dlg,
-            "Load time series files",
-            "",
-            "Direct access files (*.ts);;"
-            "SIMO S2X direct access files with info array (*.tda);;"
-            "RIFLEX SIMO binary files (*.bin);;"
-            "RIFLEX SIMO ASCII files (*.asc);;"
-            "SINTEF Ocean test data export format (*.mat);;"
-            "ASCII file with header (*.dat);;"
-            "SIMA H5 files (*.h5);;"
-            "CSV file with header (*.csv);;"
-            "Technical Data Management Streaming files (*.tdms);;"
-            "DataFrame Pickle file (*.pkl *.pickle);;"
-            "OpenFAST output files (*.out *.outb);;"
-            "All Files (*)",
-        )
+        # one filter per file format reader, also readers from installed plugins
+        files, _ = dlg.getOpenFileNames(dlg, "Load time series files", "", file_dialog_filters(registry.readers()))
 
         # load files into db and update application model and view
         self.load_files(files)
