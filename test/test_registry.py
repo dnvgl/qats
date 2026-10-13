@@ -93,10 +93,13 @@ class RegistryTestCase(unittest.TestCase):
     def setUp(self):
         registry._load()
         self._saved = dict(registry._readers)
+        self._saved_origins = dict(registry._origins)
 
     def tearDown(self):
         registry._readers.clear()
         registry._readers.update(self._saved)
+        registry._origins.clear()
+        registry._origins.update(self._saved_origins)
         registry._loaded = True
 
 

@@ -56,6 +56,7 @@ from .._validation import QatsValueError
 from ..io import registry
 from ..stats.empirical import empirical_cdf
 from ..tsdb import TsDB
+from . import LOGGING_LEVELS
 from .funcs import (
     calculate_gumbel_fit,
     calculate_psd,
@@ -71,12 +72,6 @@ from .logger import QLogger
 from .threading import Worker
 from .widgets import CustomTableWidget, CustomTableWidgetItem, CustomTabWidget, WhiteSaveNavigationToolbar
 
-LOGGING_LEVELS = dict(
-    debug=logging.DEBUG,
-    info=logging.INFO,
-    warning=logging.WARNING,
-    error=logging.ERROR,
-)
 # define path to settings file
 if sys.platform == "win32":
     SETTINGS_FILE = os.path.join(os.getenv("APPDATA", os.getenv("USERPROFILE", "")), "qats.settings")

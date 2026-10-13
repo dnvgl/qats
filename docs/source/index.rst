@@ -90,7 +90,9 @@ Table of contents
    :maxdepth: 2
 
    getting_started
+   supported_formats
    file_formats
+   reader_plugins
    examples
    gui
    api/index

@@ -175,7 +175,7 @@ Choose a file reader and add your own
 
 List the available file readers, choose a reader for a file whose name does not tell its format, and add a reader for
 a file format of your own in a script. To make a reader available in every script and in the GUI, put it in a package
-that registers it through the ``qats.readers`` entry point group (see :mod:`qats.io.registry`).
+that registers it through the ``qats.readers`` entry point group (see :ref:`reader_plugins`).
 
 .. literalinclude:: examples/reader_registry.py
    :language: python

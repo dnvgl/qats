@@ -7,6 +7,10 @@
 import os
 import sys
 
+from docutils import nodes as _nodes
+from docutils.parsers.rst import Directive as _Directive
+from docutils.statemachine import StringList as _StringList
+
 # import the package to be documented
 import qats
 
@@ -436,6 +440,36 @@ def setup(app):
         app.add_directive("autoautosummary", AutoAutoSummary)
     except BaseException as e:
         raise e
+
+    app.add_directive("qats-readers", QatsReaders)
+
+
+class QatsReaders(_Directive):
+    """
+    The built-in file format readers as a table: format, file name patterns and reader name, from the reader
+    registry. The reader name links to the notes on the format, labelled ``format-<reader name>`` (a missing label is a
+    warning, which fails the build with -W). Readers from plugins installed where the docs are built are left out.
+    """
+
+    has_content = False
+
+    def run(self):
+        from qats.io import registry
+
+        lines = [".. list-table::", "   :header-rows: 1", "   :widths: 50 25 25", ""]
+        lines += ["   * - Format", "     - File names", "     - Reader"]
+        for reader in registry.readers():
+            if registry._origins.get(reader.name) != "built-in":
+                continue
+            patterns = ", ".join(f"``{pattern}``" for pattern in reader.patterns)
+            lines += [
+                f"   * - {reader.description}",
+                f"     - {patterns}",
+                f"     - :ref:`{reader.name} <format-{reader.name}>`",
+            ]
+        container = _nodes.container()
+        self.state.nested_parse(_StringList(lines), self.content_offset, container)
+        return container.children
 
 
 # ----------------------------------------------------------------------------------------------------------------------

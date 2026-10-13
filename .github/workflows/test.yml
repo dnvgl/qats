@@ -81,7 +81,17 @@ jobs:
         uv run qats -h
         uv run qats app -h
         uv run qats config -h
+        uv run qats formats
         uv run python -m qats -h
+    #----------------------------------------------
+    # install the example reader plugin as a package and read a file through its entry point
+    # (without its dependencies, so that the qats under test is used, not one from PyPI)
+    #----------------------------------------------
+    - name: Test reader plugin
+      run: |
+        uv pip install --no-deps ./test/plugins/qats-example-reader
+        uv run --no-sync qats formats
+        uv run --no-sync pytest test/test_example_plugin.py
     #----------------------------------------------
     # build and check that the wheel installs and runs in a clean environment
     # (dependencies resolved from PyPI as for `pip install qats`, not from uv.lock)
