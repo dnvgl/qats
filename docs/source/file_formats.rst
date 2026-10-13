@@ -43,17 +43,25 @@ Comma-separated values (``.csv``)
 
 Rules:
 
-* **Header:** the first line holds the names. Comment lines are not supported.
-* **Separator:** detected automatically. Comma, semicolon, tab and space all work.
+* **Header:** the first line that doesn't start with ``#`` holds the names. Lines starting with ``#`` before it are
+  skipped.
+* **Separator:** comma, semicolon, tab or space, detected from the header line. Other separators (e.g. ``|``) are not
+  supported.
+* **Columns:** time and at least one series. A file with only a time column is an error.
 * **Names:** may contain spaces. A name containing the separator must be in double quotes, e.g. ``"surge, x"``.
 * **Time:** the first column, with any name.
-* **Values:** an empty cell is read as ``nan``.
-* **Numbers:** decimal point, not decimal comma. Scientific notation is accepted.
-* **Encoding:** UTF-8, with or without a byte-order mark. Names with non-ASCII characters (e.g. ``bølge``) fail in
-  other encodings.
+* **Values:** an empty cell is read as ``nan``. A separator at the end of each line is allowed, but a line must not
+  have more values than there are names.
+* **Numbers:** decimal point. With ``;`` as separator, a decimal comma (e.g. ``1,5``) also works. Scientific notation
+  is accepted.
+* **Encoding:** UTF-8, with or without a byte-order mark, or Windows-1252 (Western European).
 
-From Excel, save with **CSV UTF-8 (comma delimited)**. The plain "CSV (comma delimited)" uses a Windows encoding, and
-with some regional settings (e.g. Norwegian) Excel writes decimal commas. QATS can't read either.
+From Excel, both "CSV UTF-8 (comma delimited)" and the plain "CSV (comma delimited)" work, also with regional settings
+that write decimal commas, such as Norwegian:
+
+.. literalinclude:: formats/example_excel.csv
+   :caption: example_excel.csv (saved by Excel with Norwegian regional settings)
+   :encoding: cp1252
 
 
 Rules for both formats
@@ -79,9 +87,11 @@ Error                                                                    Likely 
 ``KeyError: The file ... contains duplicate time vectors`` (``.dat``)    More than one name starts with ``Time``/``time``
 ``ValueError: invalid column index ...`` (``.dat``)                      A name contains a space, or a line has fewer
                                                                          values than names
-``UnicodeDecodeError: 'utf-8' codec can't decode ...`` (``.csv``)        The file is not UTF-8: save as CSV UTF-8
-``QatsTypeError: Data (x) must be integers or floats ...`` (``.csv``)    Decimal comma, or text in a value column
-``TypeError: time must be given as array of floats ...`` (``.csv``)      A comment or other line before the header
+``QatsValueError: ... no comma, semicolon, tab ...`` (``.csv``)          Only a time column, or another separator, e.g.
+                                                                         ``|``
+``QatsValueError: ... not a number in column ...`` (``.csv``)            Text in a value column, a decimal comma with
+                                                                         another separator than ``;``, or a line before
+                                                                         the header that doesn't start with ``#``
 =======================================================================  ===================================================
 
 
