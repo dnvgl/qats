@@ -223,8 +223,12 @@ class _RowSource(SourceFile):
         self._scan()
         unique = list(dict.fromkeys(names))  # the format functions need distinct positions
         rows = self._read_rows([0] + [self._positions[name] for name in unique])
-        row = {name: i + 1 for i, name in enumerate(unique)}
-        return [SeriesData(name, rows[0, :], rows[row[name], :]) for name in names]
+        # an array of its own for each series instead of rows of one array, so that the caller can free each series
+        # on its own (a row keeps the whole array alive)
+        t = np.array(rows[0, :])
+        x = {name: np.array(rows[i + 1, :]) for i, name in enumerate(unique)}
+        del rows
+        return [SeriesData(name, t, x[name]) for name in names]
 
     def _legacy_index(self, name):
         """Position of the series on file, as stored in `TsDB.register_indices` before 5.5.0."""

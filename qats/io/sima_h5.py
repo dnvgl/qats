@@ -37,27 +37,26 @@ def read_names(path, verbose=False):
     n_dsets = 0
     n_groups = 0
 
+    # one pass over the objects in the file with h5py's low-level interface, which is several times faster than
+    # looking up each object through h5py.File for files with many datasets (#171)
     with h5py.File(path, "r") as f:
-        allkeys = list(f.keys())
-        for key in allkeys:
-            if isinstance(f[key], h5py.Dataset):
+        fid = f.id
+
+        def visit(name):
+            nonlocal n_dsets, n_groups
+            oid = h5py.h5o.open(fid, name)
+            if isinstance(oid, h5py.h5d.DatasetID):
                 n_dsets += 1
-                # check if dataset is a time series
-                dset = f[key]
-                timeinfo = _timearray_info(dset)
-
-                # include data set if it is interpreted as a time series (i.e. if timeinfo is not None)
-                if timeinfo is not None:
-                    names.append(key)
-
-            elif isinstance(f[key], h5py.Group):
+                # a time series has SIMA's time attributes (see _timearray_info)
+                if h5py.h5a.exists(oid, b"start") and h5py.h5a.exists(oid, b"delta"):
+                    names.append(name.decode("utf-8", "surrogateescape"))
+            elif isinstance(oid, h5py.h5g.GroupID):
                 n_groups += 1
-                # print("group: ", key)
-                for i in f[key]:
-                    allkeys.append("{}/{}".format(key, i))
 
-            else:
-                raise Exception("unexpected error: %s is not a dataset or a group" % key)
+        h5py.h5o.visit(fid, visit)
+
+    # breadth-first order, the order of the names before 5.5.0: by depth, and in name order within each depth
+    names.sort(key=lambda name: (name.count("/"), name.split("/")))
 
     if verbose:
         print("   no. of groups      : %4d" % n_groups + "   (incl. subgroups)")
@@ -133,7 +132,6 @@ def read_data(path, names=None, verbose=False):
                 raise NotImplementedError(
                     f"only 1-dimensional arrays implemented, got ndim={data.ndim} (for name '{name}')"
                 )
-            data = data.flatten()  # flatten data array
             nt = data.size  # number of time steps
 
             # attrs = dset.attrs  # dict with dataset attributes

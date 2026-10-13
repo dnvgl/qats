@@ -5,12 +5,15 @@ Readers for ASCII and direct access formatted time series files exported from SI
 import fnmatch
 import os
 import re
+import warnings
 from struct import unpack
 
 import numpy as np
 from scipy.interpolate import interp1d
 
 from .base import Reader, _RowSource
+
+_BIN_CHUNK = 2**22  # values read at a time from a .bin file, to limit memory use
 
 
 def read_sima_wind_names(path):
@@ -163,15 +166,21 @@ def read_bin_data(path, ind=None, verbose=False):
     specified. I.e. if ``ind=[0,10,2,3]``, then the response array with index `10` on .ts file is obtained from
     ``arr[1,:]``.
 
+    The file holds one record per time step, with the time and all responses, so the whole file is read also when
+    only some responses are requested. It is read a block of time steps at a time, keeping only the requested
+    responses, so the memory used is about that of the returned array.
+
+    .. versionchanged :: 5.5.0
+        Reads the file with numpy a block of time steps at a time: much faster, and the memory used no longer grows
+        with the number of responses on the file. Bytes after the last complete time step are ignored with a
+        warning; before, they raised an error.
     """
     if verbose:
         print("Reading %s ..." % path)
 
-    # read
     nbytes = 4
-    intfmt = "i"  # integer format
     with open(path, "rb") as f:
-        # parse no. of records
+        # each record: record length, time, the responses, record length (all 4 bytes)
         nbytesrec = unpack("i", f.read(4))[0]
         nrec = int(nbytesrec / nbytes + 2)  # plus 2 due to first and last cols.
         nts = int(nrec - 2 - 1)  # no. time series (excl. time array)
@@ -180,11 +189,17 @@ def read_bin_data(path, ind=None, verbose=False):
         f.seek(0, 2)  # go to end
         nbytestot = f.tell()  # get position
         f.seek(0)  # go back to start
-        ndat = int(nbytestot / (nbytes * nrec))
+        ndat = nbytestot // (nbytes * nrec)
+        if nbytestot % (nbytes * nrec):
+            warnings.warn(
+                f"{path} ends with {nbytestot % (nbytes * nrec)} bytes that are not a complete time step; "
+                "they are ignored"
+            )
 
-        # which keys/indices to extract
+        # which keys/indices to extract: positions in the record (time is 1, after the record length)
         if ind is None:
             ind = range(nts + 1)  # (including time array)
+        columns = np.arange(nts + 1)[list(ind)] + 1
 
         # info
         if verbose:
@@ -193,15 +208,15 @@ def read_bin_data(path, ind=None, verbose=False):
             print("ndat (no. of time steps)       : %d" % ndat)
             print("number of keys to read         : %d  (%s)" % (len(ind), "including time array index 0 is specified"))
 
-        # prepare for reading
-        basefmt = intfmt + "f" + "f" * nts + intfmt
-        fmt = basefmt * ndat
-        # read, unpack, reshape and transpose (ignoring first and last row
-        s = f.read(nbytestot)
-        arr = np.array(unpack(fmt, s)).reshape((ndat, nrec))[:, 1:-1].T
+        # read a block of time steps at a time, keeping only the requested columns
+        arr = np.empty((columns.size, ndat), dtype=np.float64)
+        rows = max(1, _BIN_CHUNK // nrec)
+        for start in range(0, ndat, rows):
+            n = min(rows, ndat - start)
+            block = np.fromfile(f, dtype=np.float32, count=n * nrec).reshape(n, nrec)
+            arr[:, start : start + n] = block[:, columns].T
 
-    # return specified indices
-    return arr[ind, :]
+    return arr
 
 
 def read_ascii_data(path, ind=None, verbose=False):

@@ -8,6 +8,7 @@ import fnmatch
 from datetime import datetime, timedelta
 from typing import List, Tuple, Union
 
+import h5py
 import numpy as np
 from pymatreader import read_mat
 
@@ -34,8 +35,15 @@ def read_names(path):
     --------
     >>> tname, names = read_names('data.mat')
 
+    .. versionchanged :: 5.5.0
+        Files with the names in ``chan_names`` are no longer read in full to list the names.
     """
-    return _series_names(read_data(path), path)
+    channels = _read_channels(path)
+    if channels is None:
+        return _series_names(read_data(path), path)
+    keys = list(dict.fromkeys(channels[0]))
+    timename = _time_name(keys, path)
+    return timename, [k for k in keys if k != timename]
 
 
 def read_units(path):
@@ -69,7 +77,42 @@ def read_units(path):
     >>> units['Time']
     's'
     """
-    return _read_file(path)[1]
+    channels = _read_channels(path)
+    return {} if channels is None else channels[1]
+
+
+def _read_channels(path):
+    """
+    Names (in file order, possibly repeated) and units of a file with the series as rows of one array (``data``,
+    with the names in ``chan_names``), read without reading the data. None for files with one variable per series.
+    """
+    data = read_mat(path, variable_names=["chan_names", "chan_units"])
+    if "chan_names" not in data:
+        return None
+    names = _as_list(data["chan_names"])
+    units = dict()
+    if "chan_units" in data:
+        for name, unit in zip(names, _as_list(data["chan_units"])):
+            unit = str(unit).strip()
+            if unit:
+                units[name] = unit
+    return names, units
+
+
+def _read_channel_rows(path, names, requested):
+    """
+    The rows of the channel array for the requested names, by name. The last of repeated names wins, as in
+    `_read_file`. Files of MAT version 7.3 are HDF5 files, where each row is read on its own; other versions are read
+    in full.
+    """
+    position = {name: i for i, name in enumerate(names)}
+    if h5py.is_hdf5(path):
+        # MATLAB stores the transpose of an array in HDF5: a row here is a column of `data` in MATLAB, i.e. a series
+        with h5py.File(path, "r") as f:
+            dset = f["data"]
+            return {name: dset[position[name], :] for name in requested}
+    rows = np.transpose(read_mat(path, variable_names=["data"])["data"])
+    return {name: rows[position[name]] for name in requested}
 
 
 def _read_file(path):
@@ -99,16 +142,19 @@ def _as_list(value):
     return [value] if isinstance(value, str) else list(value)
 
 
-def _series_names(data, path):
-    """Name of the time array and the time series names, from the arrays on a file."""
-    # identify time key, check that there is only one
-    _tn = fnmatch.filter(data.keys(), "[Tt]ime*")
+def _time_name(keys, path):
+    """Name of the time array among the names on a file; there must be exactly one."""
+    _tn = fnmatch.filter(keys, "[Tt]ime*")
     if len(_tn) < 1:
         raise KeyError("File does not contain a time vector: %s" % path)
     elif len(_tn) > 1:
         raise KeyError("Duplicate time vectors on file: %s" % path)
-    else:
-        timename = _tn[0]
+    return _tn[0]
+
+
+def _series_names(data, path):
+    """Name of the time array and the time series names, from the arrays on a file."""
+    timename = _time_name(list(data.keys()), path)
 
     # Keep only arrays of same size as time array
     tsize = data[timename].size
@@ -140,7 +186,15 @@ def read_data(path: str, names: Union[List[str], Tuple[str]] = None):
     >>> t = data[tname]   # time
     >>> x1 = data[names[0]]  # first data series
 
+    .. versionchanged :: 5.5.0
+        From files of MAT version 7.3 with the names in ``chan_names``, only the requested series are read.
     """
+    channels = _read_channels(path)
+    if channels is not None:
+        keys = list(dict.fromkeys(channels[0]))
+        requested = keys if names is None else [k for k in keys if k in names]
+        return _read_channel_rows(path, channels[0], requested)
+
     data = _read_file(path)[0]
 
     if names is not None:
@@ -190,9 +244,17 @@ class _MatSource(SourceFile):
 
     def _scan(self):
         if self._names is None:
-            # names, time key and units from one read of the file
-            data, self._units = _read_file(self.path)
-            self._timename, self._names = _series_names(data, self.path)
+            channels = _read_channels(self.path)
+            if channels is None:
+                # one variable per series: names and time key from one read of the file
+                data, self._units = _read_file(self.path)
+                self._timename, self._names = _series_names(data, self.path)
+            else:
+                # names and units only, without the data
+                self._units = channels[1]
+                keys = list(dict.fromkeys(channels[0]))
+                self._timename = _time_name(keys, self.path)
+                self._names = [k for k in keys if k != self._timename]
 
     def series(self):
         self._scan()

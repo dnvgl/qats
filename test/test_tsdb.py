@@ -789,6 +789,28 @@ class TestTsDBBookkeeping(unittest.TestCase):
         self.assertEqual(db.n, len(self.reference))
         self.assert_same_data(db.get(name="Heave"), "Heave")
 
+    def test_update_without_reading(self):
+        """With read=False, unread series stay unread and are read from their file when requested (#171)."""
+        source = TsDB.fromfile(self.source)
+        surge = source.get(name="Surge")  # read and stored in the source
+        db = TsDB()
+        db.update(source, read=False)
+        self.assertEqual(db.register_keys, source.register_keys)
+        self.assertEqual(list(db.register_parent.items()), list(source.register_parent.items()))
+        self.assertEqual([k for k, ts in db.register.items() if ts is not None], [source.register_keys[0]])
+        self.assertIsNot(db.register[source.register_keys[0]], surge)  # copied, as with read=True
+        for name in ("Surge", "Heave", "Mooring line 8"):
+            self.assert_same_data(db.get(name=name), name)
+        # the source is not changed
+        self.assertEqual(sum(ts is not None for ts in source.register.values()), 1)
+
+    def test_update_without_reading_subset(self):
+        db = TsDB()
+        db.update(TsDB.fromfile(self.source), names=["Sway", "Yaw"], read=False)
+        self.assertEqual(db.list(display=False, relative=True), ["Sway", "Yaw"])
+        self.assertEqual(set(db.register.values()), {None})
+        self.assert_same_data(db.get(name="Yaw"), "Yaw")
+
     def test_clear_then_read_others(self):
         db = TsDB.fromfile(self.source)
         db.clear(names="Surge", display=False)
