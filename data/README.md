@@ -3,6 +3,20 @@
 Sample files used by the tests in `test/` and the examples in `docs/source/examples/`. They are not part of the
 installed package.
 
+## Files provided by SINTEF Ocean
+
+SINTEF Ocean provided these files for the QATS tests, with permission to publish them in this repository. They hold
+the same SIMA result, the nodal displacements of a flexible riser (204 series, 200 time steps), in three formats.
+
+| File | Format |
+| --- | --- |
+| `sintef_asc_noddis.asc`, `key_sintef_asc_noddis.txt` | SIMA/RIFLEX ASCII results and key file |
+| `sintef_bin_noddis.bin`, `key_sintef_bin_noddis.txt` | SIMA/RIFLEX binary results and key file |
+| `sintef_noddis.h5` | SIMA HDF5 |
+
+The files are renamed. In the key files, the path of the result file on the computer that wrote it is replaced by
+the file name; nothing else is changed.
+
 ## Files from other projects
 
 The OpenFAST files are copied unchanged, apart from their names, from the projects below. They are licensed under the
