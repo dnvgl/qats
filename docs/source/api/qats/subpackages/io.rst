@@ -76,6 +76,20 @@
     .. rubric:: API
 
 
+:mod:`qats.io.openfast`
+-----------------------
+
+.. automodule:: qats.io.openfast
+    :members:
+
+    .. rubric:: Functions overview
+
+    .. autoautosummary:: qats.io.openfast
+        :functions:
+
+    .. rubric:: API
+
+
 :mod:`qats.io.other`
 -------------------------
 
