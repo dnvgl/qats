@@ -201,6 +201,20 @@ class TestCsv(FileFormatTestCase):
         path = self.write("a.csv", "Time,surge,heave\n0.0,1.0,10.0,\n0.5,2.0,20.0,\n")
         self.assert_series(self.read(path), self.expected)
 
+    def test_time_only(self):
+        """A file with only a time column is an error, not a series named after part of the time column (#222)."""
+        for header in ("Time", "t", "Tid"):
+            with self.subTest(header):
+                path = self.write("a.csv", f"{header}\n0.0\n0.5\n")
+                with self.assertRaisesRegex(ValueError, r"no comma, semicolon, tab or space between the names"):
+                    TsDB.fromfile(path)
+
+    def test_other_separator(self):
+        """Only the documented separators are used, e.g. not '|'."""
+        path = self.write("a.csv", "Time|surge\n0.0|1.0\n0.5|2.0\n")
+        with self.assertRaisesRegex(ValueError, r"no comma, semicolon, tab or space"):
+            TsDB.fromfile(path)
+
     def test_value_not_a_number(self):
         """The error names the column, the data row and the value."""
         path = self.write("a.csv", "Time,surge,heave\n0.0,1.0,\n0.5,abc,20.0\n")

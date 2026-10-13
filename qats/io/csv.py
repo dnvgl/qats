@@ -14,6 +14,7 @@ from .base import Reader, _RowSource
 # delimited)" in Western European languages
 _ENCODINGS = ("utf-8", "cp1252")
 _COMMENT = "#"
+_SEPARATORS = ",;\t "  # the separators QATS supports: comma, semicolon, tab, space
 
 
 def _is_utf8(path, chunk_size=2**20):
@@ -31,8 +32,9 @@ def _is_utf8(path, chunk_size=2**20):
 
 def _csv_options(path):
     """
-    Options for pandas.read_csv for a .csv file: its encoding, the comment lines before the header, and the decimal
-    mark (a decimal comma in files with ';' as separator, as Excel writes with e.g. Norwegian regional settings).
+    Options for pandas.read_csv for a .csv file: its encoding, the comment lines before the header, the separator,
+    and the decimal mark (a decimal comma in files with ';' as separator, as Excel writes with e.g. Norwegian regional
+    settings).
     """
     encoding = _ENCODINGS[0] if _is_utf8(path) else _ENCODINGS[1]
     skiprows = 0
@@ -46,15 +48,18 @@ def _csv_options(path):
             else:
                 data = line
                 break
-    decimal = "."
     try:
-        # the separator as pandas finds it (sep=None): sniffed from the header line
-        separator = csv.Sniffer().sniff(header).delimiter
+        # sniffed from the header line, as pandas does with sep=None, but among the separators QATS supports only:
+        # unrestricted, the sniffer picks a letter of a one-word header, e.g. 'm' in 'Time' (#222)
+        separator = csv.Sniffer().sniff(header, delimiters=_SEPARATORS).delimiter
     except csv.Error:
-        separator = None  # e.g. a single column
-    if separator == ";" and "," in data:
-        decimal = ","
-    if separator is not None and data:
+        raise QatsValueError(
+            f"The file '{path}' has no comma, semicolon, tab or space between the names on its header line "
+            f"{header.strip()!r}. A .csv file needs time and at least one series, in columns with one of these "
+            "separators."
+        ) from None
+    decimal = "," if separator == ";" and "," in data else "."
+    if data:
         # more values than names, e.g. decimal commas with ',' as separator: pandas would shift the columns and read
         # wrong values without an error
         names, values = (next(csv.reader([line.strip()], delimiter=separator)) for line in (header, data))
@@ -63,7 +68,7 @@ def _csv_options(path):
                 f"The file '{path}' has {len(values)} values on its first data row but {len(names)} names, with "
                 f"{separator!r} as separator. Decimal commas need ';' as separator."
             )
-    return dict(encoding=encoding, skiprows=skiprows, decimal=decimal)
+    return dict(encoding=encoding, skiprows=skiprows, sep=separator, decimal=decimal)
 
 
 def read_names(path):
@@ -86,10 +91,12 @@ def read_names(path):
 
     .. versionchanged :: 5.5.0
         Files in the Windows-1252 encoding and files with comment lines (starting with '#') before the header are
-        read.
+        read. The separator must be a comma, semicolon, tab or space; a file without one of these on its header line,
+        e.g. with only a time column, raises QatsValueError. Before, such a file was split on a letter of its header
+        and read as a series named after part of it.
     """
-    # pandas will infer the format e.g. delimiter.
-    df = pd.read_csv(path, nrows=1, sep=None, engine="python", index_col=False, **_csv_options(path))
+    # encoding, comment lines, separator and decimal mark detected by _csv_options
+    df = pd.read_csv(path, nrows=1, engine="python", index_col=False, **_csv_options(path))
     names = list(df)
     _ = names.pop(0)  # remove time which is assumed to be in the first column
     return names
@@ -126,9 +133,9 @@ def read_data(path, ind=None):
         separator at the end of the rows no longer shifts the columns, and a first data row with more values than
         names (e.g. decimal commas with ',' as separator) raises QatsValueError; before, both gave wrong values.
     """
-    # pandas will infer the format e.g. delimiter. index_col=False: a separator at the end of the rows does not make
-    # the first column an index, which would shift the other columns
-    df = pd.read_csv(path, usecols=ind, sep=None, engine="python", index_col=False, **_csv_options(path))
+    # encoding, comment lines, separator and decimal mark detected by _csv_options. index_col=False: a separator at the
+    # end of the rows does not make the first column an index, which would shift the other columns
+    df = pd.read_csv(path, usecols=ind, engine="python", index_col=False, **_csv_options(path))
     for name in df.columns:
         if not pd.api.types.is_numeric_dtype(df[name]):
             # a value that is not a number (empty cells are nan, which is a number)

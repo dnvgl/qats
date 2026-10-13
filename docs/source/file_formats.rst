@@ -45,7 +45,9 @@ Rules:
 
 * **Header:** the first line that doesn't start with ``#`` holds the names. Lines starting with ``#`` before it are
   skipped.
-* **Separator:** detected automatically. Comma, semicolon, tab and space all work.
+* **Separator:** comma, semicolon, tab or space, detected from the header line. Other separators (e.g. ``|``) are not
+  supported.
+* **Columns:** time and at least one series. A file with only a time column is an error.
 * **Names:** may contain spaces. A name containing the separator must be in double quotes, e.g. ``"surge, x"``.
 * **Time:** the first column, with any name.
 * **Values:** an empty cell is read as ``nan``. A separator at the end of each line is allowed, but a line must not
@@ -85,6 +87,8 @@ Error                                                                    Likely 
 ``KeyError: The file ... contains duplicate time vectors`` (``.dat``)    More than one name starts with ``Time``/``time``
 ``ValueError: invalid column index ...`` (``.dat``)                      A name contains a space, or a line has fewer
                                                                          values than names
+``QatsValueError: ... no comma, semicolon, tab ...`` (``.csv``)          Only a time column, or another separator, e.g.
+                                                                         ``|``
 ``QatsValueError: ... not a number in column ...`` (``.csv``)            Text in a value column, a decimal comma with
                                                                          another separator than ``;``, or a line before
                                                                          the header that doesn't start with ``#``
