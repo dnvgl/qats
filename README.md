@@ -2,10 +2,12 @@
 
 Python library and GUI for efficient processing and visualization of time series.
 
+[![PyPI](https://img.shields.io/pypi/v/qats)](https://pypi.org/project/qats/)
+[![conda-forge](https://img.shields.io/conda/vn/conda-forge/qats)](https://anaconda.org/conda-forge/qats)
 [![Python versions](https://img.shields.io/pypi/pyversions/qats)](https://pypi.org/project/qats/)
-[![Build Status](https://github.com/dnvgl/qats/actions/workflows/test.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/test.yml)
-[![PyPi Deployment Status](https://github.com/dnvgl/qats/actions/workflows/publish.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/publish.yml)
-[![Documentation Status](https://readthedocs.org/projects/qats/badge/?version=latest)](https://qats.readthedocs.io/en/latest/?badge=latest)
+[![Tests](https://github.com/dnvgl/qats/actions/workflows/test.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/test.yml)
+[![Documentation Status](https://app.readthedocs.org/projects/qats/badge/?version=latest)](https://qats.readthedocs.io/en/latest/)
+[![PyPI Deployment Status](https://github.com/dnvgl/qats/actions/workflows/publish.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/publish.yml)
 
 ## General
 
@@ -56,6 +58,17 @@ To upgrade from a previous version, the command is:
 ```console
 python -m pip install --upgrade qats
 ```
+
+QATS is also on [conda-forge](https://anaconda.org/conda-forge/qats). With conda (or mamba), install it in a new
+environment:
+
+```console
+conda create -n qats -c conda-forge qats
+```
+
+or in an existing one with `conda install -c conda-forge qats`, and upgrade it with `conda update -c conda-forge qats`.
+A new release appears on conda-forge shortly after it is published on PyPI. In a conda environment, install and
+upgrade QATS with conda only: installing it with `pip` there mixes packages from both sources.
 
 You may now import qats in your own scripts:
 

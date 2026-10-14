@@ -19,6 +19,18 @@ QATS is installed from PyPI by using `pip`:
 
     $ python -m pip install qats
 
+QATS is also on `conda-forge <https://anaconda.org/conda-forge/qats>`_. With conda (or mamba), install it in a new
+environment:
+
+.. code-block:: console
+
+    $ conda create -n qats -c conda-forge qats
+
+or in an existing one with ``conda install -c conda-forge qats``, and upgrade it with
+``conda update -c conda-forge qats``. A new release appears on conda-forge shortly after it is published on PyPI. In a
+conda environment, install and upgrade QATS with conda only: installing it with ``pip`` there mixes packages from both
+sources.
+
 Now you should be able to import the package in the Python console
 
 .. code-block:: python
