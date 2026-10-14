@@ -2,12 +2,12 @@
 
 Python library and GUI for efficient processing and visualization of time series.
 
-[![Python versions](https://img.shields.io/pypi/pyversions/qats)](https://pypi.org/project/qats/)
 [![PyPI](https://img.shields.io/pypi/v/qats)](https://pypi.org/project/qats/)
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/qats)](https://anaconda.org/conda-forge/qats)
-[![Build Status](https://github.com/dnvgl/qats/actions/workflows/test.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/test.yml)
-[![PyPi Deployment Status](https://github.com/dnvgl/qats/actions/workflows/publish.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/publish.yml)
+[![Python versions](https://img.shields.io/pypi/pyversions/qats)](https://pypi.org/project/qats/)
+[![Tests](https://github.com/dnvgl/qats/actions/workflows/test.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/test.yml)
 [![Documentation Status](https://app.readthedocs.org/projects/qats/badge/?version=latest)](https://qats.readthedocs.io/en/latest/)
+[![PyPI Deployment Status](https://github.com/dnvgl/qats/actions/workflows/publish.yml/badge.svg)](https://github.com/dnvgl/qats/actions/workflows/publish.yml)
 
 ## General
 
