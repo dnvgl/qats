@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qats-example-reader"
+version = "1.0.0"
+description = "An example QATS reader plugin for a text table with names and units"
+requires-python = ">=3.11"
+# a published plugin requires the QATS version with the reader interface it is written for, e.g. "qats>=5.5"
+dependencies = ["qats", "numpy"]
+
+# the reader QATS finds: "<any name>" = "<module>:<Reader subclass>"
+[project.entry-points."qats.readers"]
+example-table = "qats_example_reader:ExampleTableReader"

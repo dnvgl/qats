@@ -115,5 +115,6 @@ works for series with different time arrays.
    db.add(TimeSeries("Pitch", t, 1.5 * np.exp(-0.05 * t) * np.cos(t), unit="deg"))
    db.export("decay.ts")  # SIMO/RIFLEX direct access format; .dat, .h5 and .pkl also work
 
-If you have many files in another format, a reader for that format saves the conversion. Open an
-`issue <https://github.com/dnvgl/qats/issues>`_ to suggest it, or contribute one.
+If you have many files in another format, a reader for that format saves the conversion: see
+:ref:`reader_plugins`, and :ref:`supported_formats` for the formats QATS reads already. You can also open an
+`issue <https://github.com/dnvgl/qats/issues>`_ to suggest a format.

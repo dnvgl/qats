@@ -45,6 +45,7 @@ _BUILTIN_READERS = (
 logger = logging.getLogger(__name__)
 
 _readers: dict[str, Reader] = {}  # by name, in registration order
+_origins: dict[str, str] = {}  # by name: where the reader comes from, e.g. "built-in" or a plugin package
 _loaded = False
 
 
@@ -59,13 +60,14 @@ def _instance(reader):
     return reader
 
 
-def _add(reader, replace=False):
+def _add(reader, replace=False, origin="registered in a script"):
     if reader.name in _readers and not replace:
         raise QatsValueError(
             f"A reader named {reader.name!r} is already registered ({_readers[reader.name]!r}). "
             "Use replace=True to replace it."
         )
     _readers[reader.name] = reader
+    _origins[reader.name] = origin
 
 
 def _load():
@@ -77,9 +79,11 @@ def _load():
 
     for path in _BUILTIN_READERS:
         module, _, cls = path.partition(":")
-        _add(_instance(getattr(importlib.import_module(module), cls)), replace=True)
+        _add(_instance(getattr(importlib.import_module(module), cls)), replace=True, origin="built-in")
 
     for ep in importlib.metadata.entry_points(group=ENTRY_POINT_GROUP):
+        dist = getattr(ep, "dist", None)  # the installed package, to uninstall or upgrade
+        package = f"{dist.name} {dist.version}" if dist is not None else None
         try:
             reader = _instance(ep.load())
             if reader.api_version != READER_API_VERSION:
@@ -92,11 +96,10 @@ def _load():
                     f"Reader {reader.name!r} ({type(reader).__name__}) has the same name as the registered reader "
                     f"{_readers[reader.name]!r}"
                 )
-            _add(reader)
+            _add(reader, origin=f"plugin package {package}" if package else "plugin")
         except Exception as err:  # a broken plugin must not break QATS
-            dist = getattr(ep, "dist", None)  # the installed package, to uninstall or upgrade
-            package = f" from the package {dist.name} {dist.version}" if dist is not None else ""
-            logger.warning("Skipped the file reader plugin %r (%s)%s: %s", ep.name, ep.value, package, err)
+            source = f" from the package {package}" if package else ""
+            logger.warning("Skipped the file reader plugin %r (%s)%s: %s", ep.name, ep.value, source, err)
 
 
 def register(reader, replace=False):

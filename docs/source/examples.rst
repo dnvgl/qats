@@ -14,7 +14,6 @@ Import the time series database, load data from file and plot all time series.
    :language: python
    :linenos:
    :lines: 1-16
-   :emphasize-lines: 16
 
 You can also select a subset of the timeseries (suports wildcards) as shown below.
 
@@ -23,7 +22,6 @@ You can also select a subset of the timeseries (suports wildcards) as shown belo
    :linenos:
    :lineno-start: 15
    :lines: 18-19
-   :emphasize-lines: 2
 
 You can also plot the power spectral density of the selected time series. Because the 'surge' time series was sampled at
 a varying time step the the time series are resampled to a constant time step of 0.1 seconds before the FFT.
@@ -33,7 +31,6 @@ a varying time step the the time series are resampled to a constant time step of
    :linenos:
    :lineno-start: 15
    :lines: 21-22
-   :emphasize-lines: 2
 
 Count cycles using the Rainflow algorithm
 *****************************************
@@ -194,7 +191,7 @@ Choose a file reader and add your own
 
 List the available file readers, choose a reader for a file whose name does not tell its format, and add a reader for
 a file format of your own in a script. To make a reader available in every script and in the GUI, put it in a package
-that registers it through the ``qats.readers`` entry point group (see :mod:`qats.io.registry`).
+that registers it through the ``qats.readers`` entry point group (see :ref:`reader_plugins`).
 
 .. literalinclude:: examples/reader_registry.py
    :language: python

@@ -54,18 +54,20 @@ and run the command line interface (CLI).
 
     $ qats -h
 
-    usage: qats [-h] [--version] {app,config} ...
+    usage: qats [-h] [--version] {app,config,formats} ...
 
-    QATS is a library and desktop application for time series analysis
+    qats is a library and desktop application for time series analysis
 
-    optional arguments:
-      -h, --help    show this help message and exit
-      --version     Package version
+    options:
+      -h, --help            show this help message and exit
+      --version             Package version
 
     Commands:
-      {app,config}
-        app         Launch the desktop application
-        config      Configure the package
+      {app,config,formats}
+        app                 Launch the desktop application
+        config              Configure the package
+        formats             List the file formats QATS reads, also from installed
+                            plugins
 
 
 .. note::
