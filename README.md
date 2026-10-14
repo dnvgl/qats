@@ -6,7 +6,7 @@ Python library and GUI for efficient processing and visualization of time series
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/qats)](https://anaconda.org/conda-forge/qats)
 [![Python versions](https://img.shields.io/pypi/pyversions/qats)](https://pypi.org/project/qats/)
 [![Tests](https://img.shields.io/github/actions/workflow/status/dnvgl/qats/test.yml?branch=master&label=tests)](https://github.com/dnvgl/qats/actions/workflows/test.yml?query=branch%3Amaster)
-[![Documentation](https://img.shields.io/readthedocs/qats/latest?label=docs)](https://qats.readthedocs.io/en/latest/)
+[![Documentation](https://img.shields.io/readthedocs/qats/stable?label=docs)](https://qats.readthedocs.io/en/stable/)
 [![Deployment](https://img.shields.io/github/actions/workflow/status/dnvgl/qats/publish.yml?event=release&label=deployment)](https://github.com/dnvgl/qats/actions/workflows/publish.yml?query=event%3Arelease)
 
 ## General
