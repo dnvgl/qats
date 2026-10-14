@@ -28,7 +28,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Set up uv and python
-      uses: astral-sh/setup-uv@v10.2.0
+      uses: astral-sh/setup-uv@v10.3.0
       with:
         python-version: "3.11"
     - name: Leave out the local version part for TestPyPI
@@ -76,7 +76,7 @@ jobs:
         name: builds
         path: dist
     - name: Set up uv
-      uses: astral-sh/setup-uv@v10.2.0
+      uses: astral-sh/setup-uv@v10.3.0
       with:
         enable-cache: false
     - name: Publish to PyPI
@@ -99,7 +99,7 @@ jobs:
         name: builds
         path: dist
     - name: Set up uv
-      uses: astral-sh/setup-uv@v10.2.0
+      uses: astral-sh/setup-uv@v10.3.0
       with:
         enable-cache: false
     - name: Publish to TestPyPI
