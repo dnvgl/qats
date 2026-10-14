@@ -35,8 +35,6 @@ request (issue) or make it yourself and create a pull request.
 See :ref:`examples` for more examples on how to invoke QATS in your own scripts to do more advance operations. :ref:`api`
 provide information on the content of the QATS library.
 
-.. See :ref:`changelog` for changelog.
-
 GUI
 ***
 
@@ -68,11 +66,11 @@ The Python versions supported by the latest version of QATS are:
    `PyPI <https://pypi.org/project/qats/>`_.
 
 
-Source code, Issue tracker and Changelog
-****************************************
+Source code, issue tracker and release notes
+********************************************
 
 The `source code <https://github.com/dnvgl/qats>`_, `issue tracker <https://github.com/dnvgl/qats/issues>`_ and
-`changelog <https://github.com/dnvgl/qats/releases>`_ are hosted on GitHub.
+`release notes <https://github.com/dnvgl/qats/releases>`_ are hosted on GitHub.
 
 
 Downloads
@@ -94,7 +92,6 @@ Table of contents
    examples
    gui
    api/index
-   changes
 
 
 .. Indices and tables
@@ -117,4 +114,4 @@ Table of contents
    PyPI Project <https://pypi.org/project/qats/>
    GitHub Repository <https://github.com/dnvgl/qats>
    Issue Tracker <https://github.com/dnvgl/qats/issues>
-   Changelog <https://github.com/dnvgl/qats/releases>
+   Release notes <https://github.com/dnvgl/qats/releases>

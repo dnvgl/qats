@@ -44,7 +44,7 @@ Count cycles using the Rainflow algorithm
     to better performance. One may also experience minor changes in rebinned cycles. Finally, the mesh established by
     :func:`qats.fatigue.rainflow.mesh()` (and used by :meth:`TimeSeries.plot_cycle_rangemean3d`) was not correct for
     version <= 4.6.1. For more details, please refer to the
-    `CHANGELOG <https://github.com/dnvgl/qats/blob/master/CHANGELOG.md>`_.
+    `release notes of 4.7.0 <https://github.com/dnvgl/qats/releases/tag/4.7.0>`_.
 
 Fetch a single time series from the time series database, extract and visualize the cycle distribution using the
 Rainflow algorithm.
