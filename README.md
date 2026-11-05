@@ -78,10 +78,17 @@ You may now import qats in your own scripts:
 
 ... or use the GUI to inspect time series. 
 
-The GUI uses the [Qt](https://www.qt.io) binding [PySide6](https://pypi.org/project/PySide6/), which is installed
-with `qats` and is the binding QATS is tested with. [PyQt6](https://pypi.org/project/PyQt6/) also works, through
-[qtpy](https://github.com/spyder-ide/qtpy), but is supported on a best-effort basis only. To use it, install it and
-select it with the environment variable `QT_API`:
+The GUI uses the [Qt](https://www.qt.io) binding [PySide6](https://pypi.org/project/PySide6/) (its Essentials
+package, `pyside6-essentials`), which is installed with `qats` and is the binding QATS is tested with. From QATS 6.0
+the GUI will be optional, so that `pip install qats` installs the library only, for example on a cloud or batch
+machine without a display. To get the GUI with both QATS 5.x and 6.0, install QATS with:
+
+```console
+python -m pip install "qats[gui]"
+```
+
+[PyQt6](https://pypi.org/project/PyQt6/) also works, through [qtpy](https://github.com/spyder-ide/qtpy), but is
+supported on a best-effort basis only. To use it, install it and select it with the environment variable `QT_API`:
 
 ```console
 python -m pip install pyqt6

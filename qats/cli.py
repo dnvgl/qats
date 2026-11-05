@@ -11,18 +11,48 @@ import sys
 from . import __version__
 from .app import LOGGING_LEVELS  # without Qt: only the 'app' command loads the GUI
 
+GUI_INSTALL_HINT = 'Install the desktop application with: python -m pip install "qats[gui]"'
+
+
+def exit_without_gui(what, exc):
+    """
+    Stop with a message that a package of the desktop application is missing, and how to install it.
+
+    Parameters
+    ----------
+    what : str
+        What needs the missing package, e.g. "The desktop application needs Qt".
+    exc : ImportError
+        The error from importing the package.
+
+    Notes
+    -----
+    .. versionadded :: 5.6.0
+    """
+    sys.exit(f"{what}, which could not be imported: {exc}\n{GUI_INSTALL_HINT}")
+
 
 def link_app():
     """
     Create start menu item and desktop shortcut to `qats` desktop app
     (by invoking pythonw.exe with the necessary arguments, not the
     previous entry point qats-app.exe (or .cmd)).
+
+    Notes
+    -----
+    .. versionchanged :: 5.6.0
+        Stops with an install hint if Qt or pywin32 is missing.
     """
     if not sys.platform == "win32":
         print(f"Unable to create links to app on {sys.platform} OS.")
         sys.exit()
 
-    from win32com.client import Dispatch
+    try:
+        import qtpy  # noqa: F401 -- only checks that the application the links start can run
+
+        from win32com.client import Dispatch
+    except ImportError as exc:
+        exit_without_gui("Links to the desktop application need Qt and pywin32", exc)
 
     pkg_name = "qats"
     ico_ref = importlib.resources.files("qats.app") / "qats.ico"
@@ -61,12 +91,20 @@ def link_app():
 def unlink_app():
     """
     Remove start menu item and desktop shortcut to `qats` desktop application.
+
+    Notes
+    -----
+    .. versionchanged :: 5.6.0
+        Stops with an install hint if pywin32 is missing.
     """
     if not sys.platform == "win32":
         print(f"Unable to remove links to app on {sys.platform} OS.")
         sys.exit()
 
-    from win32com.client import Dispatch
+    try:
+        from win32com.client import Dispatch
+    except ImportError as exc:
+        exit_without_gui("Removing the links to the desktop application needs pywin32", exc)
 
     pkg_name = "qats"
     lnk_name = pkg_name.upper() + ".lnk"
@@ -92,8 +130,16 @@ def launch_app(home=True, files=None, log_level="info"):
         Initialize the application with these time series files (paths).
     log_level: str, optional
         Set logging level, default 'info'
+
+    Notes
+    -----
+    .. versionchanged :: 5.6.0
+        Stops with an install hint if Qt is missing, instead of an ImportError traceback.
     """
-    from qtpy.QtWidgets import QApplication
+    try:
+        from qtpy.QtWidgets import QApplication
+    except ImportError as exc:  # no Qt binding, or qtpy (both come with the extra "gui")
+        exit_without_gui("The desktop application needs Qt", exc)
 
     from .app.exceptions import handle_exception
     from .app.gui import Qats

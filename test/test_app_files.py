@@ -13,6 +13,7 @@ import unittest.mock
 from qats.app.funcs import file_dialog_filters, import_files
 from qats.io import registry
 
+from . import requires_qt
 from .test_reader_snapshot import DATA
 from .test_registry import RegistryTestCase, make_reader
 
@@ -73,6 +74,7 @@ class TestImportFiles(RegistryTestCase):
         self.assertEqual(failed[files[3]], "it is a folder, not a file")
 
 
+@requires_qt
 class TestDropFiles(RegistryTestCase):
     """A format added by a plugin can be dropped on the GUI; files that cannot be read are reported in the log."""
 

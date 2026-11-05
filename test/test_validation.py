@@ -26,6 +26,8 @@ from qats.stats.gumbel import Gumbel
 from qats.stats.gumbelmin import GumbelMin
 from qats.stats.weibull import Weibull
 
+from . import requires_qt
+
 DATA = os.path.join(os.path.dirname(__file__), "..", "data")
 
 METHOD_GUMBEL = "Method must be either msm or lse or pwm or mle"
@@ -378,6 +380,7 @@ class TestValidation(unittest.TestCase):
         self.assertEqual(result.stdout.strip(), "ok")
 
 
+@requires_qt
 class TestValidationGui(unittest.TestCase):
     # separate class without the matplotlib backend switching above: once Qt is running, matplotlib cannot switch
     # back to the native macOS backend

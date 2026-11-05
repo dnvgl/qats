@@ -231,7 +231,7 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/58/01/1253e6698a07380cd31a736d248a3f2a50a7c88779a1813da27503cadc2a/contourpy-1.3.3.tar.gz", hash = "sha256:083e12155b210502d0bca491432bb04d56dc3432f95a979b429f2848c3dbe880", size = 13466174, upload-time = "2025-07-26T12:03:12.549Z" }
 wheels = [
@@ -321,7 +321,7 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/83/5a/a55177dd22553a277388e8a1b3220e92de91bacb28356cdc73caa240121d/contourpy-1.4.0.tar.gz", hash = "sha256:20156f5a1ac4f8ce02656e39a61e82164a3d359796dc8026f75b062783d500e1", size = 13323726, upload-time = "2026-09-11T19:05:05.808Z" }
 wheels = [
@@ -1327,39 +1327,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pyside6"
-version = "6.12.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyside6-addons" },
-    { name = "pyside6-essentials" },
-    { name = "pyside6-pdf" },
-    { name = "pyside6-webengine" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/fa/db/0722bbb81c3515dd0847fd66a7fb4760b13ad59c89e40b27b362ab5624e2/pyside6-6.12.0-cp310-abi3-macosx_14_0_universal2.whl", hash = "sha256:efea4c2f2aa54403c45de825865a902a1960a1cc9d5aaa92d4ebb8f4c4cd0708", size = 577475, upload-time = "2026-10-08T09:11:15.222Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/53/db0cabed1e70d0bc4666b8cbc2611b72bff2f9d2c4813820182621a8c6ee/pyside6-6.12.0-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:d13ed4d0053cc20f3e4e0fdbf12790a9b7f958d7e22c0843411ecfa8c799e2a9", size = 577709, upload-time = "2026-10-08T09:11:17.345Z" },
-    { url = "https://files.pythonhosted.org/packages/4d/8c/dfd4f339285d2e6c31067789b9b7dd2cee26c098ecc78ac7200fb04aa344/pyside6-6.12.0-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:8920e163f60493e18822d20f1e01c7c4bcf9c1c5cfbc68284788896f692594f8", size = 577708, upload-time = "2026-10-08T09:11:18.705Z" },
-    { url = "https://files.pythonhosted.org/packages/a1/da/8e8514fc29ea916c3cd71a524480b77409e19ed12d709e8a5d73be089b81/pyside6-6.12.0-cp310-abi3-win_amd64.whl", hash = "sha256:31a8d2893f2f28ab483b1534dde0438f27af6e234593de30425cb4729052d8f8", size = 578958, upload-time = "2026-10-08T09:11:20.179Z" },
-    { url = "https://files.pythonhosted.org/packages/5f/2e/3ebafaf7f4ccea6f6ea9d017f7fc7d9484b79e6b31d1cb92f5f5262055f0/pyside6-6.12.0-cp310-abi3-win_arm64.whl", hash = "sha256:22e2ec6407f32b61955a28f91ab55676e60017210285c28f0c381bfeed389414", size = 562743, upload-time = "2026-10-08T09:11:21.552Z" },
-]
-
-[[package]]
-name = "pyside6-addons"
-version = "6.12.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyside6-essentials" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/16/c401d6455dbf49df37a8b142883e12d446abf51919c3e0ef5d9570e29160/pyside6_addons-6.12.0-cp310-abi3-macosx_14_0_universal2.whl", hash = "sha256:1d9bcd294ce1c9829194c7d13b01f771a2254b86cb3462cc3399321d2797fdac", size = 90545550, upload-time = "2026-10-08T09:08:14.778Z" },
-    { url = "https://files.pythonhosted.org/packages/ff/3e/0d6c5934de575286ac0699a701d4155048185035b8da0ee78d57a38bc7ef/pyside6_addons-6.12.0-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:4ab38c0017f0453671a9313d3a53ca1c0e378924f54b07e596bcea94a9642391", size = 59192702, upload-time = "2026-10-08T09:08:21.13Z" },
-    { url = "https://files.pythonhosted.org/packages/94/14/b6c5683614601448c3ea8f19613ca378db75158ba594b662a8a8041e3e5f/pyside6_addons-6.12.0-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:48cd0b639c06c9f79685f340ccae4319614b66d6efcdf06c2ce3836790d8c46e", size = 63646547, upload-time = "2026-10-08T09:08:26.921Z" },
-    { url = "https://files.pythonhosted.org/packages/02/41/ba3d52fe2acd942ebf71eb02b3bdf0897f7f6f4ce8f52289cb50228e48d3/pyside6_addons-6.12.0-cp310-abi3-win_amd64.whl", hash = "sha256:98d8d62010da6605344cee83e5c96fb846170a1f2d924523f10f5d92078b02b0", size = 40522402, upload-time = "2026-10-08T09:08:31.678Z" },
-    { url = "https://files.pythonhosted.org/packages/ea/73/860ab764368cd59b1a09cb891a9a4519425395ad1f6c47d83fde908fe603/pyside6_addons-6.12.0-cp310-abi3-win_arm64.whl", hash = "sha256:3c079cbaad2ad28bc5bfa92fd6bac4ba28d622b825825e3b4220f0682599b2db", size = 35940682, upload-time = "2026-10-08T09:08:35.424Z" },
-]
-
-[[package]]
 name = "pyside6-essentials"
 version = "6.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1372,36 +1339,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/5e/4e/f4fd4c016719be832ec49d3c87940459e87fd666179a0a199a3998d07916/pyside6_essentials-6.12.0-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:08c5841063fc1df69b7fa1ee405f539e66576a83fc48004be3e2c5e35ccbfa69", size = 83810102, upload-time = "2026-10-08T09:10:09.13Z" },
     { url = "https://files.pythonhosted.org/packages/03/61/9a7e32a37b224f68506785bfb0f288d516098ec71681782d72b695a6c95d/pyside6_essentials-6.12.0-cp310-abi3-win_amd64.whl", hash = "sha256:c9a95102aa23c1f86516a30d5a9be37552d324eee7e567eb7508973f1218cb42", size = 82153795, upload-time = "2026-10-08T09:10:15.104Z" },
     { url = "https://files.pythonhosted.org/packages/92/11/43afb3d0e7c25dd09f0eb7e44f1283dadb5fa8d8b517249fe3fde02e6702/pyside6_essentials-6.12.0-cp310-abi3-win_arm64.whl", hash = "sha256:c76aa689989bf9bb9b45535e0a81c6733294df720b0eed1308fa30d2606b98cc", size = 62073456, upload-time = "2026-10-08T09:10:20.202Z" },
-]
-
-[[package]]
-name = "pyside6-pdf"
-version = "6.12.0.140"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyside6-essentials" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/33/23949c3b48af4b96b618e0502b7313ac52a782615db8dceae5bc2c516831/pyside6_pdf-6.12.0.140-cp310-abi3-macosx_14_0_universal2.whl", hash = "sha256:74287989dd24a82ac1604e27a2d4530a0ab71ff03cdf878c16fdbcf5144373fb", size = 8644803, upload-time = "2026-10-08T09:07:36.716Z" },
-    { url = "https://files.pythonhosted.org/packages/b4/f0/9b4f3cb0506641ea53210c7b635703f1c2c1e81c27074438105ff118f8e7/pyside6_pdf-6.12.0.140-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:0c94370b6b9d65fbfe54f9d6d25df0677db0cdcfd0a842a63958a3603a42007c", size = 2843877, upload-time = "2026-10-08T09:07:39.208Z" },
-    { url = "https://files.pythonhosted.org/packages/39/cb/4a8cf3edb3f1b2396935573c02255be75f5605dcc77e9e3a201a6d6f26d7/pyside6_pdf-6.12.0.140-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:2b63ee1f8ce3d3b2b648be2ebda483dd0fbca8d44c92a6c6f924033ac7fbde8c", size = 2837165, upload-time = "2026-10-08T09:07:40.756Z" },
-    { url = "https://files.pythonhosted.org/packages/0e/8a/3f5eab9eb9e6486f0334b100322bbd0aff432dd90ad7977a3910979a163f/pyside6_pdf-6.12.0.140-cp310-abi3-win_amd64.whl", hash = "sha256:4971ba1a0ca15e7c29cfd808e9600aeb46b2305dad01456eb09fa3197166268e", size = 2983516, upload-time = "2026-10-08T09:07:42.312Z" },
-    { url = "https://files.pythonhosted.org/packages/b2/87/5c29bdaf47bf0b0cee7f467e86ffeb07be5bf8aa2afd2ff6f0785d0515b4/pyside6_pdf-6.12.0.140-cp310-abi3-win_arm64.whl", hash = "sha256:ce6e4d858df1eb4e2adcbd8ba212f3611ce60f9978881fe10d417f36013a6ff9", size = 2758117, upload-time = "2026-10-08T09:07:43.936Z" },
-]
-
-[[package]]
-name = "pyside6-webengine"
-version = "6.12.0.140"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyside6-addons" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/08/37/3b50067bdcba5c22e20a8d7a029c919850c6d94f8398175b330c3b8765ad/pyside6_webengine-6.12.0.140-cp310-abi3-macosx_14_0_universal2.whl", hash = "sha256:9a1de2da360d1817c08e9400a2a2fc5234beb3022a22123e15355169e183074e", size = 249778242, upload-time = "2026-10-08T09:06:03.602Z" },
-    { url = "https://files.pythonhosted.org/packages/ce/e0/cb8b68b962afc253709ed61555d0a4f297fd6786c0e77921d2e951504210/pyside6_webengine-6.12.0.140-cp310-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:c041c9921d7c91c9e51a2c027f434d05c3c59baa2c8f17b71dc8194e77791f06", size = 116741921, upload-time = "2026-10-08T09:06:13.408Z" },
-    { url = "https://files.pythonhosted.org/packages/1b/34/75944ed126293868fcbcc589fa2254e3310016920e5d32d21c29be021524/pyside6_webengine-6.12.0.140-cp310-abi3-manylinux_2_39_aarch64.whl", hash = "sha256:66a842ccb7f06fa7e357f6d4d63bc2739e3cbc1f93583f314e38c43024fe5f74", size = 114053128, upload-time = "2026-10-08T09:06:21.275Z" },
-    { url = "https://files.pythonhosted.org/packages/21/0d/260c7c286f2d4e8a49c099152a385414a872f022117f937824ca0a3f38e5/pyside6_webengine-6.12.0.140-cp310-abi3-win_amd64.whl", hash = "sha256:f9b61b1d457a591ee590a6b80515f25a3e61e2576a2a0a70566380f9d9de4ab0", size = 131697708, upload-time = "2026-10-08T09:06:29.606Z" },
-    { url = "https://files.pythonhosted.org/packages/76/34/7a2d1d7b95c96adf173c77d1862c2587789f7afb8754430fcfc2c9e4e47a/pyside6_webengine-6.12.0.140-cp310-abi3-win_arm64.whl", hash = "sha256:44d1fac2a057a71b8f947fc5177a95fab8a0ea4e2fda068f223a00fd0193a8c7", size = 65723, upload-time = "2026-10-08T09:06:32.559Z" },
 ]
 
 [[package]]
@@ -1466,11 +1403,18 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pymatreader" },
-    { name = "pyside6" },
+    { name = "pyside6-essentials" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "qtpy" },
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
     { name = "scipy", version = "1.18.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
+]
+
+[package.optional-dependencies]
+gui = [
+    { name = "pyside6-essentials" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "qtpy" },
 ]
 
 [package.dev-dependencies]
@@ -1493,11 +1437,15 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.0.3" },
     { name = "pymatreader", specifier = ">=0.0.32" },
-    { name = "pyside6", specifier = ">=6.10.1" },
+    { name = "pyside6-essentials", specifier = ">=6.10.1" },
+    { name = "pyside6-essentials", marker = "extra == 'gui'", specifier = ">=6.10.1" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=311" },
+    { name = "pywin32", marker = "sys_platform == 'win32' and extra == 'gui'", specifier = ">=311" },
     { name = "qtpy", specifier = ">=2.4.2" },
+    { name = "qtpy", marker = "extra == 'gui'", specifier = ">=2.4.2" },
     { name = "scipy", specifier = ">=1.10.1" },
 ]
+provides-extras = ["gui"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1580,7 +1528,7 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7a/97/5a3609c4f8d58b039179648e62dd220f89864f56f7357f5d4f45c29eb2cc/scipy-1.17.1.tar.gz", hash = "sha256:95d8e012d8cb8816c226aef832200b1d45109ed4464303e997c5b13122b297c0", size = 30573822, upload-time = "2026-02-23T00:26:24.851Z" }
 wheels = [
@@ -1659,7 +1607,7 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/7e/74/66de6258867beb2ef08f35f9f2ac017a52cacd5081714d239ff1a442d458/scipy-1.18.1.tar.gz", hash = "sha256:52c4b7422442aba924d03ad4019852b08a92e64ea187b933135687bfe2747307", size = 30781235, upload-time = "2026-08-21T23:28:50.599Z" }
 wheels = [
@@ -1774,23 +1722,23 @@ resolution-markers = [
     "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "alabaster" },
-    { name = "babel" },
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "docutils" },
-    { name = "imagesize" },
-    { name = "jinja2" },
-    { name = "packaging" },
-    { name = "pygments" },
-    { name = "requests" },
-    { name = "roman-numerals" },
-    { name = "snowballstemmer" },
-    { name = "sphinxcontrib-applehelp" },
-    { name = "sphinxcontrib-devhelp" },
-    { name = "sphinxcontrib-htmlhelp" },
-    { name = "sphinxcontrib-jsmath" },
-    { name = "sphinxcontrib-qthelp" },
-    { name = "sphinxcontrib-serializinghtml" },
+    { name = "alabaster", marker = "python_full_version < '3.12'" },
+    { name = "babel", marker = "python_full_version < '3.12'" },
+    { name = "colorama", marker = "python_full_version < '3.12' and sys_platform == 'win32'" },
+    { name = "docutils", marker = "python_full_version < '3.12'" },
+    { name = "imagesize", marker = "python_full_version < '3.12'" },
+    { name = "jinja2", marker = "python_full_version < '3.12'" },
+    { name = "packaging", marker = "python_full_version < '3.12'" },
+    { name = "pygments", marker = "python_full_version < '3.12'" },
+    { name = "requests", marker = "python_full_version < '3.12'" },
+    { name = "roman-numerals", marker = "python_full_version < '3.12'" },
+    { name = "snowballstemmer", marker = "python_full_version < '3.12'" },
+    { name = "sphinxcontrib-applehelp", marker = "python_full_version < '3.12'" },
+    { name = "sphinxcontrib-devhelp", marker = "python_full_version < '3.12'" },
+    { name = "sphinxcontrib-htmlhelp", marker = "python_full_version < '3.12'" },
+    { name = "sphinxcontrib-jsmath", marker = "python_full_version < '3.12'" },
+    { name = "sphinxcontrib-qthelp", marker = "python_full_version < '3.12'" },
+    { name = "sphinxcontrib-serializinghtml", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/50/a8c6ccc36d5eacdfd7913ddccd15a9cee03ecafc5ee2bc40e1f168d85022/sphinx-9.0.4.tar.gz", hash = "sha256:594ef59d042972abbc581d8baa577404abe4e6c3b04ef61bd7fc2acbd51f3fa3", size = 8710502, upload-time = "2025-12-04T07:45:27.343Z" }
 wheels = [
@@ -1810,23 +1758,23 @@ resolution-markers = [
     "python_full_version >= '3.12' and python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "alabaster" },
-    { name = "babel" },
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "docutils" },
-    { name = "imagesize" },
-    { name = "jinja2" },
-    { name = "packaging" },
-    { name = "pygments" },
-    { name = "requests" },
-    { name = "roman-numerals" },
-    { name = "snowballstemmer" },
-    { name = "sphinxcontrib-applehelp" },
-    { name = "sphinxcontrib-devhelp" },
-    { name = "sphinxcontrib-htmlhelp" },
-    { name = "sphinxcontrib-jsmath" },
-    { name = "sphinxcontrib-qthelp" },
-    { name = "sphinxcontrib-serializinghtml" },
+    { name = "alabaster", marker = "python_full_version >= '3.12'" },
+    { name = "babel", marker = "python_full_version >= '3.12'" },
+    { name = "colorama", marker = "python_full_version >= '3.12' and sys_platform == 'win32'" },
+    { name = "docutils", marker = "python_full_version >= '3.12'" },
+    { name = "imagesize", marker = "python_full_version >= '3.12'" },
+    { name = "jinja2", marker = "python_full_version >= '3.12'" },
+    { name = "packaging", marker = "python_full_version >= '3.12'" },
+    { name = "pygments", marker = "python_full_version >= '3.12'" },
+    { name = "requests", marker = "python_full_version >= '3.12'" },
+    { name = "roman-numerals", marker = "python_full_version >= '3.12'" },
+    { name = "snowballstemmer", marker = "python_full_version >= '3.12'" },
+    { name = "sphinxcontrib-applehelp", marker = "python_full_version >= '3.12'" },
+    { name = "sphinxcontrib-devhelp", marker = "python_full_version >= '3.12'" },
+    { name = "sphinxcontrib-htmlhelp", marker = "python_full_version >= '3.12'" },
+    { name = "sphinxcontrib-jsmath", marker = "python_full_version >= '3.12'" },
+    { name = "sphinxcontrib-qthelp", marker = "python_full_version >= '3.12'" },
+    { name = "sphinxcontrib-serializinghtml", marker = "python_full_version >= '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/bd/f08eb0f4eed5c83f1ba2a3bd18f7745a2b1525fad70660a1c00224ec468a/sphinx-9.1.0.tar.gz", hash = "sha256:7741722357dd75f8190766926071fed3bdc211c74dd2d7d4df5404da95930ddb", size = 8718324, upload-time = "2025-12-31T15:09:27.646Z" }
 wheels = [
