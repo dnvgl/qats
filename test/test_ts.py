@@ -221,6 +221,18 @@ class TestTs(unittest.TestCase):
         self.assertEqual(128, len(tsflip.minima(twin=(500, 1.0e12), threshold=None)))
         self.assertEqual(128, len(tsflip.minima(twin=(500, 1.0e12), threshold=-500.0)))
 
+    def test_stats_weibull_parameters(self):
+        """
+        Test that stats() reports the Weibull and Gumbel parameters of QATS 5.5.0, also when the Weibull location
+        parameter is above the smallest maximum (where qats.stats.weibull.pwm() raises)
+        """
+        s = self.ts.stats()
+        np.testing.assert_allclose(
+            (s["wloc"], s["wscale"], s["wshape"], s["gloc"], s["gscale"]),
+            (628.6977387879958, 16.075909034042294, 0.7713810419072378, 772.9552088937547, 34.41691465498858),
+            rtol=1e-12,
+        )
+
 
 class TestTsPlots(unittest.TestCase):
     """Plot methods, run with the non-interactive Agg backend."""

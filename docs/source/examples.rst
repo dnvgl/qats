@@ -130,6 +130,19 @@ Fit a parametric Weibull distribution to the largest 13% of the peak sample. Oft
     Comparison of empirical sample distribution and fitted parametric distribution on linearized scales.
 
 
+Weibull fit with fixed location parameter
+*****************************************
+
+Fit only the scale and shape parameters of the Weibull distribution to the largest 13% of the peak sample, with the
+location parameter fixed at the mean level, and compare the least squares fit with the censored maximum likelihood
+fit.
+
+.. literalinclude:: examples/weibull_fixed_location.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Units from MATLAB files
 ***********************
 
