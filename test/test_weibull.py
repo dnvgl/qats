@@ -134,8 +134,8 @@ class WeibullUnchangedTestCases(unittest.TestCase):
 
     def test_unchanged(self):
         for (sample, method), expected in self.expected.items():
-            # the least squares solver (MINPACK) gives results that differ by up to about 1e-8 between platforms
-            rtol = 1e-7 if method.startswith("lse") else 1e-12
+            # the least squares solver (MINPACK) gives results that differ by up to about 2e-7 between platforms
+            rtol = 1e-6 if method.startswith("lse") else 1e-12
             with self.subTest(sample=sample, method=method):
                 np.testing.assert_allclose(self.functions[method](self.samples[sample]), expected, rtol=rtol)
 
