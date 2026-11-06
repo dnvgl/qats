@@ -306,9 +306,12 @@ class Weibull(object):
         return p
 
     @classmethod
-    def fit(cls, data, method="msm", verbose=False):
+    def fit(cls, data, method="msm", verbose=False, *, loc=None, tail=None):
         """
         Establish Weibull class instance by fit to sample.
+
+        .. versionchanged :: 5.6.0
+            New arguments `loc` and `tail`. A fit that fails raises :class:`ValueError`, see the fit functions.
 
         Parameters
         ----------
@@ -325,6 +328,12 @@ class Weibull(object):
 
         verbose : bool
             If True, fitted parameters are printed to screen.
+        loc : float, optional
+            Fixed location parameter. Only the scale and shape parameters are fitted, to the sample minus `loc`. By
+            default the location parameter is fitted too, except with ``pwm2`` where it is zero.
+        tail : float, optional
+            Fit to the tail of the sample: the fraction <0, 1] of the largest values, so 0.2 fits the 20% largest
+            values. Only with ``lse`` and ``mle``, see :func:`lse` and :func:`mle`.
 
         Returns
         -------
@@ -342,19 +351,37 @@ class Weibull(object):
         >>> from qats.stats.weibull import Weibull
         >>> weib = Weibull.fit(data, method="msm")
 
+        Fit the scale and shape parameters to the exceedances of a threshold `u`, with the location parameter at the
+        threshold:
+
+        >>> weib = Weibull.fit(data[data > u], method="mle", loc=u)
+
+        Fit the largest 13% of the sample by censored maximum likelihood:
+
+        >>> weib = Weibull.fit(data, method="mle", tail=0.13)
+
         """
         options = {"msm": msm, "lse": lse, "mle": mle, "pwm": pwm, "pwm2": pwm2}
-        if method.lower() not in options.keys():
+        method = method.lower()
+        if method not in options.keys():
             raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+        if tail is not None and method not in ("lse", "mle"):
+            raise QatsValueError(f"A tail fit is only available with the methods lse and mle, not {method}")
 
         data = np.array(data)  # ensure numpy array
 
-        params = options[method](data)
-        if len(params) == 2:  # 2-parameter distribution
+        if method == "pwm2" and loc is not None:
+            loc, scale, shape = pwm(data, loc=loc)
+        elif method == "pwm2":  # 2-parameter distribution
             loc = 0
-            scale, shape = params
+            scale, shape = pwm2(data)
         else:  # 3-parameter distribution
-            loc, scale, shape = params
+            kwargs = dict()
+            if loc is not None:
+                kwargs["loc"] = loc
+            if tail is not None:
+                kwargs["tail"] = tail
+            loc, scale, shape = options[method](data, **kwargs)
 
         if verbose:
             print("Fitted parameters:\nlocation = %5.3g\nscale = %5.3g\nshape = %5.3g" % (loc, scale, shape))
@@ -681,9 +708,13 @@ def bootstrap(loc, scale, shape, size, repetitions, method="pwm"):
     return m, cv
 
 
-def lse(x, threshold: float = None):
+def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     """
     Fit Weibull distribution parameters to sample by method of least square fit to empirical cdf.
+
+    .. versionchanged :: 5.6.0
+        New arguments `tail` and `loc`. A fit that fails raises :class:`ValueError` instead of returning wrong
+        parameters.
 
     Parameters
     ----------
@@ -692,12 +723,24 @@ def lse(x, threshold: float = None):
     threshold : float, optional
         Fit distribution to data points above this threshold. The threshold is defined as value <0, 1> in the
         empirical CDF. So with threshold=0.87 the distribution is fitted to the values exceeding the 0.87-quantile of
-        the empirical cumulative distribution function.
+        the empirical cumulative distribution function. Kept for compatibility, use `tail` in new code.
+    tail : float, optional
+        Fit distribution to the tail of the sample: the fraction <0, 1] of the largest values, so 0.13 fits the 13%
+        largest values. ``tail=p`` is the same as ``threshold=1 - p``. Do not give both.
+    loc : float, optional
+        Fixed location parameter. Only the scale and shape parameters are fitted, as a 2-parameter Weibull
+        distribution of the fitted values minus `loc`. Must be below the smallest fitted value.
 
     Returns
     -------
     tuple (floats)
         Distribution parameters ``(loc, scale, shape)``.
+
+    Raises
+    ------
+    QatsValueError
+        If the fit fails: the solver does not converge, a parameter is not finite, the scale or shape parameter is not
+        positive, or the location parameter is not below the smallest fitted value.
 
     Notes
     -----
@@ -706,9 +749,25 @@ def lse(x, threshold: float = None):
     x = np.sort(x)  # sorted dataset
     f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf according to Weibull [1]
     weights = np.ones(np.shape(x))  # by default include all data points
+    threshold = _tail_threshold(f, threshold=threshold, tail=tail)
     if threshold is not None:
         # exclude data points below threshold (fit only to the tail)
         weights[f < threshold] = 0.0
+    xmin = x[weights > 0.0][0]  # smallest fitted value
+
+    if loc is not None:
+        _check_loc(loc, xmin)
+        z, y = x[weights > 0.0], f[weights > 0.0]
+
+        def e2(v):
+            # error function to be minimized, 2-parameter weibull function of the fitted values minus loc
+            return 1.0 - np.exp(-(((z - loc) / v[0]) ** v[1])) - y
+
+        b0, c0 = _paper_fit(z - loc, y)  # initial guess
+        p, cov, info, msg, ier = leastsq(e2, np.asarray([b0, c0]), full_output=True)
+        if ier not in (1, 2, 3, 4):
+            raise QatsValueError(f"The lse fit did not converge: {msg}")
+        return _check_params((float(loc), p[0], p[1]), xmin, "lse")
 
     # define error function
     # v: distribution parameters
@@ -723,29 +782,62 @@ def lse(x, threshold: float = None):
         # error function to be minimized
         return w * (fp(v, z) - y)
 
-    a0, b0, c0 = msm(x)  # initial guess based on method of moments
+    a0, b0, c0 = _msm3(x)  # initial guess based on method of moments
 
     # least square fit (x corresponds to z in lambdas, f corresponds to y and w corresponds to weights)
     p, cov, info, msg, ier = leastsq(e, np.asarray([a0, b0, c0]), args=(x, f, weights), full_output=True)
+    if ier not in (1, 2, 3, 4):
+        raise QatsValueError(f"The lse fit did not converge: {msg}")
 
-    return p[0], p[1], p[2]
+    return _check_params((p[0], p[1], p[2]), xmin, "lse")
 
 
-def mle(x):
+def mle(x, tail: float = None, loc: float = None):
     """
     Fit Weibull distribution parameters to sample by maximum likelihood estimation
+
+    .. versionchanged :: 5.6.0
+        New arguments `tail` (censored fit) and `loc`. A fit that fails raises :class:`ValueError` instead of
+        returning wrong parameters.
 
     Parameters
     ----------
     x : array_like
         sample data
+    tail : float, optional
+        Fit distribution to the tail of the sample by censored maximum likelihood: the fraction <0, 1] of the largest
+        values is fitted, so 0.13 fits the 13% largest values. The values are selected as in :func:`lse`, those with
+        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored.
+    loc : float, optional
+        Fixed location parameter. Only the scale and shape parameters are fitted. Must be below the smallest value in
+        the likelihood, which is the censoring value in a tail fit.
 
     Returns
     -------
     tuple (floats)
         Distribution parameters ``(loc, scale, shape)``.
 
+    Raises
+    ------
+    QatsValueError
+        If the fit fails: the solver does not converge, a parameter is not finite, the scale or shape parameter is not
+        positive, or the location parameter is not below the smallest value in the likelihood.
+
+    Notes
+    -----
+    In a tail fit, the `r` values with empirical CDF (mean rank) below ``1 - tail`` are censored at the largest of
+    them, ``xc = x(r)``. They enter the likelihood only through the probability that a value is at or below `xc`::
+
+        L = F(xc)^r * f(x(r+1)) * ... * f(x(n))
+
+    The likelihood equations [2, p. 656 eq. 21.73-21.75] are then summed over the n - r fitted values and each gets
+    the derivative of ``r * ln F(xc)``. With no censored values (`r` = 0) the fit is the same as without `tail`.
+
+    With a fixed location parameter the equation for the location parameter is left out.
+
     """
+    r = 0  # number of censored values
+    xc = None  # censoring value
 
     def mle_eq(p, z):
         """
@@ -756,7 +848,7 @@ def mle(x):
         p : array_like
             distribution parameters a, b, c
         z : array_like
-            data sample
+            data sample (fitted values)
 
         Returns
         -------
@@ -774,13 +866,44 @@ def mle(x):
         f2 = -n * shape / scale + shape / scale * np.sum(((z - loc) / scale) ** shape)
         f3 = -(shape - 1.0) * np.sum(1.0 / (z - loc)) + shape / scale * np.sum(((z - loc) / scale) ** (shape - 1.0))
 
+        if r > 0:
+            # derivatives of r * ln F(xc)
+            zc = (xc - loc) / scale
+            h = zc**shape
+            d = r / np.expm1(h)
+            f1 += d * h * np.log(zc)
+            f2 -= d * shape / scale * h
+            f3 -= d * shape / scale * zc ** (shape - 1.0)
+
         return f1, f2, f3
 
     x = np.array(x)
-    a0, b0, c0 = msm(x)  # initial guess
-    a, b, c = fsolve(mle_eq, np.asarray([a0, b0, c0]), args=x)
+    z = x  # fitted values
+    if tail is not None:
+        f = empirical_cdf(x.size, kind="mean")
+        threshold = _tail_threshold(f, tail=tail)
+        r = int(np.count_nonzero(f < threshold))
+        if r > 0:
+            z = np.sort(x)
+            xc = z[r - 1]
+            z = z[r:]
+    xmin = xc if r > 0 else z.min()  # smallest value in the likelihood
 
-    return a, b, c
+    if loc is not None:
+        _check_loc(loc, xmin)
+        zs = np.sort(z)
+        b0, c0 = _paper_fit(zs - loc, empirical_cdf(x.size, kind="mean")[r:])  # initial guess
+        p, info, ier, msg = fsolve(lambda v: mle_eq((loc, v[0], v[1]), zs)[:2], np.asarray([b0, c0]), full_output=True)
+        params = (float(loc), p[0], p[1])
+    else:
+        a0, b0, c0 = _msm3(x)  # initial guess
+        p, info, ier, msg = fsolve(mle_eq, np.asarray([a0, b0, c0]), args=z, full_output=True)
+        params = (p[0], p[1], p[2])
+
+    if ier != 1:
+        raise QatsValueError(f"The mle fit did not converge: {msg}")
+
+    return _check_params(params, xmin, "mle")
 
 
 def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
@@ -838,25 +961,57 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
     return (1.0 / n) * np.sum(xi**l * bc)  # eq. 32 in [8]
 
 
-def msm(x):
+def msm(x, loc: float = None):
     """
     Fit Weibull distribution parameters to sample by method of sample moments
+
+    .. versionchanged :: 5.6.0
+        New argument `loc`. A fit that fails raises :class:`ValueError` instead of returning wrong parameters.
 
     Parameters
     ----------
     x : array_like
         sample data
+    loc : float, optional
+        Fixed location parameter. Only the scale and shape parameters are fitted, as a 2-parameter Weibull
+        distribution of the sample minus `loc`. Must be below the smallest value in the sample.
 
     Returns
     -------
     floats
         The `loc`, `scale` and `shape` distribution parameters
 
+    Raises
+    ------
+    QatsValueError
+        If the fit fails: no shape parameter matches the sample moments, a parameter is not finite, the scale or shape
+        parameter is not positive, or the location parameter is not below the smallest value in the sample.
+
     Notes
     -----
-    See description in [1].
+    See description in [1]. With a fixed location parameter, the shape parameter is the one that gives the sample
+    coefficient of variation of ``x - loc``, and the scale parameter follows from the sample mean of ``x - loc``.
     """
     x = np.array(x)
+    if loc is None:
+        return _check_params(_msm3(x), x.min(), "msm")
+
+    _check_loc(loc, x.min())
+    y = x - loc
+    m1 = y.mean()  # first sample raw moment aka. mean
+    cv = y.std() / m1  # coefficient of variation
+
+    def f(shape):
+        return np.sqrt(gamma(1.0 + 2.0 / shape) / gamma(1.0 + 1.0 / shape) ** 2.0 - 1.0) - cv
+
+    c = _shape_root(f, "coefficient of variation", cv)
+    b = m1 / gamma(1.0 + 1.0 / c)
+
+    return _check_params((float(loc), b, c), x.min(), "msm")
+
+
+def _msm3(x):
+    """3-parameter fit by method of sample moments, without checking the parameters."""
     a1 = x.mean()  # first sample raw moment aka. mean
     m2 = x.var()  # second sample central moment aka. variance
     m3 = np.mean((x - a1) ** 3.0)  # third sample central moment
@@ -871,7 +1026,7 @@ def msm(x):
         ) / (gamma((shape + 2.0) / shape) - gamma((shape + 1.0) / shape) ** 2.0) ** (3.0 / 2.0) - shape0
         return eq
 
-    c = brentq(f, args=(c1,), a=0.1, b=1000.0, maxiter=1000)
+    c = _shape_root(lambda shape: f(shape, c1), "skewness", c1)
 
     # calculate location and scale parameters, see [1, eq. 67 on p. 11]
     g1 = gamma((c + 1.0) / c)
@@ -930,20 +1085,32 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
         plt.show()
 
 
-def pwm(x):
+def pwm(x, loc: float = None):
     """
     Fit distribution parameters to sample by method of probability weighted
     moments
+
+    .. versionchanged :: 5.6.0
+        New argument `loc`. A fit that fails raises :class:`ValueError` instead of returning wrong parameters.
 
     Parameters
     ----------
     x : array_like
         sample data
+    loc : float, optional
+        Fixed location parameter. Only the scale and shape parameters are fitted, with the formulas of :func:`pwm2`
+        applied to the sample minus `loc`. Must be below the smallest value in the sample.
 
     Returns
     -------
     floats
         The `loc`, `scale` and `shape` distribution parameters
+
+    Raises
+    ------
+    QatsValueError
+        If the fit fails: a parameter is not finite, the scale or shape parameter is not positive, or the location
+        parameter is not below the smallest value in the sample.
 
     Notes
     -----
@@ -954,6 +1121,18 @@ def pwm(x):
     mlj()
 
     """
+    x = np.asarray(x)
+    if loc is None:
+        params = _pwm3(x)
+    else:
+        _check_loc(loc, x.min())
+        params = (float(loc), *_pwm2(x - loc))
+
+    return _check_params(params, x.min(), "pwm")
+
+
+def _pwm3(x):
+    """3-parameter fit by probability weighted moments, without checking the parameters."""
     # probability weighted moments of order 0,1,2,3
     m100 = mlj(x, 1, 0)
     m110 = mlj(x, 1, 1)
@@ -973,6 +1152,9 @@ def pwm2(x):
     Fit distribution parameters to sample by method of probability weighted moments assuming the location parameter
     is zero.
 
+    .. versionchanged :: 5.6.0
+        A fit that fails raises :class:`ValueError` instead of returning wrong parameters.
+
     Parameters
     ----------
     x : array_like
@@ -983,16 +1165,27 @@ def pwm2(x):
     floats
         The `scale` and `shape` distribution parameters
 
+    Raises
+    ------
+    QatsValueError
+        If the fit fails: a parameter is not finite or not positive, or the sample has values at or below zero.
+
     Notes
     -----
     Details on probability weighted moments are provided on p.14-15 in [8]. Note that only the scale and parameters are
-    estimated, the location parameter is assumed zero.
+    estimated, the location parameter is assumed zero. The result is the same as from ``pwm(x, loc=0)``.
 
     See Also
     --------
     mlj(), pwm()
 
     """
+    _, b, c = pwm(x, loc=0.0)
+    return b, c
+
+
+def _pwm2(x):
+    """2-parameter fit by probability weighted moments, without checking the parameters."""
     # probability weighted moments of order 0,1
     m100 = mlj(x, 1, 0)
     m110 = mlj(x, 1, 1)
@@ -1044,3 +1237,66 @@ def weibull2gumbel(loc, scale, shape, n):
     gscale = 1.0 / (shape / scale * np.log(n) ** ((shape - 1.0) / shape))
 
     return gloc, gscale
+
+
+def _tail_threshold(f, threshold=None, tail=None):
+    """
+    Level of the empirical cdf `f` at and above which values are fitted, from either `threshold` (that level) or
+    `tail` (the fraction of the largest values, the level is ``1 - tail``). None if neither is given.
+    """
+    if threshold is not None and tail is not None:
+        raise QatsValueError("Give either tail or threshold, not both")
+    if tail is not None:
+        if not 0.0 < tail <= 1.0:
+            raise QatsValueError(f"The tail must be larger than 0 and at most 1, got {tail}")
+        threshold = 1.0 - tail
+    elif threshold is None:
+        return None
+    elif not 0.0 <= threshold < 1.0:
+        raise QatsValueError(f"The threshold must be at least 0 and less than 1, got {threshold}")
+    if not np.any(f >= threshold):
+        what = f"tail {tail}" if tail is not None else f"threshold {threshold}"
+        raise QatsValueError(f"No values of the sample are in the {what}")
+    return threshold
+
+
+def _check_loc(loc, xmin):
+    """Check that a fixed location parameter is below the smallest fitted value."""
+    if not loc < xmin:
+        raise QatsValueError(f"The location parameter ({loc:g}) must be below the smallest fitted value ({xmin:g})")
+
+
+def _check_params(params, xmin, method):
+    """Raise if fitted parameters are not finite, scale or shape is not positive, or loc is not below `xmin`."""
+    loc, scale, shape = params
+    if not np.all(np.isfinite(params)):
+        raise QatsValueError(
+            f"The {method} fit failed, the parameters are not finite: loc={loc:g}, scale={scale:g}, shape={shape:g}"
+        )
+    if not (scale > 0.0 and shape > 0.0):
+        raise QatsValueError(f"The {method} fit failed, the scale ({scale:g}) and shape ({shape:g}) must be positive")
+    if not loc < xmin:
+        raise QatsValueError(
+            f"The {method} fit failed, the location parameter ({loc:g}) is not below the smallest fitted value "
+            f"({xmin:g})"
+        )
+    return params
+
+
+def _paper_fit(y, f):
+    """
+    Scale and shape of a 2-parameter Weibull distribution by a straight line fit on Weibull paper, to the values `y`
+    with empirical cdf `f`. Used as initial guess.
+    """
+    shape, intercept = np.polyfit(np.log(y), np.log(-np.log(1.0 - f)), 1)
+    return np.exp(-intercept / shape), shape
+
+
+def _shape_root(f, statistic, value):
+    """Root of `f` between shape parameters 0.1 and 1000."""
+    try:
+        return brentq(f, a=0.1, b=1000.0, maxiter=1000)
+    except (ValueError, RuntimeError) as err:
+        raise QatsValueError(
+            f"The msm fit failed, no shape parameter between 0.1 and 1000 matches the sample {statistic} ({value:g})"
+        ) from err
