@@ -1,6 +1,6 @@
 import os
 import unittest
-from unittest import mock
+import unittest.mock
 
 import numpy as np
 from scipy import stats
@@ -134,8 +134,10 @@ class WeibullUnchangedTestCases(unittest.TestCase):
 
     def test_unchanged(self):
         for (sample, method), expected in self.expected.items():
+            # the least squares solver (MINPACK) gives results that differ by up to about 1e-8 between platforms
+            rtol = 1e-7 if method.startswith("lse") else 1e-12
             with self.subTest(sample=sample, method=method):
-                np.testing.assert_allclose(self.functions[method](self.samples[sample]), expected, rtol=1e-12)
+                np.testing.assert_allclose(self.functions[method](self.samples[sample]), expected, rtol=rtol)
 
     def test_pwm2_unchanged(self):
         y = Weibull(0.0, 410.0, 3.5).rnd(size=500, seed=3)
@@ -293,7 +295,7 @@ class WeibullFailedFitTestCases(unittest.TestCase):
         def leastsq(*args, **kwargs):
             return np.array([np.nan, np.nan, np.nan]), None, {}, "Number of calls has reached maxfev", 5
 
-        with mock.patch("qats.stats.weibull.leastsq", leastsq):
+        with unittest.mock.patch("qats.stats.weibull.leastsq", leastsq):
             with self.assertRaisesRegex(QatsValueError, "did not converge"):
                 lse(self.x)
             with self.assertRaisesRegex(QatsValueError, "did not converge"):

@@ -1126,7 +1126,8 @@ def pwm(x, loc: float = None):
         params = _pwm3(x)
     else:
         _check_loc(loc, x.min())
-        params = (float(loc), *_pwm2(x - loc))
+        b, c = _pwm2(x - loc)
+        params = (float(loc), b, c)
 
     return _check_params(params, x.min(), "pwm")
 
