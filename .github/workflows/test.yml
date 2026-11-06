@@ -34,6 +34,44 @@ jobs:
         run: uv run --locked --only-group dev ruff format --check --diff .
 
   #----------------------------------------------
+  # test the library and CLI without the GUI's packages (Qt, qtpy), as on a cloud or batch machine;
+  # from 6.0 that's `pip install qats`, with the GUI in the extra "gui"
+  #----------------------------------------------
+  testing-without-gui:
+    needs: linting
+    name: Test without the GUI
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+    - name: Set up uv and python
+      uses: astral-sh/setup-uv@v10.3.0
+      with:
+        python-version: "3.13"
+    - name: Install project without Qt
+      # the locked dependencies and the dev group, without Qt and qtpy
+      run: |
+        uv export --locked --no-hashes --no-emit-project --no-default-groups --group dev --format requirements-txt -o requirements.txt
+        grep -v -i -E '^(pyside6|shiboken6|qtpy)' requirements.txt > requirements-without-gui.txt
+        uv venv
+        uv pip install -r requirements-without-gui.txt
+        uv pip install --no-deps .
+        uv run --no-sync python -c "import importlib.util as u, sys; sys.exit(any(u.find_spec(m) for m in ('qtpy', 'PySide6', 'PyQt6')))"
+    - name: Run unit tests
+      run: uv run --no-sync pytest test/
+    - name: Test CLI
+      run: |
+        uv run --no-sync qats -h
+        uv run --no-sync qats formats
+        uv run --no-sync python -m qats -h
+        # the GUI command stops with an install hint
+        if uv run --no-sync qats app 2> app.err; then exit 1; fi
+        cat app.err
+        grep -F 'pip install "qats[gui]"' app.err
+
+  #----------------------------------------------
   # test using a matrix
   #----------------------------------------------
   testing:

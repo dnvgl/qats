@@ -60,5 +60,43 @@ class TestFormats(RegistryTestCase):
         self.assertTrue(result.stdout.rstrip().endswith("qt loaded: False"), result.stdout)
 
 
+class TestWithoutGui(unittest.TestCase):
+    """Without the packages of the desktop application, its commands stop with an install hint, not a traceback."""
+
+    @staticmethod
+    def run_without(modules, *args):
+        """Run the command line interface in a new process in which `modules` can't be imported."""
+        code = (
+            "import sys\n"
+            f"for name in {modules!r}:\n"
+            "    sys.modules[name] = None  # importing it raises ImportError, as when it's not installed\n"
+            "from qats import cli\n"
+            f"cli.main({list(args)!r})\n"
+        )
+        return subprocess.run(  # noqa: S603 -- fixed command: this Python and the code above
+            [sys.executable, "-c", code], capture_output=True, text=True
+        )
+
+    def assert_install_hint(self, result):
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn('python -m pip install "qats[gui]"', result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+
+    def test_app_without_qt(self):
+        result = self.run_without(["qtpy"], "app")
+        self.assert_install_hint(result)
+        self.assertIn("The desktop application needs Qt", result.stderr)
+
+    @unittest.skipUnless(sys.platform == "win32", "links to the application are only made on Windows")
+    def test_link_app_without_pywin32(self):
+        result = self.run_without(["win32com", "win32com.client"], "config", "--link-app")
+        self.assert_install_hint(result)
+
+    @unittest.skipUnless(sys.platform == "win32", "links to the application are only made on Windows")
+    def test_link_app_without_qt(self):
+        result = self.run_without(["qtpy"], "config", "--link-app")
+        self.assert_install_hint(result)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -83,10 +83,19 @@ and run the command line interface (CLI).
 
 
 .. note::
-    The GUI uses the `Qt <https://www.qt.io>`_ binding `PySide6 <https://pypi.org/project/PySide6/>`_, which is
-    installed with qats and is the binding QATS is tested with. `PyQt6 <https://pypi.org/project/PyQt6/>`_ also works,
-    through `qtpy <https://github.com/spyder-ide/qtpy>`_, but is supported on a best-effort basis only. To use it,
-    install it (``python -m pip install pyqt6``) and set the environment variable :code:`QT_API` to :code:`pyqt6`.
+    From QATS 6.0 the GUI will be optional, so that ``pip install qats`` installs the library only, for example on a
+    cloud or batch machine without a display. To get the GUI with both QATS 5.x and 6.0, install QATS with:
+
+    .. code-block:: console
+
+        $ python -m pip install "qats[gui]"
+
+.. note::
+    The GUI uses the `Qt <https://www.qt.io>`_ binding `PySide6 <https://pypi.org/project/PySide6/>`_ (its Essentials
+    package, ``pyside6-essentials``), which is installed with qats and is the binding QATS is tested with.
+    `PyQt6 <https://pypi.org/project/PyQt6/>`_ also works, through `qtpy <https://github.com/spyder-ide/qtpy>`_, but
+    is supported on a best-effort basis only. To use it, install it (``python -m pip install pyqt6``) and set the
+    environment variable :code:`QT_API` to :code:`pyqt6`.
     See the `qtpy README <https://github.com/spyder-ide/qtpy/blob/master/README.md>`_ for details.
 
 .. note::
