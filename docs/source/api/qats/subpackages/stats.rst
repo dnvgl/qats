@@ -83,6 +83,21 @@
     .. rubric:: Functions API
 
 
+:mod:`qats.stats.paper`
+-------------------------
+
+.. automodule:: qats.stats.paper
+    :members: probability_paper, paper_coordinates, ProbabilityPaper
+
+    .. rubric:: Classes and functions overview
+
+    .. autoautosummary:: qats.stats.paper
+        :functions:
+        :classes:
+
+    .. rubric:: API
+
+
 :mod:`qats.stats.weibull`
 ---------------------------
 

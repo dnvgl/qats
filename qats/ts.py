@@ -21,7 +21,7 @@ from .fatigue.rainflow import count_cycles, mesh
 from .fatigue.rainflow import rebin as rebin_cycles
 from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 from .signal import threshold as thresholdpass
-from .stats.empirical import empirical_cdf
+from .stats.empirical import _tail_count
 from .stats.gumbel import Gumbel
 from .stats.weibull import Weibull, _pwm3, weibull2gumbel
 
@@ -1725,7 +1725,7 @@ def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
     threshold = None
     nfit = n
     if tail is not None:
-        r = int(np.count_nonzero(empirical_cdf(n, kind="mean") < 1.0 - tail))
+        r = _tail_count(n, tail)
         nfit = n - r
         if r > 0:
             threshold = np.sort(mx)[r - 1]
