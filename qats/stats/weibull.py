@@ -763,9 +763,11 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
             # error function to be minimized, 2-parameter weibull function of the fitted values minus loc
             return 1.0 - np.exp(-(((z - loc) / v[0]) ** v[1])) - y
 
-        b0, c0 = _paper_fit(z - loc, y)  # initial guess
-        p, cov, info, msg, ier = leastsq(e2, np.asarray([b0, c0]), full_output=True)
-        if ier not in (1, 2, 3, 4):
+        for v0 in _initial_guesses(z - loc, y, censored=threshold is not None and z.size < x.size):
+            p, cov, info, msg, ier = leastsq(e2, np.asarray(v0), full_output=True)
+            if ier in (1, 2, 3, 4):
+                break
+        else:
             raise QatsValueError(f"The lse fit did not converge: {msg}")
         return _check_params((float(loc), p[0], p[1]), xmin, "lse")
 
@@ -892,8 +894,10 @@ def mle(x, tail: float = None, loc: float = None):
     if loc is not None:
         _check_loc(loc, xmin)
         zs = np.sort(z)
-        b0, c0 = _paper_fit(zs - loc, empirical_cdf(x.size, kind="mean")[r:])  # initial guess
-        p, info, ier, msg = fsolve(lambda v: mle_eq((loc, v[0], v[1]), zs)[:2], np.asarray([b0, c0]), full_output=True)
+        for v0 in _initial_guesses(zs - loc, empirical_cdf(x.size, kind="mean")[r:], censored=r > 0):
+            p, info, ier, msg = fsolve(lambda v: mle_eq((loc, v[0], v[1]), zs)[:2], np.asarray(v0), full_output=True)
+            if ier == 1:
+                break
         params = (float(loc), p[0], p[1])
     else:
         a0, b0, c0 = _msm3(x)  # initial guess
@@ -997,7 +1001,13 @@ def msm(x, loc: float = None):
         return _check_params(_msm3(x), x.min(), "msm")
 
     _check_loc(loc, x.min())
-    y = x - loc
+    b, c = _msm2(x - loc)
+
+    return _check_params((float(loc), b, c), x.min(), "msm")
+
+
+def _msm2(y):
+    """2-parameter fit (location zero) by method of sample moments, without checking the parameters."""
     m1 = y.mean()  # first sample raw moment aka. mean
     cv = y.std() / m1  # coefficient of variation
 
@@ -1007,7 +1017,7 @@ def msm(x, loc: float = None):
     c = _shape_root(f, "coefficient of variation", cv)
     b = m1 / gamma(1.0 + 1.0 / c)
 
-    return _check_params((float(loc), b, c), x.min(), "msm")
+    return b, c
 
 
 def _msm3(x):
@@ -1284,13 +1294,23 @@ def _check_params(params, xmin, method):
     return params
 
 
-def _paper_fit(y, f):
+def _initial_guesses(y, f, censored):
     """
-    Scale and shape of a 2-parameter Weibull distribution by a straight line fit on Weibull paper, to the values `y`
-    with empirical cdf `f`. Used as initial guess.
+    Initial guesses of scale and shape of a 2-parameter Weibull distribution of the sorted values `y` > 0 with
+    empirical cdf `f`, in the order to try them.
+
+    - A straight line fit on Weibull paper uses the positions of the values in the sample, so it suits a censored
+      sample, but a single value close to zero can pull it far off.
+    - The method of moments isn't disturbed by values close to zero, but it treats `y` as a complete sample. If no
+      shape parameter matches the moments, an exponential distribution with the mean of `y` is used instead.
     """
     shape, intercept = np.polyfit(np.log(y), np.log(-np.log(1.0 - f)), 1)
-    return np.exp(-intercept / shape), shape
+    paper = (np.exp(-intercept / shape), shape)
+    try:
+        moments = _msm2(y)
+    except QatsValueError:
+        moments = (y.mean(), 1.0)
+    return [paper, moments] if censored else [moments, paper]
 
 
 def _shape_root(f, statistic, value):
