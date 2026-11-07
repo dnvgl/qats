@@ -8,6 +8,8 @@ import numpy as np
 
 from ..fatigue.rainflow import rebin as rebin_cycles
 from ..stats.gumbel import pwm as gumbel_pwm
+from ..stats.paper import probability_paper
+from ..stats.weibull import Weibull
 from ..tsdb import TsDB
 
 
@@ -122,9 +124,9 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
-def calculate_stats(container, twin, fargs, minima=False):
+def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median"):
     """
-    Calculate time series statistics
+    Calculate time series statistics, and the maxima/minima with the fitted Weibull distribution on Rayleigh paper
 
     Parameters
     ----------
@@ -136,23 +138,42 @@ def calculate_stats(container, twin, fargs, minima=False):
         Filter arguments. Time series are filtered before extracting maxima.
     minima : bool, optional
         Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
+    fit : dict, optional
+        Weibull fit options for :meth:`qats.TimeSeries.stats`: `method`, `tail`, `tail_model` and `loc`. Default
+        the defaults of :meth:`qats.TimeSeries.stats`.
+    kind : str, optional
+        Plotting positions on the probability paper, see :func:`qats.stats.empirical.empirical_cdf`.
 
     Returns
     -------
     dict
-        Filtered and windowed time series and peaks/throughs
+        Statistics of each time series, see :meth:`qats.TimeSeries.stats`, with the sample and the fitted
+        distribution on Rayleigh paper as :class:`qats.stats.paper.ProbabilityPaper` under the key 'paper'
     """
-    return {
-        name: ts.stats(
+    fit = dict() if fit is None else fit
+    container_out = dict()
+    for name, ts in container.items():
+        s = ts.stats(
             twin=twin,
             filterargs=fargs,
             statsdur=10800.0,
             quantiles=(0.37, 0.57, 0.9),
             is_minima=minima,
             include_sample=True,
+            **fit,
         )
-        for name, ts in container.items()
-    }
+        s["paper"] = None
+        if np.size(s["sample"]) > 0:
+            s["paper"] = probability_paper(
+                s["sample"],
+                Weibull(s["wloc"], s["wscale"], s["wshape"]),
+                kind=kind,
+                tail=s["wtail"],
+                tail_model=s["wtail_model"] or "censored",
+                is_minima=minima,
+            )
+        container_out[name] = s
+    return container_out
 
 
 def calculate_gumbel_fit(container, twin, fargs, minima=False):
