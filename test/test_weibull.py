@@ -197,6 +197,20 @@ class WeibullFixedLocTestCases(unittest.TestCase):
         x[:10] = 10.0 + 0.5 * (x[:10] - 10.0)
         np.testing.assert_allclose(lse(x, tail=0.5), (10.0, 3.0, 1.7), rtol=1e-6)
 
+    def test_value_close_to_loc(self):
+        # a value just above the fixed location, as for an exceedance close to the threshold, must not prevent the fit
+        x = Weibull(10.0, 3.0, 1.2).rnd(size=200, seed=1)
+        x[0] = 10.0 + 1e-12
+        y = np.sort(x - 10.0)
+        f = empirical_cdf(y.size, kind="mean")
+        (scale, shape), _ = curve_fit(lambda z, b, c: 1.0 - np.exp(-((z / b) ** c)), y, f, p0=(3.0, 1.2))
+        np.testing.assert_allclose(lse(x, loc=10.0), (10.0, scale, shape), rtol=1e-6)
+        shape, _, scale = stats.weibull_min.fit(x, floc=10.0)
+        a, b, c = mle(x, loc=10.0)
+        np.testing.assert_allclose((b, c), (scale, shape), rtol=1e-4)
+        loglik = lambda b, c: np.sum(stats.weibull_min.logpdf(x, c, 10.0, b))  # noqa: E731
+        self.assertGreaterEqual(loglik(b, c), loglik(scale, shape) - 1e-9)
+
     def test_mle(self):
         x = Weibull(66000.0, 410.0, 2.0).rnd(size=500, seed=3)
         shape, loc, scale = stats.weibull_min.fit(x, floc=66000.0)

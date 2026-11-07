@@ -5,6 +5,7 @@ Provides :class:`TimeSeries` class.
 """
 
 import copy
+import numbers
 import os
 from collections import OrderedDict
 from datetime import datetime, timedelta
@@ -20,6 +21,7 @@ from .fatigue.rainflow import count_cycles, mesh
 from .fatigue.rainflow import rebin as rebin_cycles
 from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 from .signal import threshold as thresholdpass
+from .stats.empirical import empirical_cdf
 from .stats.gumbel import Gumbel
 from .stats.weibull import Weibull, _pwm3, weibull2gumbel
 
@@ -493,25 +495,44 @@ class TimeSeries(object):
 
         return t, x
 
-    def fit_weibull(self, twin=None, method="msm"):
+    def fit_weibull(self, twin=None, method="msm", *, tail=None, tail_model="censored", loc=None):
         """
         Fit Weibull distribution to sample of global maxima.
+
+        .. versionchanged :: 5.6.0
+            New arguments `tail`, `tail_model` and `loc` for fits to the tail of the maxima and with fixed location.
 
         Parameters
         ----------
         twin : tuple, optional
             Time window to consider.
         method : {'msm', 'lse', 'mle', 'pwm', 'pwm2'}, optional
-            See `qats.weibull.Weibull.fit` for description of options.
+            See `qats.weibull.Weibull.fit` for description of options. The default is 'msm', unlike
+            :meth:`stats` where it is 'pwm'.
+        tail : float, optional
+            Fraction <0, 1] of the largest maxima to fit, so 0.2 fits the 20% largest maxima. By default all maxima are
+            fitted.
+        tail_model : {'censored', 'exceedances'}, optional
+            How the tail is fitted: 'censored' (default) fits the tail maxima as part of all maxima, 'exceedances'
+            fits the maxima above the threshold value as a complete sample.
+        loc : {None, 'mean', 'threshold'} or float, optional
+            Location parameter: fitted (None, default), the mean level of the time series ('mean'), the threshold value
+            u ('threshold', only with ``tail_model='exceedances'``) or a number.
 
         Returns
         -------
         Weibull
-            Class instance.
+            Class instance. In a fit to the exceedances its data are the exceedances.
+
+        Raises
+        ------
+        QatsValueError
+            If the options can't be combined, or the fit fails (see :meth:`qats.stats.weibull.Weibull.fit`).
 
         See Also
         --------
         maxima()
+        stats() : the Notes describe the tail fit options.
         qats.signal.find_maxima
         qats.stats.weibull.Weibull.fit
         qats.stats.weibull.Weibull.fromsignal
@@ -528,9 +549,16 @@ class TimeSeries(object):
         >>> maxima = ts.maxima(local=False, threshold=None, twin=(200., 1e12), rettime=False)
         >>> weib = Weibull.fit(maxima, method='msm')
 
+        Fit the 20% largest maxima by least squares, with the location parameter at the mean level:
+
+        >>> weib = ts.fit_weibull(method="lse", tail=0.2, loc="mean")
+
         """
+        _check_weibull_options(method, tail, tail_model, loc)
         maxima = self.maxima(local=False, threshold=None, twin=twin, rettime=False)
-        return Weibull.fit(maxima, method=method)
+        mean = self.mean(twin=twin) if loc == "mean" else None
+        sample, kwargs, _, _ = _setup_weibull_fit(maxima, mean, method, tail, tail_model, loc)
+        return Weibull.fit(sample, **kwargs)
 
     def get(self, twin=None, resample=None, window_len=None, filterargs=None, window="rectangular", taperfrac=None):
         """
@@ -1328,9 +1356,25 @@ class TimeSeries(object):
             self._t += delta
             self._dtg_time = None  # reset, no need to initiate new array until requested
 
-    def stats(self, statsdur=10800.0, quantiles=(0.37, 0.57, 0.9), is_minima=False, include_sample=False, **kwargs):
+    def stats(
+        self,
+        statsdur=10800.0,
+        quantiles=(0.37, 0.57, 0.9),
+        is_minima=False,
+        include_sample=False,
+        *,
+        method="pwm",
+        tail=None,
+        tail_model="censored",
+        loc=None,
+        **kwargs,
+    ):
         """
         Returns dictionary with time series properties and statistics
+
+        .. versionchanged :: 5.6.0
+            New arguments `method`, `tail`, `tail_model` and `loc` for the Weibull fit, and new keys in the returned
+            dictionary that report the fit.
 
         Parameters
         ----------
@@ -1343,6 +1387,18 @@ class TimeSeries(object):
             Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
         include_sample : bool, optional
             Return sample of maxima or minima (minima=True).
+        method : {'pwm', 'pwm2', 'msm', 'lse', 'mle'}, optional
+            Method of the Weibull fit, see :meth:`qats.stats.weibull.Weibull.fit`. The default is 'pwm', unlike
+            :meth:`fit_weibull` where it is 'msm'.
+        tail : float, optional
+            Fraction <0, 1] of the largest maxima (or minima) to fit, so 0.2 fits the 20% largest maxima. By default
+            all maxima are fitted. See Notes.
+        tail_model : {'censored', 'exceedances'}, optional
+            How the tail is fitted, 'censored' (default) or 'exceedances'. See Notes.
+        loc : {None, 'mean', 'threshold'} or float, optional
+            Weibull location parameter: fitted (None, default), the mean level of the time series ('mean'), the
+            threshold value u ('threshold', only with ``tail_model='exceedances'``) or a number. For minima the fit is
+            to the minima multiplied by -1, so a number is given in those units: -1 multiplied with the level.
         **kwargs
             Additional keyword arguments are passed to :meth:`get()`.
 
@@ -1371,14 +1427,53 @@ class TimeSeries(object):
             wloc        Weibull distribution location parameter fitted to sample of global maxima
             wscale      Weibull distribution scale parameter fitted to sample of global maxima
             wshape      Weibull distribution shape parameter fitted to sample of global maxima
+            wmethod     Method of the Weibull fit
+            wtail       Tail fraction fitted, None if all maxima are fitted
+            wtail_model Tail model, 'censored' or 'exceedances', None if all maxima are fitted
+            wloc_from   How the location parameter was chosen: 'fitted', 'mean', 'threshold' or 'value'
+            wthreshold  Threshold value u of a tail fit, the largest maximum outside the tail (None if none)
+            wn          Number of maxima fitted
+            gn          Number of maxima in `statsdur` used for the Gumbel distribution: all maxima, or only the
+                        exceedances in a fit to the exceedances
             gloc        Gumbel distribution location parameter estimated from Weibull distribution and `statsdur`
             gscale      Gumbel distribution scale parameter estimated from Weibull distribution and `statsdur`
             p_* ..      Extreme values estimated from the Gumbel distribution, e.g. p_90 is the 0.9 quantile
 
+        For minima, `wloc` and `wthreshold` are for the minima multiplied by -1.
+
+        **Tail fits.** By default the Weibull distribution is fitted with 'pwm' to all global maxima. To fit only the
+        largest maxima, give the tail fraction `tail`. The tail maxima are those with mean rank empirical cumulative
+        probability ``i / (n + 1)`` at or above ``1 - tail``, and the threshold value u is the largest maximum below
+        them. The options are:
+
+        ===============================  =========  ===============  ===============  ===========  ==============
+        Fit                              `tail`     `tail_model`     `loc`            Methods      Gumbel from
+        ===============================  =========  ===============  ===============  ===========  ==============
+        All maxima                       None       \\-               None or number   all          all maxima
+        All maxima, location at mean     None       \\-               'mean'           all          all maxima
+        Censored, location fitted        p          'censored'       None             lse, mle     all maxima
+        Censored, location fixed         p          'censored'       'mean' / number  lse, mle     all maxima
+        Exceedances, location fitted     p          'exceedances'    None             all          exceedances
+        Exceedances, location at u       p          'exceedances'    'threshold'      all          exceedances
+        ===============================  =========  ===============  ===============  ===========  ==============
+
+        - **Censored** (the default tail model): the tail maxima keep their positions among all maxima, and the
+          maxima below u count only by their number. The fitted distribution describes all maxima, so the Gumbel
+          distribution uses all maxima in `statsdur`. The moment methods ('pwm', 'pwm2', 'msm') have no censored form.
+          The fitted distribution also describes the censored maxima, so a fixed location parameter should be below
+          them and 'threshold' is not possible. The mean level of the time series is a lower bound of the global
+          maxima.
+        - **Exceedances**: the maxima above u are fitted as a complete sample. The fitted distribution describes only
+          the maxima above u, so the Gumbel distribution uses only the exceedances in `statsdur` (n * p instead of n,
+          `gn`).
+
+        A tail fit that fails (no convergence, or invalid parameters, see :meth:`qats.stats.weibull.Weibull.fit`)
+        gives NaN for the Weibull and Gumbel parameters and the extreme values. Options that can't be combined raise
+        :class:`QatsValueError`.
 
         See Also
         --------
-        qats.stats.weibull.weibull2gumbel, qats.stats.weibull.pwm
+        qats.stats.weibull.weibull2gumbel, qats.stats.weibull.pwm, qats.stats.weibull.Weibull.fit
 
         Examples
         --------
@@ -1394,7 +1489,18 @@ class TimeSeries(object):
         To ignore the transient part of the time series, time window may be specified:
 
         >>> stats = ts.stats(twin=(500., 1e12))
+
+        To fit the Weibull distribution to the 20% largest maxima by censored least squares, with the location
+        parameter at the mean level:
+
+        >>> stats = ts.stats(method="lse", tail=0.2, loc="mean")
+
+        To fit the maxima above the threshold value, with the location parameter at the threshold value:
+
+        >>> stats = ts.stats(method="mle", tail=0.2, tail_model="exceedances", loc="threshold")
         """
+        _check_weibull_options(method, tail, tail_model, loc)
+
         # get time series as array
         t, x = self.get(**kwargs)
 
@@ -1411,16 +1517,28 @@ class TimeSeries(object):
             f = -1.0
 
         mx, _ = find_maxima(f * x)
+        winfo = _weibull_info(method, tail, tail_model, loc, n=np.size(mx))
+        n = np.nan
         if np.size(mx) <= 1:
             wloc = wscale = wshape = gloc = gscale = np.nan
             pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
         else:
-            # unchecked fit: unlike pwm(), a location parameter at or above the smallest maximum is kept
-            wloc, wscale, wshape = _pwm3(mx)
+            if method.lower() == "pwm" and tail is None and loc is None:
+                # unchecked fit: unlike pwm(), a location parameter at or above the smallest maximum is kept
+                wloc, wscale, wshape = _pwm3(mx)
+                n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
+            else:
+                try:
+                    sample, fitargs, winfo, ndist = _setup_weibull_fit(mx, f * x.mean(), method, tail, tail_model, loc)
+                    wloc, wscale, wshape = Weibull.fit(sample, **fitargs).params
+                except QatsValueError:
+                    # failed fit
+                    wloc = wscale = wshape = np.nan
+                else:
+                    n = round(statsdur / (t[-1] - t[0]) * ndist)
             if any(np.isnan([wloc, wscale, wshape])):
                 # force all parameters to nan if one (typically scale or shape) is
                 wloc = wscale = wshape = np.nan
-            n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             try:
                 gloc, gscale = weibull2gumbel(wloc, wscale, wshape, n)
             except (QatsValueError, ZeroDivisionError):
@@ -1453,6 +1571,8 @@ class TimeSeries(object):
             wloc=wloc,
             wscale=wscale,
             wshape=wshape,
+            **winfo,
+            gn=n,
             gloc=gloc,
             gscale=gscale,
             is_minima=is_minima,
@@ -1512,3 +1632,121 @@ class TimeSeries(object):
         # get data array, time does not matter
         _, x = self.get(**kwargs)
         return skew(x, bias=bias)
+
+
+_WEIBULL_METHODS = ("pwm", "pwm2", "msm", "lse", "mle")
+_TAIL_MODELS = ("censored", "exceedances")
+
+
+def _check_weibull_options(method, tail, tail_model, loc):
+    """
+    Raise if the options of a Weibull fit to maxima in :meth:`TimeSeries.stats` and :meth:`TimeSeries.fit_weibull`
+    are invalid or can't be combined.
+    """
+    if not isinstance(method, str) or method.lower() not in _WEIBULL_METHODS:
+        raise QatsValueError(f"The method must be one of {', '.join(_WEIBULL_METHODS)}, got {method!r}")
+    if tail is not None:
+        if isinstance(tail, bool) or not isinstance(tail, numbers.Real):
+            raise QatsTypeError(f"The tail must be a number, got {type(tail).__name__}")
+        if not 0.0 < tail <= 1.0:
+            raise QatsValueError(f"The tail must be larger than 0 and at most 1, got {tail}")
+    if tail_model not in _TAIL_MODELS:
+        raise QatsValueError(f"The tail model must be one of {', '.join(_TAIL_MODELS)}, got {tail_model!r}")
+    if isinstance(loc, str):
+        if loc not in ("mean", "threshold"):
+            raise QatsValueError(f"The location must be None, 'mean', 'threshold' or a number, got {loc!r}")
+    elif loc is not None and (isinstance(loc, bool) or not isinstance(loc, numbers.Real)):
+        raise QatsTypeError(f"The location must be None, 'mean', 'threshold' or a number, got {type(loc).__name__}")
+
+    method = method.lower()
+    if tail is None and tail_model == "exceedances":
+        raise QatsValueError("A fit to the exceedances (tail_model='exceedances') needs the tail fraction, tail=")
+    exceedances = tail is not None and tail_model == "exceedances"
+    if loc == "threshold" and not exceedances:
+        raise QatsValueError(
+            "The location can be at the threshold value only in a fit to the exceedances, with a tail and "
+            "tail_model='exceedances'. In a censored fit the location must be below the censored maxima."
+        )
+    if tail is not None and not exceedances and method in ("pwm", "pwm2", "msm"):
+        raise QatsValueError(
+            f"The method {method} has no censored tail fit. Use the method 'lse' or 'mle', or fit the exceedances "
+            f"with tail_model='exceedances'."
+        )
+
+
+def _weibull_info(method, tail, tail_model, loc, threshold=None, n=np.nan):
+    """Fit options and sample sizes of a Weibull fit to maxima, as reported by :meth:`TimeSeries.stats`."""
+    if loc is None:
+        loc_from = "value" if method.lower() == "pwm2" else "fitted"  # pwm2 has the location at zero
+    elif isinstance(loc, str):
+        loc_from = loc
+    else:
+        loc_from = "value"
+    return OrderedDict(
+        wmethod=method.lower(),
+        wtail=tail,
+        wtail_model=tail_model if tail is not None else None,
+        wloc_from=loc_from,
+        wthreshold=threshold,
+        wn=n,
+    )
+
+
+def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
+    """
+    Sample and arguments for :meth:`qats.stats.weibull.Weibull.fit` with the options of :meth:`TimeSeries.stats` and
+    :meth:`TimeSeries.fit_weibull`, which must be checked with :func:`_check_weibull_options` first.
+
+    Parameters
+    ----------
+    mx : array
+        Maxima.
+    mean : float
+        Mean level, the location with ``loc="mean"``.
+    method, tail, tail_model, loc
+        Fit options, see :meth:`TimeSeries.stats`.
+
+    Returns
+    -------
+    array
+        Sample to fit: the maxima, or the exceedances of the threshold value u.
+    dict
+        Keyword arguments for :meth:`Weibull.fit`.
+    dict
+        Fit options and sample sizes, see :func:`_weibull_info`.
+    int
+        Number of maxima the fitted distribution describes, for the Gumbel distribution: all maxima, or the
+        exceedances.
+    """
+    n = mx.size
+    exceedances = tail is not None and tail_model == "exceedances"
+
+    # threshold value u: the largest maximum outside the tail, selected as in qats.stats.weibull.lse() and mle()
+    threshold = None
+    nfit = n
+    if tail is not None:
+        r = int(np.count_nonzero(empirical_cdf(n, kind="mean") < 1.0 - tail))
+        nfit = n - r
+        if r > 0:
+            threshold = np.sort(mx)[r - 1]
+
+    sample = mx
+    if exceedances and threshold is not None:
+        sample = mx[mx > threshold]
+        nfit = sample.size
+
+    info = _weibull_info(method, tail, tail_model, loc, threshold=threshold, n=nfit)
+
+    kwargs = dict(method=method.lower())
+    if loc == "mean":
+        kwargs["loc"] = mean
+    elif loc == "threshold":
+        if threshold is None:
+            raise QatsValueError(f"The tail {tail} includes all {n} maxima, so there is no threshold value")
+        kwargs["loc"] = threshold
+    elif loc is not None:
+        kwargs["loc"] = loc
+    if tail is not None and not exceedances:
+        kwargs["tail"] = tail
+
+    return sample, kwargs, info, sample.size
