@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 import unittest.mock
 
@@ -8,9 +9,10 @@ from scipy.optimize import curve_fit
 from scipy.special import gamma
 
 from qats import TsDB
-from qats._validation import QatsValueError
+from qats._validation import QatsTypeError, QatsValueError
 from qats.stats.empirical import empirical_cdf
-from qats.stats.weibull import Weibull, lse, mle, msm, pwm, pwm2
+from qats.stats.paper import probability_paper
+from qats.stats.weibull import Weibull, lse, mle, msm, plot_fit, pwm, pwm2, weibull2gumbel
 
 # todo: more test cases for weibull class and functions
 
@@ -407,7 +409,8 @@ class WeibullPlotLinearTestCases(unittest.TestCase):
         # data below and at the location parameter can't be shown on Weibull paper
         w = Weibull(1.0, 2.0, 1.5, data=[4.0, 0.5, 1.5, 1.0, 6.0, 2.5])
         with unittest.mock.patch("matplotlib.pyplot.show"), unittest.mock.patch("matplotlib.pyplot.close"):
-            w.plot_linear()
+            with self.assertWarnsRegex(DeprecationWarning, r"Weibull.plot_linear\(\) is deprecated.*Weibull.plot\("):
+                w.plot_linear()
         ax = self.plt.gcf().axes[0]
         data, fitted = ax.get_lines()
 
@@ -434,6 +437,220 @@ class WeibullPlotLinearTestCases(unittest.TestCase):
         self.assertEqual(
             [t.get_text() for t in ax.get_xticklabels()], [str(v) for v in np.around(np.exp(xloc) + w.loc, 2)]
         )
+
+    def test_plot_fit_deprecated(self):
+        x = Weibull(1.0, 2.0, 1.5).rnd(size=20, seed=1)
+        with unittest.mock.patch("matplotlib.pyplot.show"):
+            with self.assertWarnsRegex(DeprecationWarning, r"plot_fit\(\) is deprecated.*\.plot\(paper='weibull'"):
+                plot_fit(x, (0.5, 2.0, 1.5))
+
+
+class WeibullFitTailModelTestCases(unittest.TestCase):
+    """
+    Weibull.fit() with the tail models, and the fit settings it keeps in fit_info.
+    """
+
+    def setUp(self):
+        self.x = Weibull(66000.0, 410.0, 2.0).rnd(size=500, seed=3)
+        self.tail = 0.2
+        # values outside the tail: mean rank i / 501 below 1 - tail, and the threshold value u, the largest of them
+        self.r = int(np.ceil((1.0 - self.tail) * (self.x.size + 1))) - 1
+        self.u = np.sort(self.x)[self.r - 1]
+        self.exceedances = self.x[self.x > self.u]
+
+    def test_exceedances_same_as_complete_fit(self):
+        # the fit to the exceedances is the complete fit of the values above u
+        for method in ("pwm", "pwm2", "msm", "lse", "mle"):
+            for loc in (None, self.u, 66000.0):
+                if method == "mle" and loc is None:
+                    continue  # does not converge on this sample
+                with self.subTest(method=method, loc=loc):
+                    kwargs = dict() if loc is None else dict(loc=loc)
+                    w = Weibull.fit(self.x, method=method, tail=self.tail, tail_model="exceedances", **kwargs)
+                    self.assertEqual(w.params, Weibull.fit(self.exceedances, method=method, **kwargs).params)
+                    # the whole sample is kept
+                    np.testing.assert_array_equal(w.data, self.x)
+
+    def test_exceedances_whole_sample_in_tail(self):
+        w = Weibull.fit(self.x, method="msm", tail=1.0, tail_model="exceedances")
+        self.assertEqual(w.params, Weibull.fit(self.x, method="msm").params)
+        self.assertIsNone(w.fit_info["threshold"])
+
+    def test_censored_unchanged(self):
+        w = Weibull.fit(self.x, method="mle", tail=self.tail, tail_model="censored")
+        self.assertEqual(w.params, mle(self.x, tail=self.tail))
+
+    def test_fit_info(self):
+        complete = dict(tail=None, tail_model=None, threshold=None, n=500)
+        cases = [
+            (dict(method="msm"), dict(loc_from="fitted", **complete)),
+            (dict(method="pwm2"), dict(loc_from="value", **complete)),
+            (dict(method="lse", loc=66000.0), dict(loc_from="value", **complete)),
+            (
+                dict(method="LSE", tail=self.tail),
+                dict(tail=self.tail, tail_model="censored", loc_from="fitted", threshold=self.u, n=500 - self.r),
+            ),
+            (
+                dict(method="mle", tail=self.tail, tail_model="exceedances", loc=self.u),
+                dict(
+                    tail=self.tail,
+                    tail_model="exceedances",
+                    loc_from="value",
+                    threshold=self.u,
+                    n=self.exceedances.size,
+                ),
+            ),
+        ]
+        for kwargs, expected in cases:
+            with self.subTest(**kwargs):
+                info = Weibull.fit(self.x, **kwargs).fit_info
+                self.assertEqual(info, dict(method=kwargs["method"].lower(), **expected))
+
+    def test_fit_info_not_fitted(self):
+        self.assertIsNone(Weibull(1.0, 2.0, 1.5).fit_info)
+        self.assertIsNone(Weibull(1.0, 2.0, 1.5, data=self.x).fit_info)
+
+    def test_fit_info_is_a_copy(self):
+        w = Weibull.fit(self.x, method="lse", tail=self.tail)
+        w.fit_info["tail"] = 0.5
+        self.assertEqual(w.fit_info["tail"], self.tail)
+
+    def test_invalid(self):
+        cases = [
+            (QatsTypeError, dict(method="lse", loc="mean")),
+            (QatsTypeError, dict(method="lse", loc="threshold")),
+            (QatsTypeError, dict(method="lse", tail="0.2")),
+            (QatsValueError, dict(method="lse", tail_model="exceedances")),
+            (QatsValueError, dict(method="lse", tail=0.2, tail_model="peaks")),
+            (QatsValueError, dict(method="msm", tail=0.2)),
+            (QatsValueError, dict(method="weibull")),
+        ]
+        for error, kwargs in cases:
+            with self.subTest(**kwargs), self.assertRaises(error):
+                Weibull.fit(self.x, **kwargs)
+
+    def test_gumbel_parameters_exceedances(self):
+        # the distribution describes the exceedances, so the default n is their number
+        w = Weibull.fit(self.x, method="msm", tail=self.tail, tail_model="exceedances")
+        self.assertEqual(w.gumbel_parameters(), weibull2gumbel(*w.params, self.exceedances.size))
+        # unchanged for the other fits: all values
+        for kwargs in (dict(method="msm"), dict(method="lse", tail=self.tail)):
+            with self.subTest(**kwargs):
+                w = Weibull.fit(self.x, **kwargs)
+                self.assertEqual(w.gumbel_parameters(), weibull2gumbel(*w.params, self.x.size))
+
+    def test_mse_exceedances(self):
+        w = Weibull.fit(self.x, method="msm", tail=self.tail, tail_model="exceedances")
+        z = np.sort(self.exceedances)
+        expected = np.mean((empirical_cdf(z.size, kind="mean") - w.cdf(z)) ** 2.0)
+        self.assertAlmostEqual(w.mse, expected, delta=1e-15)
+        # unchanged for a fit to all values
+        w = Weibull.fit(self.x, method="msm")
+        z = np.sort(self.x)
+        self.assertAlmostEqual(w.mse, np.mean((w.ecdf - w.cdf(z)) ** 2.0), delta=1e-15)
+
+
+class WeibullPlotTestCases(unittest.TestCase):
+    """Weibull.plot() draws with qats.stats.paper, run with the Agg backend."""
+
+    def setUp(self):
+        import matplotlib.pyplot as plt
+
+        self.plt = plt
+        backend = plt.get_backend()
+        plt.switch_backend("Agg")
+        self.addCleanup(plt.switch_backend, backend)
+        self.addCleanup(plt.close, "all")
+        self.x = Weibull(66000.0, 410.0, 2.0).rnd(size=200, seed=3)
+
+    def axes(self):
+        return self.plt.figure().gca()
+
+    def lines(self, ax):
+        """Data points (fitted, then not fitted), the fitted line and the dashed threshold value line."""
+        lines = ax.get_lines()
+        points = [ln for ln in lines if ln.get_marker() == "o"]
+        fitted_line = [ln for ln in lines if ln.get_marker() != "o" and ln.get_linestyle() == "-"]
+        dashed = [ln for ln in lines if ln.get_linestyle() == "--"]
+        return points, fitted_line, dashed
+
+    def test_default_as_before(self):
+        # data against mean ranks and the fitted cdf, on linear scales
+        w = Weibull.fit(self.x, method="msm")
+        with unittest.mock.patch("matplotlib.pyplot.show") as show:
+            ax = w.plot()
+        show.assert_called_once()
+        (data,), (line,), dashed = self.lines(ax)
+        np.testing.assert_array_equal(data.get_xdata(), np.sort(self.x))
+        np.testing.assert_allclose(data.get_ydata(), empirical_cdf(self.x.size, kind="mean"), rtol=1e-14)
+        np.testing.assert_allclose(line.get_ydata(), w.cdf(line.get_xdata()), rtol=1e-9, atol=1e-12)
+        self.assertEqual(dashed, [])
+        self.assertEqual(ax.get_xlabel(), "X")
+        self.assertEqual(ax.get_ylabel(), "Cumulative probability")
+
+    def test_ax(self):
+        ax = self.axes()
+        with unittest.mock.patch("matplotlib.pyplot.show") as show:
+            result = Weibull.fit(self.x, method="msm").plot(ax=ax)
+        show.assert_not_called()
+        self.assertIs(result, ax)
+        self.assertIn(ax.figure.number, self.plt.get_fignums())
+
+    def test_filename(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "weibull.png")
+            with unittest.mock.patch("matplotlib.pyplot.show") as show:
+                Weibull.fit(self.x, method="msm").plot(filename=path)
+            show.assert_not_called()
+            self.assertTrue(os.path.isfile(path))
+        # a figure that is only saved is closed
+        self.assertEqual(self.plt.get_fignums(), [])
+
+    def test_paper_and_kind(self):
+        w = Weibull.fit(self.x, method="msm")
+        for paper in ("rayleigh", "weibull", "gumbel", "linear"):
+            with self.subTest(paper=paper):
+                ax = w.plot(paper=paper, kind="median", ax=self.axes())
+                p = probability_paper(self.x, w, paper=paper, kind="median")
+                (data,), (line,), _ = self.lines(ax)
+                np.testing.assert_array_equal(data.get_xdata(), p.x)
+                np.testing.assert_array_equal(data.get_ydata(), p.y)
+                np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+                np.testing.assert_array_equal(ax.get_yticks(), p.yticks)
+                self.assertEqual([t.get_text() for t in ax.get_yticklabels()], p.yticklabels)
+                self.assertEqual([t.get_text() for t in ax.get_xticklabels()], p.xticklabels)
+
+    def test_censored_tail(self):
+        w = Weibull.fit(self.x, method="lse", tail=0.2)
+        ax = w.plot(paper="rayleigh", ax=self.axes())
+        (fitted, other), (line,), (u,) = self.lines(ax)
+        info = w.fit_info
+        self.assertEqual(fitted.get_xdata().size, info["n"])
+        self.assertTrue(np.all(fitted.get_xdata() > info["threshold"]))
+        self.assertIsNone(fitted.get_alpha())
+        self.assertLess(other.get_alpha(), 1.0)
+        self.assertLess(other.get_markersize(), fitted.get_markersize())
+        self.assertEqual(u.get_xdata()[0], info["threshold"])
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels[:3], ["Data", "Data not fitted", "Fitted"])
+
+    def test_exceedances_tail(self):
+        w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
+        ax = w.plot(paper="rayleigh", ax=self.axes())
+        (fitted, _), (line,), (u,) = self.lines(ax)
+        u_value = w.fit_info["threshold"]
+        self.assertEqual(fitted.get_xdata().size, np.count_nonzero(self.x > u_value))
+        # the fitted distribution describes the values above u, so the line starts at u
+        self.assertAlmostEqual(line.get_xdata()[0], u_value, delta=1e-6 * u_value)
+
+    def test_no_data(self):
+        w = Weibull(1.0, 2.0, 1.5)
+        ax = w.plot(ax=self.axes())
+        points, (line,), _ = self.lines(ax)
+        self.assertEqual(points, [])
+        np.testing.assert_allclose(line.get_ydata(), w.cdf(line.get_xdata()), rtol=1e-9, atol=1e-12)
+        self.assertGreaterEqual(line.get_ydata().min(), 0.0)
+        self.assertLess(line.get_ydata().max(), 1.0)
 
 
 if __name__ == "__main__":
