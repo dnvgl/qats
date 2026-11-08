@@ -186,12 +186,25 @@ class TestGuiMaxima(unittest.TestCase):
         self.display()
         before = self.table()[NAMES[0]]["wloc"]
         fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
-        result = (False, 20000, 256, 2, fit, "median", True)
+        result = (False, 20000, 256, 2, fit, "median", "pwm", True)
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
         self.settle()
         self.assertNotEqual(self.table()[NAMES[0]]["wloc"], before)
         self.check_same_fit(fit)
+
+    def test_gumbel_method_setting(self):
+        # stored on OK, used by the next Extremes CDF tab, and the shown statistics are not recalculated
+        from qats.app.gui import SettingsDialog
+
+        self.display()
+        result = (False, 20000, 256, 2, self.window.weibull_fit(), self.window.plotting_positions(), "mle", True)
+        with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
+            with unittest.mock.patch.object(self.window, "start_times_series_processing_thread") as recalculate:
+                self.window.on_open_settings()
+        recalculate.assert_not_called()
+        self.assertEqual(self.window.settings["gumbel_method"], "mle")
+        self.assertEqual(self.window.gumbel_method(), "mle")
 
     def test_cancelled_settings_keep_table(self):
         from qats.app.gui import SettingsDialog
@@ -200,12 +213,13 @@ class TestGuiMaxima(unittest.TestCase):
         before = self.table()
         fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
         with unittest.mock.patch.object(
-            SettingsDialog, "settings", return_value=(False, 20000, 256, 2, fit, "median", False)
+            SettingsDialog, "settings", return_value=(False, 20000, 256, 2, fit, "median", "mle", False)
         ):
             self.window.on_open_settings()
         self.settle()
         self.assertEqual(self.table(), before)
         self.assertNotIn("weibull_method", self.window.settings)
+        self.assertNotIn("gumbel_method", self.window.settings)
 
     def test_invalid_stored_settings(self):
         from qats.app.gui import WEIBULL_FIT_DEFAULTS
@@ -223,6 +237,13 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.settings = dict(plotting_positions="hazen")
         with self.assertLogs(level="WARNING"):
             self.assertEqual(self.window.plotting_positions(), "median")
+        for method in ("gumbel", "PWM", None):
+            with self.subTest(gumbel_method=method):
+                self.window.settings = dict(gumbel_method=method)
+                with self.assertLogs(level="WARNING"):
+                    self.assertEqual(self.window.gumbel_method(), "pwm")
+        self.window.settings = dict()
+        self.assertEqual(self.window.gumbel_method(), "pwm")
 
     def container(self):
         return {name: self.window.db.get(name=name) for name in NAMES}
@@ -236,14 +257,15 @@ class TestGuiMaxima(unittest.TestCase):
         return tabs.widget(index).findChild(FigureCanvasQTAgg).figure.axes[0]
 
     def test_extremes_cdf(self):
-        # the tab follows the maxima/minima selection and plotting positions, and draws what the library returns, for
-        # the extremes of 12 realisations of the same process
+        # the tab follows the maxima/minima selection, plotting positions and Gumbel fit method, and draws what the
+        # library returns, for the extremes of 12 realisations of the same process
         from qats.app.funcs import calculate_gumbel_fit
 
         container = realisations()
         self.window.settings["plotting_positions"] = "mean"
-        for minima in (False, True):
-            with self.subTest(minima=minima):
+        for minima, method in ((False, "pwm"), (True, "pwm"), (False, "mle"), (True, "lse")):
+            with self.subTest(minima=minima, method=method):
+                self.window.settings["gumbel_method"] = method
                 self.window.minima.setChecked(minima)
                 self.window.maxima.setChecked(not minima)
                 self.window.start_gumbel_fit_thread(container)
@@ -255,7 +277,9 @@ class TestGuiMaxima(unittest.TestCase):
                     self.window.filter_settings(),
                     minima=minima,
                     kind="mean",
+                    method=method,
                 )
+                self.assertIn(f"Gumbel fit: {method},", axes.get_title())
                 p = g["paper"]
                 points, line = axes.get_lines()
                 np.testing.assert_array_equal(points.get_xdata(), p.x)
@@ -303,13 +327,16 @@ class TestGuiOptionsMatchLibrary(unittest.TestCase):
     """The fit options the GUI offers are the library's, so they can't drift apart."""
 
     def test_options(self):
-        from qats.app.gui import PLOTTING_POSITIONS, TAIL_MODELS, WEIBULL_METHODS
+        from qats.app.gui import GUMBEL_METHOD_DEFAULT, GUMBEL_METHODS, PLOTTING_POSITIONS, TAIL_MODELS, WEIBULL_METHODS
         from qats.stats.empirical import _PLOTTING_POSITIONS, _TAIL_MODELS
+        from qats.stats.gumbel import _FIT_METHODS as GUMBEL_FIT_METHODS
         from qats.stats.weibull import _FIT_METHODS
 
         self.assertEqual(set(TAIL_MODELS), set(_TAIL_MODELS))
         self.assertEqual(set(PLOTTING_POSITIONS), set(_PLOTTING_POSITIONS))
         self.assertLessEqual(set(WEIBULL_METHODS), set(_FIT_METHODS))
+        self.assertEqual(set(GUMBEL_METHODS), set(GUMBEL_FIT_METHODS))
+        self.assertIn(GUMBEL_METHOD_DEFAULT, GUMBEL_METHODS)
 
 
 @requires_qt
@@ -336,9 +363,20 @@ class TestSettingsDialogFit(unittest.TestCase):
         d = self.dialog()
         self.assertEqual(d.get_fit(), dict(method="pwm", tail=None, tail_model="censored", loc=None))
         self.assertEqual(d.get_plotting_positions(), "median")
+        self.assertEqual(d.get_gumbel_method(), "pwm")
         self.assertFalse(d.tailspinbox.isEnabled())
         self.assertFalse(d.tailmodelcombo.isEnabled())
         self.assertFalse(d.locspinbox.isEnabled())
+
+    def test_gumbel_method_round_trip(self):
+        from qats.app.gui import SettingsDialog
+
+        for method in ("pwm", "msm", "lse", "mle"):
+            with self.subTest(method=method):
+                d = SettingsDialog(False, 512, 50, 1, gumbel_method=method)
+                self.addCleanup(d.close)
+                self.assertEqual(d.get_gumbel_method(), method)
+                self.assertTrue(d.gumbelmethodcombo.isEnabled())
 
     def test_censored_tail_disables_pwm_and_msm(self):
         d = self.dialog()

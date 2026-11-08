@@ -135,6 +135,31 @@ class TestCalculateGumbelFit(unittest.TestCase):
         labels = np.array([float(v) for v in g["paper"].xticklabels])
         np.testing.assert_allclose(g["paper"].xticks, -labels, rtol=1e-12)
 
+    def test_methods(self):
+        # each method gives the parameters of Gumbel.fit(), on the maxima or the minima multiplied by -1
+        from qats.app.funcs import calculate_gumbel_fit
+
+        for method in ("pwm", "msm", "lse", "mle"):
+            for minima in (False, True):
+                with self.subTest(method=method, minima=minima):
+                    g = calculate_gumbel_fit(self.container, None, None, minima=minima, method=method)
+                    z = -g["sample"] if minima else g["sample"]
+                    expected = Gumbel.fit(z, method=method)
+                    self.assertEqual((g["loc"], g["scale"]), (expected.loc, expected.scale))
+                    self.assertEqual(g["method"], method)
+                    np.testing.assert_allclose(
+                        g["paper"].fit_y, (g["paper"].fit_x - g["loc"]) / g["scale"], rtol=1e-9, atol=1e-9
+                    )
+
+    def test_invalid_method(self):
+        # an invalid method raises, and is not shown as a failed fit
+        from qats._validation import QatsValueError
+        from qats.app.funcs import calculate_gumbel_fit
+
+        with self.assertRaisesRegex(QatsValueError, "must be one of"):
+            calculate_gumbel_fit(self.container, None, None, method="gumbel")
+        self.assertEqual(calculate_gumbel_fit(self.container, None, None, method="MLE")["method"], "mle")
+
     def test_failed_fit(self):
         # the same realisation twice: equal extremes, zero scale, NaN parameters and the points without a line
         from qats.app.funcs import calculate_gumbel_fit

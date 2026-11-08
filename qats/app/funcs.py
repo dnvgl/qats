@@ -9,6 +9,7 @@ import numpy as np
 from .._validation import QatsValueError
 from ..fatigue.rainflow import _create_bins
 from ..fatigue.rainflow import rebin as rebin_cycles
+from ..stats.gumbel import _FIT_METHODS as GUMBEL_FIT_METHODS
 from ..stats.gumbel import Gumbel
 from ..stats.paper import probability_paper
 from ..stats.weibull import Weibull
@@ -177,12 +178,12 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
     return container_out
 
 
-def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median"):
+def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median", method="pwm"):
     """
     Sample the extreme of each time series, fit a Gumbel distribution, and put both on Gumbel paper
 
     .. versionchanged :: 5.6.0
-        New argument `kind`. The sample and the fitted distribution are returned on Gumbel paper, from
+        New arguments `kind` and `method`. The sample and the fitted distribution are returned on Gumbel paper, from
         :func:`qats.stats.paper.probability_paper`, and the sample in its original units, also for minima.
 
     Parameters
@@ -198,6 +199,8 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median"):
         minima multiplied by -1, and the paper is mirrored.
     kind : str, optional
         Plotting positions on the Gumbel paper, see :func:`qats.stats.empirical.empirical_cdf`.
+    method : str, optional
+        Method of the Gumbel fit, see :meth:`qats.stats.gumbel.Gumbel.fit`. Default 'pwm'.
 
     Returns
     -------
@@ -211,6 +214,10 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median"):
     """
     if len(container.keys()) < 2:
         raise ValueError("Select more than 1 time series to fit Gumbel CDF to extremes sample.")
+    # an invalid method raises here, not as a failed fit below
+    if not isinstance(method, str) or method.lower() not in GUMBEL_FIT_METHODS:
+        raise QatsValueError(f"The Gumbel fit method must be one of {', '.join(GUMBEL_FIT_METHODS)}, got {method!r}")
+    method = method.lower()
 
     # the extreme of each time series, in its original units
     sample = list()
@@ -221,7 +228,6 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median"):
 
     # fit to the maxima, or to the minima multiplied by -1. A fit that fails (e.g. equal extremes, so the scale is
     # zero) gives NaN parameters and the sample without a fitted line.
-    method = "pwm"
     try:
         gumbel = Gumbel.fit(-sample if minima else sample, method=method)
     except QatsValueError:
