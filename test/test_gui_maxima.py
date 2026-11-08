@@ -224,6 +224,79 @@ class TestGuiMaxima(unittest.TestCase):
         with self.assertLogs(level="WARNING"):
             self.assertEqual(self.window.plotting_positions(), "median")
 
+    def container(self, names=NAMES):
+        return {name: self.window.db.get(name=name) for name in names}
+
+    def extremes_axes(self):
+        """Axes of the last Extremes CDF tab."""
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+
+        tabs = self.window.tabs
+        index = max(i for i in range(tabs.count()) if tabs.tabText(i) == "Extremes CDF")
+        return tabs.widget(index).findChild(FigureCanvasQTAgg).figure.axes[0]
+
+    def test_extremes_cdf(self):
+        # the tab follows the maxima/minima selection and plotting positions, and draws what the library returns
+        from qats.app.funcs import calculate_gumbel_fit
+
+        lines = [f"Mooring line {i}" for i in range(1, 9)]
+        self.window.settings["plotting_positions"] = "mean"
+        for minima in (False, True):
+            with self.subTest(minima=minima):
+                self.window.minima.setChecked(minima)
+                self.window.maxima.setChecked(not minima)
+                self.window.start_gumbel_fit_thread(self.container(lines))
+                self.settle()
+                axes = self.extremes_axes()
+                g = calculate_gumbel_fit(
+                    self.container(lines),
+                    self.window.time_window(),
+                    self.window.filter_settings(),
+                    minima=minima,
+                    kind="mean",
+                )
+                p = g["paper"]
+                points, line = axes.get_lines()
+                np.testing.assert_array_equal(points.get_xdata(), p.x)
+                np.testing.assert_array_equal(points.get_ydata(), p.y)
+                np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+                np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
+                self.assertEqual(points.get_color(), line.get_color())
+                np.testing.assert_array_equal(axes.get_yticks(), p.yticks)
+                self.assertEqual([t.get_text() for t in axes.get_xticklabels()], p.xticklabels)
+                self.assertIn("minima" if minima else "maxima", axes.get_title())
+                self.assertIn("mean plotting positions", axes.get_title())
+                self.assertGreater(p.fit_x.size, 0)
+
+    def test_extremes_cdf_failed_fit(self):
+        # the minima of mooring lines 4 and 5 are equal, so the Gumbel scale is zero: the points without a line
+        self.window.minima.setChecked(True)
+        self.window.maxima.setChecked(False)
+        with self.assertLogs(level="WARNING") as logs:
+            self.window.start_gumbel_fit_thread(self.container())
+            self.settle()
+        self.assertTrue(any("could not be fitted" in m for m in logs.output))
+        points, line = self.extremes_axes().get_lines()
+        self.assertEqual(points.get_xdata().size, 2)
+        self.assertEqual(line.get_xdata().size, 0)
+
+    def test_cycle_distribution(self):
+        # the bars are the library's cycle counts, also with a single bin
+        from qats.app.funcs import calculate_rfc
+
+        for nbins in (1, 16):
+            with self.subTest(nbins=nbins):
+                rfc = calculate_rfc(self.container(), None, None, nbins)
+                self.window.plot_rfc(rfc)
+                bars = self.window.cycles_axes.patches
+                self.assertEqual(len(bars), nbins * len(NAMES))
+                for i, name in enumerate(NAMES):
+                    r, c, w = rfc[name]
+                    series = bars[i * nbins : (i + 1) * nbins]
+                    np.testing.assert_allclose([b.get_x() + 0.5 * b.get_width() for b in series], r, rtol=1e-12)
+                    np.testing.assert_array_equal([b.get_height() for b in series], c)
+                    np.testing.assert_allclose([b.get_width() for b in series], w, rtol=1e-12)
+
 
 @requires_qt
 class TestGuiOptionsMatchLibrary(unittest.TestCase):

@@ -57,7 +57,6 @@ from matplotlib.ticker import FuncFormatter
 from .. import __version__
 from .._validation import QatsTypeError, QatsValueError
 from ..io import registry
-from ..stats.empirical import empirical_cdf
 from ..stats.paper import _UNFITTED_STYLE
 from ..ts import _check_weibull_options
 from ..tsdb import TsDB
@@ -1199,7 +1198,7 @@ class Qats(QMainWindow):
         Parameters
         ----------
         container : dict
-            Cycle range versus number of occurrences.
+            Cycle range, count and bar width of each time series, see :func:`qats.app.funcs.calculate_rfc`.
         """
         self.cycles_axes.clear()
         self.cycles_axes.grid(True)
@@ -1210,26 +1209,16 @@ class Qats(QMainWindow):
         # (readable on both light and dark backgrounds)
         barcolor = cycle(matplotlib.rcParams["axes.prop_cycle"].by_key()["color"])
 
-        # draw
-        for name, value in container.items():
-            crange, count = value  # unpack magnitude and count
-
-            try:
-                # width of bars
-                width = crange[1] - crange[0]
-
-            except IndexError:
-                # cycles and magnitude lists are empty, no cycles found from rainflow
-                logging.warning("No cycles found for time series '%s'. Cannot create cycle histogram." % name)
-
-            except ValueError:
-                # probably nans or infs in data
-                logging.warning("Invalid values (nan, inf) in time series '%s'. Cannot create cycle histogram." % name)
-
+        # draw what the library returns
+        for name, (crange, count, width) in container.items():
+            if np.size(crange) == 0:
+                logging.warning(f"No cycles found for time series '{name}'. Cannot create cycle histogram.")
+            elif not (np.all(np.isfinite(crange)) and np.all(np.isfinite(width))):
+                logging.warning(f"Invalid values (nan, inf) in time series '{name}'. Cannot create cycle histogram.")
             else:
                 self.cycles_axes.bar(crange, count, width, label=name, alpha=0.4, color=next(barcolor))
                 self.cycles_axes.legend(loc="upper left")
-                self.cycles_canvas.draw()
+        self.cycles_canvas.draw()
 
         self.set_status("Cycle distribution plot updated", msecs=3000)
 
@@ -1306,17 +1295,12 @@ class Qats(QMainWindow):
         Parameters
         ----------
         container : dict
-            Sample and fitted Gumbel distribution parameters
+            Sample of extremes and the fitted Gumbel distribution on Gumbel paper, see
+            :func:`qats.app.funcs.calculate_gumbel_fit`
         """
-        # get sample and fitted distribution parameters
-        sample = container.get("sample")
-        loc = container.get("loc")
-        scale = container.get("scale")
-        is_minima = container.get("minima")
-
-        # nomalize sample distribution and fitted distribution
-        sample_dist = -np.log(-np.log(empirical_cdf(sample.size, kind="median")))
-        fitted_dist = (sample - loc) / scale
+        p = container["paper"]
+        is_minima = container["minima"]
+        txt = "minima" if is_minima else "maxima"
 
         # create widget and attach to tab
         w = QWidget()
@@ -1335,34 +1319,33 @@ class Qats(QMainWindow):
             tabindex,
             "Plot fitted Gumbel cumulative distribution function to extremes (maxima/minima) of selected time series",
         )
-        if is_minima:
-            # TODO: Double check that this is correct considering sample multiplied with -1 etc.
-            axes.invert_xaxis()
-            txt = "minima"
-        else:
-            txt = "maxima"
-
-        # plot
-        # TODO: Double check if sample should be multiplied with -1 or not.
-        axes.plot(sample, sample_dist, marker="o", linestyle="", label="Data")
-        axes.plot(sample, fitted_dist, "-m", label="Fitted")
-
-        # plotting positions and plot configurations
-        ylabels = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999])
-        yticks = -np.log(-np.log(ylabels))
-        axes.set_yticks(yticks)
-        axes.set_yticklabels(ylabels)
+        # draw what the library returns: the extremes and the fitted line in one colour, on Gumbel paper with its
+        # ticks. Minima are drawn mirrored (multiplied by -1) and labelled in their own units.
+        color = matplotlib.rcParams["axes.prop_cycle"].by_key()["color"][0]
+        axes.plot(p.x, p.y, "o", color=color, label=f"Extremes (n = {p.x.size})")
+        axes.plot(p.fit_x, p.fit_y, "-", color=color, label="Fitted Gumbel distribution")
+        axes.set_xticks(p.xticks, p.xticklabels)
+        axes.set_yticks(p.yticks, p.yticklabels)
+        axes.set_ylim(p.yticks[0], p.yticks[-1])
         axes.legend(loc="upper left")
         axes.grid(True)
-        axes.set_xlabel("Data")
+        axes.set_xlabel("Minimum of each time series" if is_minima else "Maximum of each time series")
         axes.set_ylabel("Cumulative probability (-)")
+        axes.set_title(
+            f"Gumbel fit: {container['method']}, {p.x.size} extreme {txt}; {container['kind']} plotting positions",
+            fontsize="small",
+        )
         canvas.draw()
 
         self.set_status("Gumbel distribution plot created", msecs=3000)
-        logging.info(
-            f"Fitted Gumbel distribution to {txt} extreme sample of {sample.size}'. "
-            f"(location, scale) = ({loc}, {scale})"
-        )
+        if p.fit_x.size == 0:
+            logging.warning(f"The Gumbel distribution could not be fitted to the {p.x.size} extreme {txt}.")
+        else:
+            of = f"{txt} multiplied by -1" if is_minima else txt
+            logging.info(
+                f"Fitted Gumbel distribution to a sample of {p.x.size} extreme {txt}. "
+                f"(location, scale) = ({container['loc']}, {container['scale']}), of the {of}"
+            )
 
     def psd_nperseg(self):
         """int: Length of segments used to estimate PSD with Welch's method."""
@@ -1632,8 +1615,9 @@ class Qats(QMainWindow):
         twin = self.time_window()
         fargs = self.filter_settings()
 
-        # start calculation of filtered and windows time series trace
-        worker = Worker(calculate_gumbel_fit, container, twin, fargs)
+        # sample the extremes and fit, with the maxima/minima selection and plotting positions of the other tabs
+        minima = self.minima.isChecked()
+        worker = Worker(calculate_gumbel_fit, container, twin, fargs, minima=minima, kind=self.plotting_positions())
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_gumbel)
         self.threadpool.start(worker)
