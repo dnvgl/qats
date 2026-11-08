@@ -276,6 +276,61 @@ class PaperTicksTestCases(unittest.TestCase):
         self.assertEqual(p.xticklabels, ["2"])
 
 
+class PaperLinearTestCases(unittest.TestCase):
+    """The linear paper: cumulative probability on a linear scale."""
+
+    def setUp(self):
+        self.x = np.array([1.0, 2.0, 4.0])
+        self.f = np.array([0.7, 1.7, 2.7]) / 3.4  # median ranks (i - 0.3) / (n + 0.4)
+
+    def test_coordinates(self):
+        p = probability_paper(self.x, paper="linear")
+        np.testing.assert_array_equal(p.x, self.x)
+        np.testing.assert_allclose(p.y, self.f, rtol=1e-14)
+        px, py = paper_coordinates(self.x, self.f, paper="linear")
+        np.testing.assert_array_equal(px, self.x)
+        np.testing.assert_array_equal(py, self.f)
+
+    def test_ticks(self):
+        # steps of 0.1, from the tick at or below the lowest point (0.206) to the tick at or above the highest (0.794)
+        p = probability_paper(self.x, paper="linear")
+        np.testing.assert_allclose(p.yticks, np.linspace(0.2, 0.8, 7), atol=1e-15)
+        self.assertEqual(p.yticklabels, ["0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8"])
+        # the whole axis for a larger sample
+        p = probability_paper(np.arange(1.0, 101.0), paper="linear")
+        self.assertEqual(p.yticklabels, ["0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1"])
+
+    def test_fitted_line(self):
+        w = Weibull(0.5, 2.0, 1.5)
+        p = probability_paper(self.x, w, paper="linear")
+        np.testing.assert_allclose(p.fit_y, w.cdf(p.fit_x), rtol=1e-9, atol=1e-12)
+
+
+class PaperNoSampleTestCases(unittest.TestCase):
+    """Only a fitted distribution, without a sample."""
+
+    def test_fitted_only(self):
+        w = Weibull(0.5, 2.0, 1.5)
+        for paper in ("rayleigh", "weibull", "gumbel", "linear"):
+            with self.subTest(paper=paper):
+                p = probability_paper(None, w, paper=paper)
+                for a in (p.sample, p.x, p.y, p.fitted, p.excluded):
+                    self.assertEqual(a.size, 0)
+                self.assertGreater(p.fit_x.size, 0)
+                self.assertTrue(np.all(np.isfinite(p.fit_x)))
+                # from the lowest to the highest tick around the probabilities 0.001 and 0.999
+                self.assertAlmostEqual(p.fit_y[0], p.yticks[0], delta=1e-12)
+                self.assertLessEqual(float(p.yticklabels[0]), 0.001)
+                self.assertGreaterEqual(float(p.yticklabels[-1]), 0.999)
+                self.assertGreater(len(p.xticks), 1)
+
+    def test_invalid(self):
+        with self.assertRaisesRegex(QatsValueError, "Give a sample, a fitted distribution or both"):
+            probability_paper(None)
+        with self.assertRaisesRegex(QatsValueError, "give the sample"):
+            probability_paper(None, Weibull(0.5, 2.0, 1.5), tail=0.2)
+
+
 class PaperValidationTestCases(unittest.TestCase):
     """Invalid arguments raise."""
 
