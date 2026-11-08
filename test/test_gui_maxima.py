@@ -159,18 +159,21 @@ class TestGuiMaxima(unittest.TestCase):
         self.set_fit(fit)
         self.display()
         axes = self.window.weibull_axes
-        # one legend entry per series, with u and n
+        # one legend entry per series, with u and n, then one entry for each kind of point
         labels = [t.get_text() for t in axes.get_legend().get_texts()]
-        self.assertEqual(len(labels), 2)
-        self.assertTrue(all("u = " in label and "n = " in label for label in labels))
-        # fitted points filled, the others hollow, in the series' colour; the fitted line in the same colour
+        self.assertEqual(len(labels), 4)
+        self.assertTrue(all("u = " in label and "n = " in label for label in labels[:2]))
+        self.assertEqual(labels[2:], ["Fitted", "Not fitted"])
+        # fitted points opaque, the others faded and smaller, in the series' colour
         lines = axes.get_lines()
-        filled = [ln for ln in lines if ln.get_marker() == "o" and ln.get_markerfacecolor() != "none"]
-        hollow = [ln for ln in lines if ln.get_marker() == "o" and ln.get_markerfacecolor() == "none"]
-        self.assertEqual(len(filled), 2)
-        self.assertEqual(len(hollow), 2)
-        for f, h in zip(filled, hollow):
+        fitted = [ln for ln in lines if ln.get_marker() == "o" and ln.get_alpha() is None]
+        faded = [ln for ln in lines if ln.get_marker() == "o" and ln.get_alpha() is not None]
+        self.assertEqual(len(fitted), 2)
+        self.assertEqual(len(faded), 2)
+        for f, h in zip(fitted, faded):
             self.assertEqual(f.get_color(), h.get_color())
+            self.assertLess(h.get_alpha(), 1.0)
+            self.assertLess(h.get_markersize(), f.get_markersize())
         # the threshold value u of each series
         s = self.expected(NAMES[0], fit)
         verticals = [ln for ln in lines if ln.get_linestyle() == "--"]
