@@ -302,7 +302,8 @@ class Gumbel(object):
         Determine distribution parameters by fit to sample.
 
         .. versionchanged :: 5.6.0
-            The fit settings are kept in :attr:`fit_info`.
+            The fit settings are kept in :attr:`fit_info`. The method name is not case sensitive; before, a name
+            that wasn't lowercase raised :class:`KeyError`.
 
         Parameters
         ----------
@@ -327,13 +328,13 @@ class Gumbel(object):
         >>> gumb = Gumbel.fit(data, method="msm")
 
         """
-        options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-        if method.lower() not in options.keys():
-            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+        if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+            raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
+        method = method.lower()
 
         data = np.array(data)  # ensure numpy array
 
-        loc, scale = options[method](data)
+        loc, scale = _FIT_FUNCTIONS[method](data)
         if verbose:
             print("Fitted parameters:\nloc = %5.3g\nscale = %5.3g" % (loc, scale))
 
@@ -660,9 +661,9 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
     >>> m, cv = bootstrap(10, 2.5, 5, 100)
 
     """
-    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-    if method.lower() not in options.keys():
-        raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+    if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+        raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
+    fit = _FIT_FUNCTIONS[method.lower()]
 
     # initiate distribution
     distribution = Gumbel(loc, scale)
@@ -674,7 +675,7 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
         x = distribution.rnd(size=size)
 
         # estimate distribution parameters to random sample
-        par[i, :] = options[method](x)
+        par[i, :] = fit(x)
         i += 1
 
     # calculate mean value and coefficient of variation of the distribution parameters
@@ -821,18 +822,16 @@ def plot_fits(data, filename=None, methods=None):
     plt.plot(x, z, "ko", label="Data")
 
     # fit distributions and plot
-    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-
     # default if not specified
     if not methods:
-        methods = options.keys()
+        methods = _FIT_METHODS
 
     for method in methods:
-        if method.lower() not in options.keys():
-            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+        if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+            raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
 
         # estimate location and scale parameter
-        loc, scale = options[method](x)
+        loc, scale = _FIT_FUNCTIONS[method.lower()](x)
 
         # linarize and plot
         z = (x - loc) / scale
@@ -919,3 +918,9 @@ def pwm(x):
     a = m0 - _euler_masceroni() * b
 
     return a, b
+
+
+# fit functions by method, defined once for Gumbel.fit(), bootstrap() and plot_fits(), and for the methods offered by
+# the desktop application. The method name is not case sensitive.
+_FIT_FUNCTIONS = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
+_FIT_METHODS = tuple(_FIT_FUNCTIONS)

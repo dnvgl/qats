@@ -8,8 +8,9 @@ import unittest.mock
 
 import numpy as np
 
+from qats._validation import QatsValueError
 from qats.stats.empirical import empirical_cdf
-from qats.stats.gumbel import Gumbel, _euler_masceroni, lse, mle, msm, pwm
+from qats.stats.gumbel import Gumbel, _euler_masceroni, bootstrap, lse, mle, msm, pwm
 from qats.stats.paper import probability_paper
 
 
@@ -64,6 +65,21 @@ class GumbelFitInfoTestCases(unittest.TestCase):
 
     def test_not_fitted(self):
         self.assertIsNone(Gumbel(1000.0, 150.0).fit_info)
+
+    def test_method_not_case_sensitive(self):
+        # a method name that isn't lowercase used to raise KeyError
+        for method, f in (("PWM", pwm), ("Msm", msm), ("LSE", lse), ("mLe", mle)):
+            with self.subTest(method=method):
+                g = Gumbel.fit(self.x, method=method)
+                self.assertEqual((g.loc, g.scale), f(self.x))
+                self.assertEqual(g.fit_info["method"], method.lower())
+        m, cv = bootstrap(1000.0, 150.0, 20, 5, method="MSM")
+        self.assertEqual(m.shape, (2,))
+
+    def test_invalid_method(self):
+        for method in ("gumbel", None):
+            with self.subTest(method=method), self.assertRaisesRegex(QatsValueError, "Method must be either"):
+                Gumbel.fit(self.x, method=method)
 
 
 class GumbelPlotTestCases(unittest.TestCase):

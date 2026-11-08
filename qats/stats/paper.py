@@ -300,7 +300,10 @@ def probability_paper(
         fgrid = _paper_f(fit_y, paper)
         if exceedances:
             fgrid = np.clip(1.0 - (1.0 - fgrid) / p, 0.0, 1.0)
-        xfit = np.asarray(fitted.invcdf(fgrid), dtype=float)
+        # an unbounded distribution is infinite at F = 0 or 1 (e.g. Gumbel at the bottom of a linear paper); such
+        # points are left out of the line
+        with np.errstate(divide="ignore", invalid="ignore"):
+            xfit = np.asarray(fitted.invcdf(fgrid), dtype=float)
         keep = np.isfinite(xfit)
         if paper == "weibull":
             keep &= xfit > loc
