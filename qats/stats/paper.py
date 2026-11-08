@@ -204,16 +204,17 @@ def probability_paper(
 
     Examples
     --------
-    Draw the maxima of a time series and a Weibull distribution fitted to them on Rayleigh paper
+    Draw the maxima of a time series and a Weibull distribution fitted to them on Rayleigh paper, with the maxima
+    left out of the fit faded
 
     >>> import matplotlib.pyplot as plt
     >>> from qats.stats.paper import probability_paper
     >>> from qats.stats.weibull import Weibull
     >>> mx = ts.maxima()
     >>> p = probability_paper(mx, Weibull.fit(mx, method="mle", tail=0.2), tail=0.2)
-    >>> plt.plot(p.x[p.fitted], p.y[p.fitted], "o")
-    >>> plt.plot(p.x[~p.fitted], p.y[~p.fitted], "o", mfc="none")
-    >>> plt.plot(p.fit_x, p.fit_y, "-")
+    >>> plt.plot(p.x[p.fitted], p.y[p.fitted], "o", color="C0")
+    >>> plt.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color="C0", alpha=0.3, ms=4.5)
+    >>> plt.plot(p.fit_x, p.fit_y, "-", color="C0")
     >>> plt.xticks(p.xticks, p.xticklabels)
     >>> plt.yticks(p.yticks, p.yticklabels)
     >>> plt.show()
