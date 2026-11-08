@@ -196,7 +196,8 @@ GUMBEL_METHODS = {
     "lse": "Least squares fit to the median-rank empirical distribution",
     "mle": "Maximum likelihood",
 }
-GUMBEL_METHOD_DEFAULT = "pwm"
+# defaults: as before the settings existed. Gringorten is the usual nearly unbiased choice for Gumbel distributions
+GUMBEL_DEFAULTS = dict(method="pwm", kind="median")
 
 
 def fit_description(fit, kind, minima=False):
@@ -1113,11 +1114,11 @@ class Qats(QMainWindow):
         # load settings dialog with current settings
         defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins(), self.twin_ndec())
         before = self._processing_settings()
-        psdnorm, nperseg, nbins, twindec, fit, kind, gumbel_method, ok = SettingsDialog.settings(
+        psdnorm, nperseg, nbins, twindec, fit, kind, gumbel, ok = SettingsDialog.settings(
             defaults,
             fit=self.weibull_fit(),
             kind=self.plotting_positions(),
-            gumbel_method=self.gumbel_method(),
+            gumbel=self.gumbel_fit(),
             parent=self,
         )
 
@@ -1133,7 +1134,8 @@ class Qats(QMainWindow):
             self.settings["weibull_loc"] = fit["loc"]
             self.settings["plotting_positions"] = kind
             # used by the next Extremes CDF tab; tabs already open keep the fit they show
-            self.settings["gumbel_method"] = gumbel_method
+            self.settings["gumbel_method"] = gumbel["method"]
+            self.settings["gumbel_plotting_positions"] = gumbel["kind"]
 
             # recalculate the shown time series with the new settings
             if self._displayed is not None and self._processing_settings() != before:
@@ -1406,13 +1408,26 @@ class Qats(QMainWindow):
             kind = "median"
         return kind
 
-    def gumbel_method(self):
-        """str: Method of the Gumbel fit to the extremes (Extremes CDF). An invalid stored setting gives 'pwm'."""
-        method = self.settings.get("gumbel_method", GUMBEL_METHOD_DEFAULT)
-        if method not in GUMBEL_METHODS:
-            logging.warning(f"Invalid Gumbel fit method setting {method!r}, using {GUMBEL_METHOD_DEFAULT!r}")
-            method = GUMBEL_METHOD_DEFAULT
-        return method
+    def gumbel_fit(self):
+        """
+        dict: Gumbel fit to the extremes on the Extremes CDF tab: `method`, see :meth:`qats.stats.gumbel.Gumbel.fit`,
+        and `kind`, the plotting positions. An invalid stored setting gives its default, see `GUMBEL_DEFAULTS`.
+        """
+        gumbel = dict(
+            method=self.settings.get("gumbel_method", GUMBEL_DEFAULTS["method"]),
+            kind=self.settings.get("gumbel_plotting_positions", GUMBEL_DEFAULTS["kind"]),
+        )
+        if gumbel["method"] not in GUMBEL_METHODS:
+            logging.warning(
+                f"Invalid Gumbel fit method setting {gumbel['method']!r}, using {GUMBEL_DEFAULTS['method']!r}"
+            )
+            gumbel["method"] = GUMBEL_DEFAULTS["method"]
+        if gumbel["kind"] not in PLOTTING_POSITIONS:
+            logging.warning(
+                f"Invalid Gumbel plotting positions setting {gumbel['kind']!r}, using {GUMBEL_DEFAULTS['kind']!r}"
+            )
+            gumbel["kind"] = GUMBEL_DEFAULTS["kind"]
+        return gumbel
 
     def _processing_settings(self):
         """Settings that change the calculated statistics and plots."""
@@ -1638,16 +1653,17 @@ class Qats(QMainWindow):
         twin = self.time_window()
         fargs = self.filter_settings()
 
-        # sample the extremes and fit, with the maxima/minima selection and plotting positions of the other tabs
+        # sample the extremes and fit, with the maxima/minima selection of the other tabs and the Gumbel fit settings
         minima = self.minima.isChecked()
+        gumbel = self.gumbel_fit()
         worker = Worker(
             calculate_gumbel_fit,
             container,
             twin,
             fargs,
             minima=minima,
-            kind=self.plotting_positions(),
-            method=self.gumbel_method(),
+            kind=gumbel["kind"],
+            method=gumbel["method"],
         )
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.plot_gumbel)
@@ -1746,11 +1762,12 @@ class SettingsDialog(QDialog):
         Default Weibull fit to maxima/minima: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
     kind : str, optional
         Default plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
-    gumbel_method : str, optional
-        Default method of the Gumbel fit to the extremes, see :meth:`qats.stats.gumbel.Gumbel.fit`.
+    gumbel : dict, optional
+        Default Gumbel fit to the extremes: `method`, see :meth:`qats.stats.gumbel.Gumbel.fit`, and `kind`, the
+        plotting positions.
     """
 
-    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None, *, fit=None, kind="median", gumbel_method="pwm"):
+    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None, *, fit=None, kind="median", gumbel=None):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle("Configure application settings")
         self.setWindowIcon(QIcon(ICON_FILE))
@@ -1822,7 +1839,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(self._fit_group(dict(WEIBULL_FIT_DEFAULTS) if fit is None else fit, kind))
 
         # settings group: Gumbel fit to the extremes
-        layout.addWidget(self._extremes_group(gumbel_method))
+        layout.addWidget(self._extremes_group(dict(GUMBEL_DEFAULTS) if gumbel is None else gumbel))
 
         # help text
         helptext = QHBoxLayout()
@@ -1921,7 +1938,10 @@ class SettingsDialog(QDialog):
             self.kindcombo.addItem(name, name)
             self.kindcombo.setItemData(i, tooltip, Qt.ToolTipRole)
         self.kindcombo.setCurrentIndex(list(PLOTTING_POSITIONS).index(kind))
-        self.kindcombo.setToolTip("Plotting positions of the maxima/minima on probability paper.")
+        self.kindcombo.setToolTip(
+            "Plotting positions of the maxima/minima on Rayleigh paper (Maxima/Minima CDF tab).\n"
+            "The Extremes CDF tab has its own setting, under Extremes distribution."
+        )
         form.addRow("Plotting positions", self.kindcombo)
 
         # keep the combination of options valid
@@ -1933,7 +1953,7 @@ class SettingsDialog(QDialog):
         group.setLayout(form)
         return group
 
-    def _extremes_group(self, method):
+    def _extremes_group(self, gumbel):
         """Group of widgets for the Gumbel fit to the extremes of the selected time series."""
         group = QGroupBox("Extremes distribution (extremes CDF)")
         form = QFormLayout()
@@ -1941,13 +1961,25 @@ class SettingsDialog(QDialog):
         for i, (name, tooltip) in enumerate(GUMBEL_METHODS.items()):
             self.gumbelmethodcombo.addItem(name, name)
             self.gumbelmethodcombo.setItemData(i, tooltip, Qt.ToolTipRole)
-        self.gumbelmethodcombo.setCurrentIndex(list(GUMBEL_METHODS).index(method))
+        self.gumbelmethodcombo.setCurrentIndex(list(GUMBEL_METHODS).index(gumbel["method"]))
         self.gumbelmethodcombo.setToolTip(
             "Method of the Gumbel fit to the extremes, one from each selected time series: probability weighted\n"
             "moments (pwm), method of moments (msm), least squares (lse) or maximum likelihood (mle). With the\n"
             "few extremes of a set of simulations, the methods can give quite different upper quantiles."
         )
         form.addRow("Gumbel fit method", self.gumbelmethodcombo)
+
+        self.gumbelkindcombo = QComboBox()
+        for i, (name, tooltip) in enumerate(PLOTTING_POSITIONS.items()):
+            self.gumbelkindcombo.addItem(name, name)
+            self.gumbelkindcombo.setItemData(i, tooltip, Qt.ToolTipRole)
+        self.gumbelkindcombo.setCurrentIndex(list(PLOTTING_POSITIONS).index(gumbel["kind"]))
+        self.gumbelkindcombo.setToolTip(
+            "Plotting positions of the extremes on Gumbel paper. Gringorten is the usual nearly unbiased choice\n"
+            "for Gumbel distributions. They change the points drawn, not the fit; the lse fit is to median ranks."
+        )
+        form.addRow("Plotting positions", self.gumbelkindcombo)
+
         group.setLayout(form)
         return group
 
@@ -2011,12 +2043,12 @@ class SettingsDialog(QDialog):
         """Collect the plotting positions setting."""
         return self.kindcombo.currentData()
 
-    def get_gumbel_method(self):
-        """Collect the method of the Gumbel fit to the extremes."""
-        return self.gumbelmethodcombo.currentData()
+    def get_gumbel(self):
+        """Collect the Gumbel fit to the extremes: method and plotting positions."""
+        return dict(method=self.gumbelmethodcombo.currentData(), kind=self.gumbelkindcombo.currentData())
 
     @staticmethod
-    def settings(defaults, parent=None, fit=None, kind="median", gumbel_method="pwm"):
+    def settings(defaults, parent=None, fit=None, kind="median", gumbel=None):
         """Create settings dialog and return settings.
 
         Parameters
@@ -2029,8 +2061,8 @@ class SettingsDialog(QDialog):
             Default Weibull fit to maxima/minima.
         kind : str, optional
             Default plotting positions.
-        gumbel_method : str, optional
-            Default method of the Gumbel fit to the extremes.
+        gumbel : dict, optional
+            Default Gumbel fit to the extremes: method and plotting positions.
 
         Returns
         -------
@@ -2046,25 +2078,23 @@ class SettingsDialog(QDialog):
             Weibull fit to maxima/minima: method, tail, tail_model and loc.
         kind : str
             Plotting positions.
-        gumbel_method : str
-            Method of the Gumbel fit to the extremes.
+        gumbel : dict
+            Gumbel fit to the extremes: `method` and `kind` (plotting positions).
         accepted : bool
             The dialog was closed with OK.
         """
         dnorm, dnperseg, dnbins, dtwindec = defaults
-        dialog = SettingsDialog(
-            dnorm, dnperseg, dnbins, dtwindec, parent=parent, fit=fit, kind=kind, gumbel_method=gumbel_method
-        )
+        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent, fit=fit, kind=kind, gumbel=gumbel)
         result = dialog.exec_()
         norm, nperseg, nbins, twindec = dialog.get_settings()
         fit = dialog.get_fit()
         kind = dialog.get_plotting_positions()
-        gumbel_method = dialog.get_gumbel_method()
+        gumbel = dialog.get_gumbel()
         # --- settings dialogue box debugging
         logging.debug(f"settings saved: norm = {norm}")
         logging.debug(f"settings saved: nperseg = {nperseg}")
         logging.debug(f"settings saved: nbins = {nbins}")
         logging.debug(f"settings saved: twindec = {twindec}")
-        logging.debug(f"settings saved: fit = {fit}, kind = {kind}, gumbel_method = {gumbel_method}")
+        logging.debug(f"settings saved: fit = {fit}, kind = {kind}, gumbel = {gumbel}")
         # ---
-        return norm, nperseg, nbins, twindec, fit, kind, gumbel_method, result == QDialog.Accepted
+        return norm, nperseg, nbins, twindec, fit, kind, gumbel, result == QDialog.Accepted
