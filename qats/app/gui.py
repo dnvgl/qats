@@ -188,6 +188,8 @@ PLOTTING_POSITIONS = {
     "beard": "Beard, (i - 0.31)/(n + 0.38)",
     "gringorten": "Gringorten, (i - 0.44)/(n + 0.12)",
 }
+# maxima/minima left out of a tail fit: faded and smaller, so dense clusters recede behind the fitted ones
+_UNFITTED_STYLE = dict(alpha=0.3, markersize=4.5)
 
 
 def fit_description(fit, kind, minima=False):
@@ -1249,8 +1251,11 @@ class Qats(QMainWindow):
         handles = []
         yticks = dict()
         is_minima = False
+        is_tail_fit = False
 
-        # draw: the fitted maxima filled, the others hollow, and the threshold value u of a tail fit dashed
+        # draw: the fitted maxima, the others faded, and the threshold value u of a tail fit dashed. The x axis of
+        # Rayleigh paper is in data units, so matplotlib's ticks serve all series (the paper's own x ticks are made
+        # for one series' range).
         for name, data in container.items():
             p = data.get("paper")
             if p is None:
@@ -1261,9 +1266,10 @@ class Qats(QMainWindow):
             u = data.get("wthreshold")
             label = name if u is None else f"{name} (u = {sign * u:.5g}, n = {data.get('wn')})"
             axes.plot(p.x[p.fitted], p.y[p.fitted], "o", color=color)
-            axes.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color=color, mfc="none")
+            axes.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color=color, **_UNFITTED_STYLE)
             axes.plot(p.fit_x, p.fit_y, "-", color=color)
             if u is not None:
+                is_tail_fit = True
                 axes.axvline(u, color=color, linestyle="--", linewidth=1.0)
             handles.append(Line2D([], [], color=color, marker="o", label=label))
             yticks.update(zip(p.yticklabels, p.yticks))
@@ -1282,6 +1288,12 @@ class Qats(QMainWindow):
         axes.set_xlabel("Minima" if is_minima else "Maxima")
         axes.set_ylabel("Cumulative probability (-)")
         axes.set_title(self._fit_description, fontsize="small")
+        if handles and is_tail_fit:
+            # explain the markers once for all series
+            handles.append(Line2D([], [], color="0.3", marker="o", linestyle="none", label="Fitted"))
+            handles.append(
+                Line2D([], [], color="0.3", marker="o", linestyle="none", label="Not fitted", **_UNFITTED_STYLE)
+            )
         if handles:
             axes.legend(handles=handles, loc="upper left")
         self.weibull_canvas.draw()
