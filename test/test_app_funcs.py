@@ -4,10 +4,14 @@ import unittest
 import numpy as np
 
 from qats import TsDB
+from qats.fatigue.rainflow import rebin
+from qats.stats.empirical import empirical_cdf
+from qats.stats.gumbel import Gumbel
+from qats.stats.gumbel import pwm as gumbel_pwm
 from qats.stats.paper import probability_paper
 from qats.stats.weibull import Weibull
 
-from . import requires_qt
+from . import realisations, requires_qt
 
 FIT_OPTIONS = [
     dict(),
@@ -76,6 +80,113 @@ class TestCalculateStats(unittest.TestCase):
         self.assertTrue(np.isnan(s["wloc"]))
         self.assertGreater(s["paper"].x.size, 0)
         self.assertEqual(s["paper"].fit_x.size, 0)
+
+
+@requires_qt
+class TestCalculateGumbelFit(unittest.TestCase):
+    """
+    The extremes and Gumbel distribution on the Extremes CDF tab are those of the library, for the extremes of 12
+    realisations of the same process.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.container = realisations()
+
+    def check(self, minima, kind="median"):
+        from qats.app.funcs import calculate_gumbel_fit
+
+        g = calculate_gumbel_fit(self.container, None, None, minima=minima, kind=kind)
+        extremes = np.sort([ts.x.min() if minima else ts.x.max() for ts in self.container.values()])
+        np.testing.assert_array_equal(g["sample"], extremes)
+
+        # the parameters of a pwm fit to the maxima, or to the minima multiplied by -1
+        z = -extremes if minima else extremes
+        self.assertEqual((g["loc"], g["scale"]), gumbel_pwm(z))
+
+        # the sample and fitted line on Gumbel paper
+        p = probability_paper(extremes, Gumbel(g["loc"], g["scale"]), paper="gumbel", kind=kind, is_minima=minima)
+        for attr in ("x", "y", "fit_x", "fit_y", "xticks", "yticks"):
+            np.testing.assert_array_equal(getattr(g["paper"], attr), getattr(p, attr), err_msg=attr)
+        self.assertEqual(g["paper"].xticklabels, p.xticklabels)
+        self.assertEqual((g["paper"].paper, g["paper"].kind, g["kind"], g["minima"]), ("gumbel", kind, kind, minima))
+
+        # hand calculation: the sorted (mirrored) extremes against -ln(-ln F), the fitted line (x - loc) / scale
+        f = empirical_cdf(extremes.size, kind=kind)
+        np.testing.assert_allclose(g["paper"].x, np.sort(z), rtol=1e-14)
+        np.testing.assert_allclose(g["paper"].y, -np.log(-np.log(f)), rtol=1e-14)
+        line = (g["paper"].fit_x - g["loc"]) / g["scale"]
+        np.testing.assert_allclose(g["paper"].fit_y, line, rtol=1e-9, atol=1e-9)
+
+    def test_maxima(self):
+        self.check(minima=False)
+
+    def test_minima(self):
+        self.check(minima=True)
+
+    def test_plotting_positions(self):
+        self.check(minima=False, kind="gringorten")
+
+    def test_minima_labelled_in_own_units(self):
+        from qats.app.funcs import calculate_gumbel_fit
+
+        g = calculate_gumbel_fit(self.container, None, None, minima=True)
+        # the mirrored paper: x ticks at -value, labelled with the value
+        labels = np.array([float(v) for v in g["paper"].xticklabels])
+        np.testing.assert_allclose(g["paper"].xticks, -labels, rtol=1e-12)
+
+    def test_failed_fit(self):
+        # the same realisation twice: equal extremes, zero scale, NaN parameters and the points without a line
+        from qats.app.funcs import calculate_gumbel_fit
+
+        ts = self.container["seed 1"]
+        for minima in (False, True):
+            with self.subTest(minima=minima):
+                g = calculate_gumbel_fit({"a": ts, "b": ts}, None, None, minima=minima)
+                self.assertTrue(np.isnan(g["loc"]) and np.isnan(g["scale"]))
+                self.assertEqual(g["paper"].x.size, 2)
+                self.assertEqual(g["paper"].fit_x.size, 0)
+
+    def test_too_few_series(self):
+        from qats.app.funcs import calculate_gumbel_fit
+
+        with self.assertRaises(ValueError):
+            calculate_gumbel_fit({"seed 1": self.container["seed 1"]}, None, None)
+
+
+@requires_qt
+class TestCalculateRfc(unittest.TestCase):
+    """The cycle distribution on the Cycles tab is the library's rainflow count, grouped by rebin()."""
+
+    @classmethod
+    def setUpClass(cls):
+        # each series is counted on its own, so two different mooring lines
+        db = TsDB.fromfile(os.path.join(os.path.dirname(__file__), "..", "data", "mooring.ts"))
+        cls.container = {f"line {i}": db.get(name=f"mooring line {i}") for i in (1, 2)}
+
+    def test_counts_and_widths(self):
+        from qats.app.funcs import calculate_rfc
+
+        for nbins in (1, 10, 256):
+            out = calculate_rfc(self.container, None, None, nbins)
+            for name, ts in self.container.items():
+                with self.subTest(nbins=nbins, name=name):
+                    r, c, w = out[name]
+                    cycles = ts.rfc()
+                    expected = rebin(cycles, binby="range", n=nbins)
+                    np.testing.assert_array_equal(r, expected[:, 0])
+                    np.testing.assert_array_equal(c, expected[:, 2])
+                    # equal bins from zero to the largest range
+                    np.testing.assert_allclose(w, np.full(nbins, cycles[:, 0].max() / nbins), rtol=1e-12)
+                    self.assertEqual(c.sum(), cycles[:, 2].sum())
+
+    def test_no_cycles(self):
+        from qats import TimeSeries
+        from qats.app.funcs import calculate_rfc
+
+        ts = TimeSeries("flat", np.arange(10.0), np.ones(10))
+        r, c, w = calculate_rfc({"flat": ts}, None, None, 10)["flat"]
+        self.assertEqual((r.size, c.size, w.size), (0, 0, 0))
 
 
 if __name__ == "__main__":

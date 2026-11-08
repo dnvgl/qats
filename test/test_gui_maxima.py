@@ -13,7 +13,7 @@ import unittest.mock
 
 import numpy as np
 
-from . import requires_qt
+from . import realisations, requires_qt
 from .test_reader_snapshot import DATA
 
 NAMES = ("Mooring line 4", "Mooring line 5")
@@ -224,8 +224,8 @@ class TestGuiMaxima(unittest.TestCase):
         with self.assertLogs(level="WARNING"):
             self.assertEqual(self.window.plotting_positions(), "median")
 
-    def container(self, names=NAMES):
-        return {name: self.window.db.get(name=name) for name in names}
+    def container(self):
+        return {name: self.window.db.get(name=name) for name in NAMES}
 
     def extremes_axes(self):
         """Axes of the last Extremes CDF tab."""
@@ -236,20 +236,21 @@ class TestGuiMaxima(unittest.TestCase):
         return tabs.widget(index).findChild(FigureCanvasQTAgg).figure.axes[0]
 
     def test_extremes_cdf(self):
-        # the tab follows the maxima/minima selection and plotting positions, and draws what the library returns
+        # the tab follows the maxima/minima selection and plotting positions, and draws what the library returns, for
+        # the extremes of 12 realisations of the same process
         from qats.app.funcs import calculate_gumbel_fit
 
-        lines = [f"Mooring line {i}" for i in range(1, 9)]
+        container = realisations()
         self.window.settings["plotting_positions"] = "mean"
         for minima in (False, True):
             with self.subTest(minima=minima):
                 self.window.minima.setChecked(minima)
                 self.window.maxima.setChecked(not minima)
-                self.window.start_gumbel_fit_thread(self.container(lines))
+                self.window.start_gumbel_fit_thread(container)
                 self.settle()
                 axes = self.extremes_axes()
                 g = calculate_gumbel_fit(
-                    self.container(lines),
+                    container,
                     self.window.time_window(),
                     self.window.filter_settings(),
                     minima=minima,
@@ -269,11 +270,10 @@ class TestGuiMaxima(unittest.TestCase):
                 self.assertGreater(p.fit_x.size, 0)
 
     def test_extremes_cdf_failed_fit(self):
-        # the minima of mooring lines 4 and 5 are equal, so the Gumbel scale is zero: the points without a line
-        self.window.minima.setChecked(True)
-        self.window.maxima.setChecked(False)
+        # the same realisation twice: equal extremes, so the Gumbel scale is zero: the points without a line
+        ts = realisations()["seed 1"]
         with self.assertLogs(level="WARNING") as logs:
-            self.window.start_gumbel_fit_thread(self.container())
+            self.window.start_gumbel_fit_thread({"a": ts, "b": ts})
             self.settle()
         self.assertTrue(any("could not be fitted" in m for m in logs.output))
         points, line = self.extremes_axes().get_lines()
