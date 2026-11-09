@@ -31,12 +31,16 @@ class TestCalculateStats(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "..", "data", "mooring.ts")
         cls.ts = TsDB.fromfile(path).get(name="mooring line 4")
 
-    def check(self, fit, minima=False, kind="median"):
+    def check(self, fit, minima=False, plotting_positions="median"):
         from qats.app.funcs import calculate_stats
 
-        s = calculate_stats({"a": self.ts}, None, None, minima=minima, fit=fit, kind=kind)["a"]
+        s = calculate_stats({"a": self.ts}, None, None, minima=minima, fit=fit, plotting_positions=plotting_positions)[
+            "a"
+        ]
+        # an lse fit is fitted to the plotting positions of the plot
+        lse = dict(plotting_positions=plotting_positions) if fit.get("method") == "lse" else dict()
         expected = self.ts.stats(
-            statsdur=10800.0, quantiles=(0.37, 0.57, 0.9), is_minima=minima, include_sample=True, **fit
+            statsdur=10800.0, quantiles=(0.37, 0.57, 0.9), is_minima=minima, include_sample=True, **fit, **lse
         )
         for key, value in expected.items():
             if key == "sample":
@@ -49,7 +53,7 @@ class TestCalculateStats(unittest.TestCase):
         p = probability_paper(
             expected["sample"],
             Weibull(expected["wloc"], expected["wscale"], expected["wshape"]),
-            kind=kind,
+            plotting_positions=plotting_positions,
             tail=fit.get("tail"),
             tail_model=fit.get("tail_model", "censored"),
             is_minima=minima,
@@ -57,7 +61,7 @@ class TestCalculateStats(unittest.TestCase):
         for attr in ("x", "y", "fitted", "fit_x", "fit_y", "yticks"):
             np.testing.assert_array_equal(getattr(s["paper"], attr), getattr(p, attr), err_msg=attr)
         self.assertEqual(s["paper"].paper, "rayleigh")
-        self.assertEqual(s["paper"].kind, kind)
+        self.assertEqual(s["paper"].plotting_positions, plotting_positions)
 
     def test_fit_options(self):
         for fit in FIT_OPTIONS:
@@ -70,7 +74,7 @@ class TestCalculateStats(unittest.TestCase):
                 self.check(fit, minima=True)
 
     def test_plotting_positions(self):
-        self.check(dict(), kind="mean")
+        self.check(dict(), plotting_positions="mean")
 
     def test_failed_fit(self):
         # mle to the exceedances with the location fitted doesn't converge on these maxima: NaN, points without a line
@@ -93,10 +97,10 @@ class TestCalculateGumbelFit(unittest.TestCase):
     def setUpClass(cls):
         cls.container = realisations()
 
-    def check(self, minima, kind="median"):
+    def check(self, minima, plotting_positions="median"):
         from qats.app.funcs import calculate_gumbel_fit
 
-        g = calculate_gumbel_fit(self.container, None, None, minima=minima, kind=kind)
+        g = calculate_gumbel_fit(self.container, None, None, minima=minima, plotting_positions=plotting_positions)
         extremes = np.sort([ts.x.min() if minima else ts.x.max() for ts in self.container.values()])
         np.testing.assert_array_equal(g["sample"], extremes)
 
@@ -105,14 +109,23 @@ class TestCalculateGumbelFit(unittest.TestCase):
         self.assertEqual((g["loc"], g["scale"]), gumbel_pwm(z))
 
         # the sample and fitted line on Gumbel paper
-        p = probability_paper(extremes, Gumbel(g["loc"], g["scale"]), paper="gumbel", kind=kind, is_minima=minima)
+        p = probability_paper(
+            extremes,
+            Gumbel(g["loc"], g["scale"]),
+            paper="gumbel",
+            plotting_positions=plotting_positions,
+            is_minima=minima,
+        )
         for attr in ("x", "y", "fit_x", "fit_y", "xticks", "yticks"):
             np.testing.assert_array_equal(getattr(g["paper"], attr), getattr(p, attr), err_msg=attr)
         self.assertEqual(g["paper"].xticklabels, p.xticklabels)
-        self.assertEqual((g["paper"].paper, g["paper"].kind, g["kind"], g["minima"]), ("gumbel", kind, kind, minima))
+        self.assertEqual(
+            (g["paper"].paper, g["paper"].plotting_positions, g["plotting_positions"], g["minima"]),
+            ("gumbel", plotting_positions, plotting_positions, minima),
+        )
 
         # hand calculation: the sorted (mirrored) extremes against -ln(-ln F), the fitted line (x - loc) / scale
-        f = empirical_cdf(extremes.size, kind=kind)
+        f = empirical_cdf(extremes.size, kind=plotting_positions)
         np.testing.assert_allclose(g["paper"].x, np.sort(z), rtol=1e-14)
         np.testing.assert_allclose(g["paper"].y, -np.log(-np.log(f)), rtol=1e-14)
         line = (g["paper"].fit_x - g["loc"]) / g["scale"]
@@ -125,7 +138,7 @@ class TestCalculateGumbelFit(unittest.TestCase):
         self.check(minima=True)
 
     def test_plotting_positions(self):
-        self.check(minima=False, kind="gringorten")
+        self.check(minima=False, plotting_positions="gringorten")
 
     def test_minima_labelled_in_own_units(self):
         from qats.app.funcs import calculate_gumbel_fit
@@ -134,6 +147,25 @@ class TestCalculateGumbelFit(unittest.TestCase):
         # the mirrored paper: x ticks at -value, labelled with the value
         labels = np.array([float(v) for v in g["paper"].xticklabels])
         np.testing.assert_allclose(g["paper"].xticks, -labels, rtol=1e-12)
+
+    def test_lse_fitted_to_plotting_positions(self):
+        # an lse fit is fitted to the plotting positions of the plot, so they change the fit
+        from qats.app.funcs import calculate_gumbel_fit
+
+        fits = dict()
+        for plotting_positions in ("median", "gringorten"):
+            with self.subTest(plotting_positions=plotting_positions):
+                g = calculate_gumbel_fit(
+                    self.container, None, None, plotting_positions=plotting_positions, method="lse"
+                )
+                expected = Gumbel.fit(g["sample"], method="lse", plotting_positions=plotting_positions)
+                self.assertEqual((g["loc"], g["scale"]), (expected.loc, expected.scale))
+                fits[plotting_positions] = (g["loc"], g["scale"])
+        self.assertNotEqual(fits["median"], fits["gringorten"])
+        # the other methods don't use them
+        a = calculate_gumbel_fit(self.container, None, None, plotting_positions="median", method="mle")
+        b = calculate_gumbel_fit(self.container, None, None, plotting_positions="gringorten", method="mle")
+        self.assertEqual((a["loc"], a["scale"]), (b["loc"], b["scale"]))
 
     def test_methods(self):
         # each method gives the parameters of Gumbel.fit(), on the maxima or the minima multiplied by -1

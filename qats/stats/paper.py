@@ -23,7 +23,14 @@ from dataclasses import dataclass
 import numpy as np
 
 from .._validation import QatsTypeError, QatsValueError
-from .empirical import _PLOTTING_POSITIONS, _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
+from .empirical import (
+    _check_plotting_positions,
+    _check_tail,
+    _check_tail_model,
+    _tail_count,
+    empirical_cdf,
+    tail_threshold,
+)
 from .weibull import Weibull
 
 _PAPERS = ("rayleigh", "weibull", "gumbel", "linear")
@@ -58,7 +65,7 @@ class ProbabilityPaper:
     ----------
     paper : str
         Probability paper: 'rayleigh', 'weibull', 'gumbel' or 'linear'.
-    kind : str
+    plotting_positions : str
         Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
     loc : float
         Location of the Weibull paper, the x axis is ln(x - loc). Zero on the other papers.
@@ -86,7 +93,7 @@ class ProbabilityPaper:
     """
 
     paper: str
-    kind: str
+    plotting_positions: str
     loc: float
     sample: np.ndarray
     x: np.ndarray
@@ -139,7 +146,7 @@ def probability_paper(
     fitted=None,
     *,
     paper="rayleigh",
-    kind="median",
+    plotting_positions="median",
     tail=None,
     tail_model="censored",
     loc=None,
@@ -161,7 +168,7 @@ def probability_paper(
         distribution fitted to the minima multiplied by -1.
     paper : str, optional
         Probability paper: 'rayleigh' (default), 'weibull', 'gumbel' or 'linear'. See :mod:`qats.stats.paper`.
-    kind : str, optional
+    plotting_positions : str, optional
         Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`. Default 'median', ``(i-0.3)/(n+0.4)``.
     tail : float, optional
         Tail fraction of a tail fit: the fit used only the largest values, a fraction `tail` of the sample. The
@@ -201,13 +208,13 @@ def probability_paper(
     The plotting positions are computed for the whole sample, also with a tail, and before excluding the values a
     Weibull paper can't show, so these don't shift the other values.
 
-    The values in the tail are selected as in the tail fits of :mod:`qats.stats.weibull` and
-    :meth:`qats.TimeSeries.stats`, independently of `kind`: the values whose mean-rank cumulative probability
-    ``i/(n+1)`` is at least ``1 - tail``. The threshold value u is the largest value outside the tail. With the
-    'censored' tail model, the values in the tail are marked as fitted. With 'exceedances', the values above u are.
+    The tail is selected as in the tail fits of :mod:`qats.stats.weibull` and :meth:`qats.TimeSeries.stats`,
+    independently of `plotting_positions`: the values whose mean-rank cumulative probability ``i/(n+1)`` is at least
+    ``1 - tail``. The threshold value u is the largest value outside the tail. The values marked as fitted are those
+    in the tail with the 'censored' tail model, and those above u with 'exceedances'.
 
-    A fit to the exceedances describes only the values above u. Without `tail`, it is drawn with only the
-    exceedances as its own complete sample: pass the exceedances as `sample`.
+    A fit to the exceedances describes only the values above u. To draw it without `tail`, pass the exceedances as
+    `sample`: they are then drawn as a complete sample of their own.
 
     Examples
     --------
@@ -227,10 +234,7 @@ def probability_paper(
     >>> plt.show()
     """
     _check_paper(paper)
-    if kind not in _PLOTTING_POSITIONS:
-        raise QatsValueError(
-            f"The plotting positions (kind) must be one of {', '.join(_PLOTTING_POSITIONS)}, got {kind!r}"
-        )
+    _check_plotting_positions(plotting_positions)
     if tail is not None:
         _check_tail(tail)
     _check_tail_model(tail_model, tail)
@@ -257,7 +261,7 @@ def probability_paper(
     sign = -1.0 if is_minima else 1.0
     z = np.sort(sign * z)
     n = z.size
-    f = empirical_cdf(n, kind=kind)
+    f = empirical_cdf(n, kind=plotting_positions)
 
     # values used in the fit
     r = _tail_count(n, tail) if tail is not None else 0
@@ -318,7 +322,7 @@ def probability_paper(
 
     return ProbabilityPaper(
         paper=paper,
-        kind=kind,
+        plotting_positions=plotting_positions,
         loc=loc,
         sample=sign * z[shown],
         x=x,
@@ -412,7 +416,7 @@ def _format(v):
     return f"{v + 0.0:g}"
 
 
-def _plot_distribution(distribution, filename, paper, kind, ax):
+def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
     """
     Draw a fitted distribution and the sample it was fitted to on probability paper.
 
@@ -427,7 +431,7 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
         Save the figure as `filename`.
     paper : str
         Probability paper: 'rayleigh', 'weibull', 'gumbel' or 'linear', see :func:`probability_paper`.
-    kind : str
+    plotting_positions : str
         Plotting positions of the sample, see :func:`qats.stats.empirical.empirical_cdf`.
     ax : matplotlib.axes.Axes or None
         Axes to draw on. None draws on a new figure.
@@ -454,7 +458,7 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
         distribution.data,
         distribution,
         paper=paper,
-        kind=kind,
+        plotting_positions=plotting_positions,
         tail=tail,
         tail_model=info.get("tail_model") or "censored",
     )

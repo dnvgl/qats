@@ -65,17 +65,19 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.on_display()
         self.settle()
 
-    def set_fit(self, fit, kind="median"):
+    def set_fit(self, fit, plotting_positions="median"):
         self.window.settings.update(
             weibull_method=fit.get("method", "pwm"),
             weibull_tail=fit.get("tail"),
             weibull_tail_model=fit.get("tail_model", "censored"),
             weibull_loc=fit.get("loc"),
-            plotting_positions=kind,
+            plotting_positions=plotting_positions,
         )
 
     def expected(self, name, fit, minima=False):
         ts = self.window.db.get(name=name)
+        # an lse fit is fitted to the plotting positions of the Maxima/Minima CDF tab
+        lse = dict(plotting_positions=self.window.plotting_positions()) if fit.get("method") == "lse" else dict()
         return ts.stats(
             twin=self.window.time_window(),
             filterargs=self.window.filter_settings(),
@@ -84,6 +86,7 @@ class TestGuiMaxima(unittest.TestCase):
             is_minima=minima,
             include_sample=True,
             **fit,
+            **lse,
         )
 
     def table(self):
@@ -186,7 +189,7 @@ class TestGuiMaxima(unittest.TestCase):
         self.display()
         before = self.table()[NAMES[0]]["wloc"]
         fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
-        result = (False, 20000, 256, 2, fit, "median", dict(method="pwm", kind="median"), True)
+        result = (False, 20000, 256, 2, fit, "median", dict(method="pwm", plotting_positions="median"), True)
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
         self.settle()
@@ -198,7 +201,7 @@ class TestGuiMaxima(unittest.TestCase):
         from qats.app.gui import SettingsDialog
 
         self.display()
-        gumbel = dict(method="mle", kind="gringorten")
+        gumbel = dict(method="mle", plotting_positions="gringorten")
         result = (False, 20000, 256, 2, self.window.weibull_fit(), self.window.plotting_positions(), gumbel, True)
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             with unittest.mock.patch.object(self.window, "start_times_series_processing_thread") as recalculate:
@@ -219,7 +222,16 @@ class TestGuiMaxima(unittest.TestCase):
         with unittest.mock.patch.object(
             SettingsDialog,
             "settings",
-            return_value=(False, 20000, 256, 2, fit, "median", dict(method="mle", kind="gringorten"), False),
+            return_value=(
+                False,
+                20000,
+                256,
+                2,
+                fit,
+                "median",
+                dict(method="mle", plotting_positions="gringorten"),
+                False,
+            ),
         ):
             self.window.on_open_settings()
         self.settle()
@@ -245,17 +257,26 @@ class TestGuiMaxima(unittest.TestCase):
         with self.assertLogs(level="WARNING"):
             self.assertEqual(self.window.plotting_positions(), "median")
         for settings, expected in (
-            (dict(gumbel_method="gumbel"), dict(method="pwm", kind="median")),
-            (dict(gumbel_method="PWM", gumbel_plotting_positions="beard"), dict(method="pwm", kind="beard")),
-            (dict(gumbel_method=None, gumbel_plotting_positions="mle"), dict(method="pwm", kind="median")),
-            (dict(gumbel_method="lse", gumbel_plotting_positions="hazen"), dict(method="lse", kind="median")),
+            (dict(gumbel_method="gumbel"), dict(method="pwm", plotting_positions="median")),
+            (
+                dict(gumbel_method="PWM", gumbel_plotting_positions="beard"),
+                dict(method="pwm", plotting_positions="beard"),
+            ),
+            (
+                dict(gumbel_method=None, gumbel_plotting_positions="mle"),
+                dict(method="pwm", plotting_positions="median"),
+            ),
+            (
+                dict(gumbel_method="lse", gumbel_plotting_positions="hazen"),
+                dict(method="lse", plotting_positions="median"),
+            ),
         ):
             with self.subTest(**settings):
                 self.window.settings = dict(settings)
                 with self.assertLogs(level="WARNING"):
                     self.assertEqual(self.window.gumbel_fit(), expected)
         self.window.settings = dict()
-        self.assertEqual(self.window.gumbel_fit(), dict(method="pwm", kind="median"))
+        self.assertEqual(self.window.gumbel_fit(), dict(method="pwm", plotting_positions="median"))
 
     def container(self):
         return {name: self.window.db.get(name=name) for name in NAMES}
@@ -289,7 +310,7 @@ class TestGuiMaxima(unittest.TestCase):
                     self.window.time_window(),
                     self.window.filter_settings(),
                     minima=minima,
-                    kind="mean",
+                    plotting_positions="mean",
                     method=method,
                 )
                 self.assertIn(f"Gumbel fit: {method},", axes.get_title())
@@ -350,7 +371,7 @@ class TestGuiOptionsMatchLibrary(unittest.TestCase):
         self.assertLessEqual(set(WEIBULL_METHODS), set(_FIT_METHODS))
         self.assertEqual(set(GUMBEL_METHODS), set(GUMBEL_FIT_METHODS))
         self.assertIn(GUMBEL_DEFAULTS["method"], GUMBEL_METHODS)
-        self.assertIn(GUMBEL_DEFAULTS["kind"], PLOTTING_POSITIONS)
+        self.assertIn(GUMBEL_DEFAULTS["plotting_positions"], PLOTTING_POSITIONS)
 
 
 @requires_qt
@@ -362,10 +383,10 @@ class TestSettingsDialogFit(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
-    def dialog(self, fit=None, kind="median"):
+    def dialog(self, fit=None, plotting_positions="median"):
         from qats.app.gui import SettingsDialog
 
-        d = SettingsDialog(False, 512, 50, 1, fit=fit, kind=kind)
+        d = SettingsDialog(False, 512, 50, 1, fit=fit, plotting_positions=plotting_positions)
         self.addCleanup(d.close)
         return d
 
@@ -377,7 +398,7 @@ class TestSettingsDialogFit(unittest.TestCase):
         d = self.dialog()
         self.assertEqual(d.get_fit(), dict(method="pwm", tail=None, tail_model="censored", loc=None))
         self.assertEqual(d.get_plotting_positions(), "median")
-        self.assertEqual(d.get_gumbel(), dict(method="pwm", kind="median"))
+        self.assertEqual(d.get_gumbel(), dict(method="pwm", plotting_positions="median"))
         self.assertFalse(d.tailspinbox.isEnabled())
         self.assertFalse(d.tailmodelcombo.isEnabled())
         self.assertFalse(d.locspinbox.isEnabled())
@@ -386,19 +407,19 @@ class TestSettingsDialogFit(unittest.TestCase):
         from qats.app.gui import SettingsDialog
 
         for gumbel in (
-            dict(method="pwm", kind="gringorten"),
-            dict(method="msm", kind="median"),
-            dict(method="lse", kind="mean"),
-            dict(method="mle", kind="beard"),
+            dict(method="pwm", plotting_positions="gringorten"),
+            dict(method="msm", plotting_positions="median"),
+            dict(method="lse", plotting_positions="mean"),
+            dict(method="mle", plotting_positions="beard"),
         ):
             with self.subTest(**gumbel):
                 # independent of the plotting positions of the maxima/minima distribution
-                d = SettingsDialog(False, 512, 50, 1, kind="symmetrical", gumbel=gumbel)
+                d = SettingsDialog(False, 512, 50, 1, plotting_positions="symmetrical", gumbel=gumbel)
                 self.addCleanup(d.close)
                 self.assertEqual(d.get_gumbel(), gumbel)
                 self.assertEqual(d.get_plotting_positions(), "symmetrical")
                 self.assertTrue(d.gumbelmethodcombo.isEnabled())
-                self.assertTrue(d.gumbelkindcombo.isEnabled())
+                self.assertTrue(d.gumbelplottingpositionscombo.isEnabled())
 
     def test_censored_tail_disables_pwm_and_msm(self):
         d = self.dialog()
@@ -425,15 +446,15 @@ class TestSettingsDialogFit(unittest.TestCase):
     def test_round_trip(self):
         from qats.ts import _check_weibull_options
 
-        for fit, kind in (
+        for fit, plotting_positions in (
             (dict(method="msm", tail=0.15, tail_model="exceedances", loc=None), "mean"),
             (dict(method="lse", tail=0.3, tail_model="censored", loc="mean"), "gringorten"),
             (dict(method="mle", tail=None, tail_model="censored", loc=120.5), "beard"),
         ):
             with self.subTest(**fit):
-                d = self.dialog(fit=fit, kind=kind)
+                d = self.dialog(fit=fit, plotting_positions=plotting_positions)
                 self.assertEqual(d.get_fit(), fit)
-                self.assertEqual(d.get_plotting_positions(), kind)
+                self.assertEqual(d.get_plotting_positions(), plotting_positions)
                 _check_weibull_options(**d.get_fit())
 
     def test_value_location(self):

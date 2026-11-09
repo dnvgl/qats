@@ -126,7 +126,7 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
-def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median"):
+def calculate_stats(container, twin, fargs, minima=False, fit=None, plotting_positions="median"):
     """
     Calculate time series statistics, and the maxima/minima with the fitted Weibull distribution on Rayleigh paper
 
@@ -143,8 +143,9 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
     fit : dict, optional
         Weibull fit options for :meth:`qats.TimeSeries.stats`: `method`, `tail`, `tail_model` and `loc`. Default
         the defaults of :meth:`qats.TimeSeries.stats`.
-    kind : str, optional
-        Plotting positions on the probability paper, see :func:`qats.stats.empirical.empirical_cdf`.
+    plotting_positions : str, optional
+        Plotting positions on the probability paper, see :func:`qats.stats.empirical.empirical_cdf`. An ``lse`` fit
+        is fitted to these plotting positions, so the fitted line is drawn against the points it was fitted to.
 
     Returns
     -------
@@ -152,7 +153,9 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
         Statistics of each time series, see :meth:`qats.TimeSeries.stats`, with the sample and the fitted
         distribution on Rayleigh paper as :class:`qats.stats.paper.ProbabilityPaper` under the key 'paper'
     """
-    fit = dict() if fit is None else fit
+    fit = dict() if fit is None else dict(fit)
+    if fit.get("method", "").lower() == "lse":
+        fit["plotting_positions"] = plotting_positions
     container_out = dict()
     for name, ts in container.items():
         s = ts.stats(
@@ -169,7 +172,7 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
             s["paper"] = probability_paper(
                 s["sample"],
                 Weibull(s["wloc"], s["wscale"], s["wshape"]),
-                kind=kind,
+                plotting_positions=plotting_positions,
                 tail=s["wtail"],
                 tail_model=s["wtail_model"] or "censored",
                 is_minima=minima,
@@ -178,12 +181,13 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
     return container_out
 
 
-def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median", method="pwm"):
+def calculate_gumbel_fit(container, twin, fargs, minima=False, plotting_positions="median", method="pwm"):
     """
     Sample the extreme of each time series, fit a Gumbel distribution, and put both on Gumbel paper
 
     .. versionchanged :: 5.6.0
-        New arguments `kind` and `method`. The sample and the fitted distribution are returned on Gumbel paper, from
+        New arguments `plotting_positions` and `method`. The sample and the fitted distribution are returned on
+        Gumbel paper, from
         :func:`qats.stats.paper.probability_paper`, and the sample in its original units, also for minima.
 
     Parameters
@@ -197,8 +201,9 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median", me
     minima : bool, optional
         Sample the minimum of each time series instead of the maximum. The Gumbel distribution is fitted to the
         minima multiplied by -1, and the paper is mirrored.
-    kind : str, optional
-        Plotting positions on the Gumbel paper, see :func:`qats.stats.empirical.empirical_cdf`.
+    plotting_positions : str, optional
+        Plotting positions on the Gumbel paper, see :func:`qats.stats.empirical.empirical_cdf`. An ``lse`` fit is
+        fitted to these plotting positions.
     method : str, optional
         Method of the Gumbel fit, see :meth:`qats.stats.gumbel.Gumbel.fit`. Default 'pwm'.
 
@@ -208,7 +213,7 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median", me
         - 'sample': the extremes sorted ascending, in their original units
         - 'loc', 'scale': the Gumbel parameters, of the minima multiplied by -1 for minima. NaN if the fit fails.
         - 'method': the method of the fit
-        - 'minima', 'kind': as given
+        - 'minima', 'plotting_positions': as given
         - 'paper': the sample and the fitted distribution on Gumbel paper,
           :class:`qats.stats.paper.ProbabilityPaper`. Without a fitted line if the fit fails.
     """
@@ -229,12 +234,21 @@ def calculate_gumbel_fit(container, twin, fargs, minima=False, kind="median", me
     # fit to the maxima, or to the minima multiplied by -1. A fit that fails (e.g. equal extremes, so the scale is
     # zero) gives NaN parameters and the sample without a fitted line.
     try:
-        gumbel = Gumbel.fit(-sample if minima else sample, method=method)
+        fitargs = dict(plotting_positions=plotting_positions) if method == "lse" else dict()
+        gumbel = Gumbel.fit(-sample if minima else sample, method=method, **fitargs)
     except QatsValueError:
         gumbel = None
-    paper = probability_paper(sample, gumbel, paper="gumbel", kind=kind, is_minima=minima)
+    paper = probability_paper(sample, gumbel, paper="gumbel", plotting_positions=plotting_positions, is_minima=minima)
     loc, scale = (np.nan, np.nan) if gumbel is None else (gumbel.loc, gumbel.scale)
-    return dict(loc=loc, scale=scale, method=method, sample=sample, minima=minima, kind=kind, paper=paper)
+    return dict(
+        loc=loc,
+        scale=scale,
+        method=method,
+        sample=sample,
+        minima=minima,
+        plotting_positions=plotting_positions,
+        paper=paper,
+    )
 
 
 def export_to_file(filename, db, names, twin, fargs):

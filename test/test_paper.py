@@ -44,7 +44,7 @@ class PaperCoordinatesTestCases(unittest.TestCase):
         np.testing.assert_allclose(p.y, -np.log(-np.log(self.f)), rtol=1e-14)
 
     def test_mean_ranks(self):
-        p = probability_paper(self.x, kind="mean")
+        p = probability_paper(self.x, plotting_positions="mean")
         np.testing.assert_allclose(p.y, np.sqrt(-np.log(1.0 - np.array([0.25, 0.5, 0.75]))), rtol=1e-14)
 
     def test_unsorted_sample(self):
@@ -339,7 +339,7 @@ class PaperValidationTestCases(unittest.TestCase):
         w = Weibull(0.0, 2.0, 1.5)
         cases = [
             (QatsValueError, dict(paper="normal")),
-            (QatsValueError, dict(kind="weibull")),
+            (QatsValueError, dict(plotting_positions="weibull")),
             (QatsValueError, dict(tail=0.0)),
             (QatsValueError, dict(tail=1.5)),
             (QatsTypeError, dict(tail="0.2")),
