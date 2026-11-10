@@ -102,7 +102,11 @@ class TestGuiMaxima(unittest.TestCase):
         return rows
 
     def check_same_fit(self, fit, minima=False):
-        """The table and the maxima/minima CDF plot show the library's fit with these settings."""
+        """
+        The table and the maxima/minima CDF plot show the library's statistics and fit, for the window's time window,
+        filter and plotting positions and these fit settings.
+        """
+        from qats.app.gui import STATS_ORDER
         from qats.stats.paper import probability_paper
         from qats.stats.weibull import Weibull
 
@@ -113,13 +117,15 @@ class TestGuiMaxima(unittest.TestCase):
         self.assertEqual(len(lines), 3 * len(NAMES))
         for i, name in enumerate(table):
             s = self.expected(name, fit, minima=minima)
-            for key in ("wloc", "wscale", "wshape", "wthreshold", "wn", "gn", "p_90.00"):
+            # every column, as the table formats it
+            for key in STATS_ORDER[1:]:
                 value = s[key]
                 self.assertEqual(table[name][key], "" if value is None else f"{value:12.5g}", (name, key))
 
             p = probability_paper(
                 s["sample"],
                 Weibull(s["wloc"], s["wscale"], s["wshape"]),
+                plotting_positions=self.window.plotting_positions(),
                 tail=fit.get("tail"),
                 tail_model=fit.get("tail_model", "censored"),
                 is_minima=minima,
@@ -128,6 +134,7 @@ class TestGuiMaxima(unittest.TestCase):
             np.testing.assert_array_equal(fitted.get_xdata(), p.x[p.fitted])
             np.testing.assert_array_equal(fitted.get_ydata(), p.y[p.fitted])
             np.testing.assert_array_equal(other.get_xdata(), p.x[~p.fitted])
+            np.testing.assert_array_equal(other.get_ydata(), p.y[~p.fitted])
             np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
             np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
 
@@ -148,6 +155,49 @@ class TestGuiMaxima(unittest.TestCase):
                 full = dict(dict(method="pwm", tail=None, tail_model="censored", loc=None), **fit)
                 self.assertEqual(self.window.stats_fit_label.text(), fit_description(full, "median"))
                 self.assertEqual(self.window.weibull_axes.get_title(), fit_description(full, "median"))
+
+    def set_time_window_and_filter(self, twin, lowpass):
+        self.window.from_time.setValue(twin[0])
+        self.window.to_time.setValue(twin[1])
+        self.window.lowpass.setChecked(True)
+        self.window.lowpass_f.setValue(lowpass)
+        self.assertEqual(self.window.time_window(), twin)
+        self.assertEqual(self.window.filter_settings(), ("lp", lowpass))
+
+    def test_time_window_and_filter(self):
+        # the statistics, maxima/minima CDF and cycle distribution of the cropped and filtered series, with fit
+        # settings and plotting positions that aren't the defaults
+        from qats.fatigue.rainflow import rebin
+
+        self.set_time_window_and_filter((500.0, 6000.0), 0.1)
+        self.window.settings["rfc_nbins"] = 32
+        for fit, minima, plotting_positions in (
+            (dict(method="lse", tail=0.2), False, "gringorten"),
+            (dict(method="mle", tail=0.3, loc="mean"), True, "mean"),
+            (dict(method="msm", tail=0.2, tail_model="exceedances", loc="threshold"), False, "beard"),
+        ):
+            with self.subTest(**fit, minima=minima, plotting_positions=plotting_positions):
+                self.set_fit(fit, plotting_positions=plotting_positions)
+                self.window.minima.setChecked(minima)
+                self.window.maxima.setChecked(not minima)
+                self.display()
+                self.check_same_fit(fit, minima=minima)
+                self.assertIn(f"{plotting_positions} plotting positions", self.window.weibull_axes.get_title())
+
+                # the cycle bars: the library's rainflow count of each series, in 32 equal bins
+                bars = self.window.cycles_axes.patches
+                self.assertEqual(len(bars), 32 * len(NAMES))
+                for i, name in enumerate(NAMES):
+                    cycles = self.window.db.get(name=name).rfc(twin=(500.0, 6000.0), filterargs=("lp", 0.1))
+                    expected = rebin(cycles, binby="range", n=32)
+                    series = bars[i * 32 : (i + 1) * 32]
+                    np.testing.assert_allclose(
+                        [b.get_x() + 0.5 * b.get_width() for b in series], expected[:, 0], rtol=1e-12
+                    )
+                    np.testing.assert_array_equal([b.get_height() for b in series], expected[:, 2])
+                    np.testing.assert_allclose(
+                        [b.get_width() for b in series], np.full(32, cycles[:, 0].max() / 32), rtol=1e-12
+                    )
 
     def test_minima(self):
         fit = dict(method="msm", tail=0.2, tail_model="exceedances")
@@ -326,6 +376,38 @@ class TestGuiMaxima(unittest.TestCase):
                 self.assertIn("minima" if minima else "maxima", axes.get_title())
                 self.assertIn("mean plotting positions", axes.get_title())
                 self.assertGreater(p.fit_x.size, 0)
+
+    def test_extremes_cdf_time_window_and_filter(self):
+        # the library's fit to the extremes of the cropped and filtered series. The low-pass filter removes the upper
+        # half of the process's frequency band (0.08 to 0.12 Hz), so it changes the extremes.
+        from qats.stats.gumbel import Gumbel
+        from qats.stats.paper import probability_paper
+
+        container = realisations()
+        self.set_time_window_and_filter((1000.0, 9000.0), 0.1)
+        self.window.settings.update(gumbel_method="lse", gumbel_plotting_positions="gringorten")
+        for minima in (False, True):
+            with self.subTest(minima=minima):
+                self.window.minima.setChecked(minima)
+                self.window.maxima.setChecked(not minima)
+                self.window.start_gumbel_fit_thread(container)
+                self.settle()
+                extremes = list()
+                for ts in container.values():
+                    _, x = ts.get(twin=(1000.0, 9000.0), filterargs=("lp", 0.1))
+                    extremes.append(x.min() if minima else x.max())
+                extremes = np.sort(extremes)
+                fitted = Gumbel.fit(-extremes if minima else extremes, method="lse", plotting_positions="gringorten")
+                p = probability_paper(
+                    extremes, fitted, paper="gumbel", plotting_positions="gringorten", is_minima=minima
+                )
+                points, line = self.extremes_axes().get_lines()
+                np.testing.assert_array_equal(points.get_xdata(), p.x)
+                np.testing.assert_array_equal(points.get_ydata(), p.y)
+                np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+                np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
+                unfiltered = np.sort([ts.x.min() if minima else ts.x.max() for ts in container.values()])
+                self.assertFalse(np.array_equal(extremes, unfiltered))
 
     def test_extremes_cdf_failed_fit(self):
         # the same realisation twice: equal extremes, so the Gumbel scale is zero: the points without a line
