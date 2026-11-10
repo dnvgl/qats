@@ -357,8 +357,30 @@ class TestTsWeibullFit(unittest.TestCase):
                     loc_from=loc_from,
                     threshold=s["wthreshold"],
                     n=s["wn"],
+                    plotting_positions=s["wplotting_positions"],
                 )
                 self.assertEqual(info, expected)
+
+    def test_lse_kind(self):
+        # stats() and fit_weibull() pass the plotting positions on to an lse fit, and report them
+        for kwargs in (dict(), dict(tail=self.tail), dict(tail=self.tail, loc="mean")):
+            with self.subTest(**kwargs):
+                fixed = dict(kwargs, loc=self.ts.mean()) if kwargs.get("loc") == "mean" else kwargs
+                expected = Weibull.fit(self.mx, method="lse", plotting_positions="gringorten", **fixed).params
+                s = self.ts.stats(method="lse", plotting_positions="gringorten", **kwargs)
+                self.assertEqual((s["wloc"], s["wscale"], s["wshape"]), expected)
+                self.assertEqual(s["wplotting_positions"], "gringorten")
+                self.assertEqual(
+                    self.ts.fit_weibull(method="lse", plotting_positions="gringorten", **kwargs).params, expected
+                )
+        self.assertEqual(self.ts.stats(method="lse")["wplotting_positions"], "mean")
+        self.assertIsNone(self.ts.stats()["wplotting_positions"])
+        for f in (self.ts.stats, self.ts.fit_weibull):
+            with self.subTest(fn=f.__name__):
+                with self.assertRaisesRegex(QatsValueError, "only for the method lse"):
+                    f(method="mle", plotting_positions="median")
+                with self.assertRaisesRegex(QatsValueError, "plotting positions"):
+                    f(method="lse", plotting_positions="hazen")
 
     def test_fit_keeps_all_maxima(self):
         w = self.ts.fit_weibull(method="msm", tail=self.tail, tail_model="exceedances")

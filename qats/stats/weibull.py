@@ -14,7 +14,14 @@ from scipy.special import binom, gamma
 from .._deprecation import warn_deprecated
 from .._validation import QatsTypeError, QatsValueError
 from ..signal import find_maxima
-from .empirical import _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
+from .empirical import (
+    _check_plotting_positions,
+    _check_tail,
+    _check_tail_model,
+    _tail_count,
+    empirical_cdf,
+    tail_threshold,
+)
 from .paper import _plot_distribution, paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
@@ -134,14 +141,15 @@ class Weibull(object):
         dict or None
             A copy of the fit settings, with the meanings of the ``w*`` keys of :meth:`qats.TimeSeries.stats`:
 
-            ==========  ===============================================================================================
-            method      Method of the fit
-            tail        Tail fraction of a tail fit, None if all values were fitted
-            tail_model  'censored' or 'exceedances', None if all values were fitted
-            loc_from    Where the location parameter comes from: 'fitted', or 'value' (given, or zero with ``pwm2``)
-            threshold   Threshold value u of a tail fit, the largest value outside the tail (None if none)
-            n           Number of values fitted
-            ==========  ===============================================================================================
+            ==================  ======================================================================================
+            method              Method of the fit
+            tail                Tail fraction of a tail fit, None if all values were fitted
+            tail_model          'censored' or 'exceedances', None if all values were fitted
+            loc_from            Where the location parameter is from: 'fitted', or 'value' (given, or zero for ``pwm2``)
+            threshold           Threshold value u of a tail fit, the largest value outside the tail (None if none)
+            n                   Number of values fitted
+            plotting_positions  Plotting positions of an ``lse`` fit, None for the other methods
+            ==================  ======================================================================================
         """
         return None if self._fit_info is None else dict(self._fit_info)
 
@@ -357,13 +365,15 @@ class Weibull(object):
         return p
 
     @classmethod
-    def fit(cls, data, method="msm", verbose=False, *, loc=None, tail=None, tail_model="censored"):
+    def fit(
+        cls, data, method="msm", verbose=False, *, loc=None, tail=None, tail_model="censored", plotting_positions=None
+    ):
         """
         Establish Weibull class instance by fit to sample.
 
         .. versionchanged :: 5.6.0
-            New arguments `loc`, `tail` and `tail_model`. The fit settings are kept in :attr:`fit_info`. A fit that
-            fails raises :class:`ValueError`, see the fit functions.
+            New arguments `loc`, `tail`, `tail_model` and `plotting_positions`. The fit settings are kept in
+            :attr:`fit_info`. A fit that fails raises :class:`ValueError`, see the fit functions.
 
         Parameters
         ----------
@@ -394,6 +404,10 @@ class Weibull(object):
               count only by their number. Only with ``lse`` and ``mle``, see :func:`lse` and :func:`mle`.
             - 'exceedances': the values above the threshold value u, the largest value outside the tail, are fitted as
               a complete sample with any method, and the distribution describes only those values.
+
+        plotting_positions : str, optional
+            Plotting positions an ``lse`` fit is fitted to, see :func:`lse` and
+            :func:`qats.stats.empirical.empirical_cdf`. Default 'mean'. Only with ``lse``.
 
         Returns
         -------
@@ -445,6 +459,10 @@ class Weibull(object):
                 f"A tail fit is only available with the methods lse and mle, not {method}. Or fit the exceedances "
                 f"with tail_model='exceedances'."
             )
+        if plotting_positions is not None:
+            if method != "lse":
+                raise QatsValueError(f"plotting_positions= is only for the method lse, not {method}")
+            _check_plotting_positions(plotting_positions)
 
         data = np.array(data)  # ensure numpy array
 
@@ -468,6 +486,8 @@ class Weibull(object):
                 kwargs["loc"] = loc
             if fit_tail is not None:
                 kwargs["tail"] = fit_tail
+            if plotting_positions is not None:
+                kwargs["plotting_positions"] = plotting_positions
             loc_fit, scale, shape = _FIT_FUNCTIONS[method](sample, **kwargs)
 
         if verbose:
@@ -484,6 +504,7 @@ class Weibull(object):
             loc_from="value" if (loc is not None or method == "pwm2") else "fitted",
             threshold=threshold,
             n=nfit,
+            plotting_positions=(plotting_positions or "mean") if method == "lse" else None,
         )
         return weib
 
@@ -594,12 +615,12 @@ class Weibull(object):
         )
         return p
 
-    def plot(self, filename=None, *, paper=None, kind=None, ax=None):
+    def plot(self, filename=None, *, paper=None, plotting_positions=None, ax=None):
         """
         Plot the distribution and the sample it was fitted to on probability paper
 
         .. versionchanged :: 5.6.0
-            New arguments `paper`, `kind` and `ax`, and the axes are returned. The plot is drawn with
+            New arguments `paper`, `plotting_positions` and `ax`, and the axes are returned. The plot is drawn with
             :func:`qats.stats.paper.probability_paper`, and shows a tail fit as :attr:`fit_info` describes it: the
             values outside the fit faded, and the threshold value u dashed. With the default arguments the data and
             the fitted distribution are drawn as before, but the fitted line spans the probability axis, from the
@@ -612,9 +633,9 @@ class Weibull(object):
         paper : str, optional
             Probability paper: 'linear' (cumulative probability on a linear scale), 'rayleigh', 'weibull' or
             'gumbel'. See :mod:`qats.stats.paper`. Default 'linear'; will be 'rayleigh' from 6.0.
-        kind : str, optional
-            Plotting positions of the data, see :func:`qats.stats.empirical.empirical_cdf`. Default 'mean',
-            ``i/(n+1)``; will be 'median' from 6.0.
+        plotting_positions : str, optional
+            Plotting positions of the data, see :func:`qats.stats.empirical.empirical_cdf`. Default those an
+            ``lse`` fit was fitted to (see :attr:`fit_info`), otherwise 'mean', ``i/(n+1)``; will be 'median' from 6.0.
         ax : matplotlib.axes.Axes, optional
             Draw on these axes. The figure is then neither shown nor closed, only saved if `filename` is given.
 
@@ -640,13 +661,14 @@ class Weibull(object):
 
         >>> import matplotlib.pyplot as plt
         >>> fig, ax = plt.subplots()
-        >>> Weibull.fit(maxima, method="mle", tail=0.2).plot(paper="rayleigh", kind="median", ax=ax)
+        >>> Weibull.fit(maxima, method="mle", tail=0.2).plot(paper="rayleigh", plotting_positions="median", ax=ax)
         >>> plt.show()
 
         """
-        return _plot_distribution(
-            self, filename, "linear" if paper is None else paper, "mean" if kind is None else kind, ax
-        )
+        if plotting_positions is None:
+            # the plotting positions an lse fit was fitted to
+            plotting_positions = (self._fit_info or dict()).get("plotting_positions") or "mean"
+        return _plot_distribution(self, filename, "linear" if paper is None else paper, plotting_positions, ax)
 
     def plot_linear(self, filename=None):
         """
@@ -687,7 +709,7 @@ class Weibull(object):
             "qats.stats.weibull.Weibull.plot_linear()",
             "5.6.0",
             "6.0.0",
-            alternative="Weibull.plot(paper='weibull', kind='mean')",
+            alternative="Weibull.plot(paper='weibull', plotting_positions='mean')",
         )
         plt.figure()
 
@@ -827,13 +849,13 @@ def bootstrap(loc, scale, shape, size, repetitions, method="pwm"):
     return m, cv
 
 
-def lse(x, threshold: float = None, tail: float = None, loc: float = None):
+def lse(x, threshold: float = None, tail: float = None, loc: float = None, plotting_positions: str = "mean"):
     """
     Fit Weibull distribution parameters to sample by method of least square fit to empirical cdf.
 
     .. versionchanged :: 5.6.0
-        New arguments `tail` and `loc`. A fit that fails raises :class:`ValueError` instead of returning wrong
-        parameters.
+        New arguments `tail`, `loc` and `plotting_positions`. A fit that fails raises :class:`ValueError` instead of
+        returning wrong parameters.
 
     Parameters
     ----------
@@ -849,6 +871,9 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     loc : float, optional
         Fixed location parameter. Only the scale and shape parameters are fitted, as a 2-parameter Weibull
         distribution of the fitted values minus `loc`. Must be below the smallest fitted value.
+    plotting_positions : str, optional
+        Plotting positions the distribution is fitted to, see :func:`qats.stats.empirical.empirical_cdf`. Default
+        'mean', ``i/(n+1)``.
 
     Returns
     -------
@@ -858,20 +883,26 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     Raises
     ------
     QatsValueError
-        If the fit fails: the solver does not converge, a parameter is not finite, the scale or shape parameter is not
+        If `plotting_positions` is not one of the plotting positions of :func:`qats.stats.empirical.empirical_cdf`,
+        or the fit fails: the solver does not converge, a parameter is not finite, the scale or shape parameter is not
         positive, or the location parameter is not below the smallest fitted value.
 
     Notes
     -----
-    Uses what are known as (approximate) mean rank estimates for the empirical cdf.
+    The cumulative distribution function is fitted to the given plotting positions of the sample, by default mean
+    rank estimates. In a fit to the tail, the plotting positions are those of the whole sample, and the tail is
+    selected by mean rank whatever the plotting positions: the values with ``i/(n+1)`` at or above ``1 - tail`` (or
+    `threshold`).
     """
+    _check_plotting_positions(plotting_positions)
     x = np.sort(x)  # sorted dataset
-    f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf according to Weibull [1]
+    f = empirical_cdf(x.size, kind=plotting_positions)  # plotting positions the cdf is fitted to
+    rank = empirical_cdf(x.size, kind="mean")  # mean rank, selects the tail
     weights = np.ones(np.shape(x))  # by default include all data points
-    threshold = _tail_level(f, threshold=threshold, tail=tail)
+    threshold = _tail_level(rank, threshold=threshold, tail=tail)
     if threshold is not None:
         # exclude data points below threshold (fit only to the tail)
-        weights[f < threshold] = 0.0
+        weights[rank < threshold] = 0.0
     xmin = x[weights > 0.0][0]  # smallest fitted value
 
     if loc is not None:
@@ -1188,7 +1219,7 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
         "qats.stats.weibull.plot_fit()",
         "5.6.0",
         "6.0.0",
-        alternative="Weibull(loc, scale, shape, data=x).plot(paper='weibull', kind='mean')",
+        alternative="Weibull(loc, scale, shape, data=x).plot(paper='weibull', plotting_positions='mean')",
     )
     # unpack distribution parameters
     a, b, c = params

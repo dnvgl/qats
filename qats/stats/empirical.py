@@ -140,6 +140,14 @@ def _tail_count(n, tail):
     return int(np.count_nonzero(empirical_cdf(n, kind="mean") < 1.0 - tail))
 
 
+def _check_plotting_positions(plotting_positions):
+    """Raise if `plotting_positions` is not one of the plotting positions of :func:`empirical_cdf`."""
+    if plotting_positions not in _PLOTTING_POSITIONS:
+        raise QatsValueError(
+            f"The plotting positions must be one of {', '.join(_PLOTTING_POSITIONS)}, got {plotting_positions!r}"
+        )
+
+
 def _check_tail(tail):
     """Raise if the tail fraction `tail` is not a number in <0, 1]."""
     if isinstance(tail, bool) or not isinstance(tail, numbers.Real):

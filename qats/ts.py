@@ -21,7 +21,7 @@ from .fatigue.rainflow import count_cycles, mesh
 from .fatigue.rainflow import rebin as rebin_cycles
 from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 from .signal import threshold as thresholdpass
-from .stats.empirical import _check_tail, _check_tail_model, _tail_count, tail_threshold
+from .stats.empirical import _check_plotting_positions, _check_tail, _check_tail_model, _tail_count, tail_threshold
 from .stats.gumbel import Gumbel
 from .stats.weibull import _FIT_FUNCTIONS, Weibull, _pwm3, weibull2gumbel
 
@@ -495,12 +495,15 @@ class TimeSeries(object):
 
         return t, x
 
-    def fit_weibull(self, twin=None, method="msm", *, tail=None, tail_model="censored", loc=None):
+    def fit_weibull(
+        self, twin=None, method="msm", *, tail=None, tail_model="censored", loc=None, plotting_positions=None
+    ):
         """
         Fit Weibull distribution to sample of global maxima.
 
         .. versionchanged :: 5.6.0
-            New arguments `tail`, `tail_model` and `loc` for fits to the tail of the maxima and with fixed location.
+            New arguments `tail`, `tail_model` and `loc` for fits to the tail of the maxima and with fixed location,
+            and `plotting_positions` for the plotting positions of an ``lse`` fit.
 
         Parameters
         ----------
@@ -518,11 +521,15 @@ class TimeSeries(object):
         loc : {None, 'mean', 'threshold'} or float, optional
             Location parameter: fitted (None, default), the mean level of the time series ('mean'), the threshold value
             u ('threshold', only with ``tail_model='exceedances'``) or a number.
+        plotting_positions : str, optional
+            Plotting positions an ``lse`` fit is fitted to, see :func:`qats.stats.empirical.empirical_cdf`. Default
+            'mean'. Only with ``method='lse'``.
 
         Returns
         -------
         Weibull
-            Class instance. In a fit to the exceedances its data are the exceedances.
+            Class instance, with all maxima as its data, also in a fit to the exceedances, and the fit settings in
+            :attr:`~qats.stats.weibull.Weibull.fit_info`.
 
         Raises
         ------
@@ -554,10 +561,10 @@ class TimeSeries(object):
         >>> weib = ts.fit_weibull(method="lse", tail=0.2, loc="mean")
 
         """
-        _check_weibull_options(method, tail, tail_model, loc)
+        _check_weibull_options(method, tail, tail_model, loc, plotting_positions)
         maxima = self.maxima(local=False, threshold=None, twin=twin, rettime=False)
         mean = self.mean(twin=twin) if loc == "mean" else None
-        kwargs, _, _ = _setup_weibull_fit(maxima, mean, method, tail, tail_model, loc)
+        kwargs, _, _ = _setup_weibull_fit(maxima, mean, method, tail, tail_model, loc, plotting_positions)
         return Weibull.fit(maxima, **kwargs)
 
     def get(self, twin=None, resample=None, window_len=None, filterargs=None, window="rectangular", taperfrac=None):
@@ -1367,14 +1374,15 @@ class TimeSeries(object):
         tail=None,
         tail_model="censored",
         loc=None,
+        plotting_positions=None,
         **kwargs,
     ):
         """
         Returns dictionary with time series properties and statistics
 
         .. versionchanged :: 5.6.0
-            New arguments `method`, `tail`, `tail_model` and `loc` for the Weibull fit, and new keys in the returned
-            dictionary that report the fit.
+            New arguments `method`, `tail`, `tail_model`, `loc` and `plotting_positions` for the Weibull fit, and new
+            keys in the returned dictionary that report the fit.
 
         Parameters
         ----------
@@ -1399,6 +1407,9 @@ class TimeSeries(object):
             Weibull location parameter: fitted (None, default), the mean level of the time series ('mean'), the
             threshold value u ('threshold', only with ``tail_model='exceedances'``) or a number. For minima the fit is
             to the minima multiplied by -1, so a number is given in those units: -1 multiplied with the level.
+        plotting_positions : str, optional
+            Plotting positions an ``lse`` fit is fitted to, see :func:`qats.stats.empirical.empirical_cdf`. Default
+            'mean'. Only with ``method='lse'``.
         **kwargs
             Additional keyword arguments are passed to :meth:`get()`.
 
@@ -1432,6 +1443,7 @@ class TimeSeries(object):
             wtail_model Tail model, 'censored' or 'exceedances', None if all maxima are fitted
             wloc_from   How the location parameter was chosen: 'fitted', 'mean', 'threshold' or 'value'
             wthreshold  Threshold value u of a tail fit, the largest maximum outside the tail (None if none)
+            wplotting_positions       Plotting positions of an lse fit, None for the other methods
             wn          Number of maxima fitted
             gn          Number of maxima in `statsdur` used for the Gumbel distribution: all maxima, or only the
                         exceedances in a fit to the exceedances
@@ -1499,7 +1511,7 @@ class TimeSeries(object):
 
         >>> stats = ts.stats(method="mle", tail=0.2, tail_model="exceedances", loc="threshold")
         """
-        _check_weibull_options(method, tail, tail_model, loc)
+        _check_weibull_options(method, tail, tail_model, loc, plotting_positions)
 
         # get time series as array
         t, x = self.get(**kwargs)
@@ -1517,7 +1529,7 @@ class TimeSeries(object):
             f = -1.0
 
         mx, _ = find_maxima(f * x)
-        winfo = _weibull_info(method, tail, tail_model, loc, n=np.size(mx))
+        winfo = _weibull_info(method, tail, tail_model, loc, n=np.size(mx), plotting_positions=plotting_positions)
         n = np.nan
         if np.size(mx) <= 1:
             wloc = wscale = wshape = gloc = gscale = np.nan
@@ -1529,7 +1541,9 @@ class TimeSeries(object):
                 n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             else:
                 try:
-                    fitargs, winfo, ndist = _setup_weibull_fit(mx, f * x.mean(), method, tail, tail_model, loc)
+                    fitargs, winfo, ndist = _setup_weibull_fit(
+                        mx, f * x.mean(), method, tail, tail_model, loc, plotting_positions
+                    )
                     wloc, wscale, wshape = Weibull.fit(mx, **fitargs).params
                 except QatsValueError:
                     # failed fit
@@ -1634,7 +1648,7 @@ class TimeSeries(object):
         return skew(x, bias=bias)
 
 
-def _check_weibull_options(method, tail, tail_model, loc):
+def _check_weibull_options(method, tail, tail_model, loc, plotting_positions=None):
     """
     Raise if the options of a Weibull fit to maxima in :meth:`TimeSeries.stats` and :meth:`TimeSeries.fit_weibull`
     are invalid or can't be combined.
@@ -1662,9 +1676,13 @@ def _check_weibull_options(method, tail, tail_model, loc):
             f"The method {method} has no censored tail fit. Use the method 'lse' or 'mle', or fit the exceedances "
             f"with tail_model='exceedances'."
         )
+    if plotting_positions is not None:
+        if method != "lse":
+            raise QatsValueError(f"plotting_positions= is only for the method lse, not {method}")
+        _check_plotting_positions(plotting_positions)
 
 
-def _weibull_info(method, tail, tail_model, loc, threshold=None, n=np.nan):
+def _weibull_info(method, tail, tail_model, loc, threshold=None, n=np.nan, plotting_positions=None):
     """Fit options and sample sizes of a Weibull fit to maxima, as reported by :meth:`TimeSeries.stats`."""
     if loc is None:
         loc_from = "value" if method.lower() == "pwm2" else "fitted"  # pwm2 has the location at zero
@@ -1679,10 +1697,11 @@ def _weibull_info(method, tail, tail_model, loc, threshold=None, n=np.nan):
         wloc_from=loc_from,
         wthreshold=threshold,
         wn=n,
+        wplotting_positions=(plotting_positions or "mean") if method.lower() == "lse" else None,
     )
 
 
-def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
+def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc, plotting_positions=None):
     """
     Arguments for :meth:`qats.stats.weibull.Weibull.fit` of the maxima with the options of :meth:`TimeSeries.stats`
     and :meth:`TimeSeries.fit_weibull`, which must be checked with :func:`_check_weibull_options` first.
@@ -1693,7 +1712,7 @@ def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
         Maxima.
     mean : float
         Mean level, the location with ``loc="mean"``.
-    method, tail, tail_model, loc
+    method, tail, tail_model, loc, plotting_positions
         Fit options, see :meth:`TimeSeries.stats`.
 
     Returns
@@ -1716,9 +1735,13 @@ def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
     if exceedances and threshold is not None:
         nfit = ndist = int(np.count_nonzero(mx > threshold))
 
-    info = _weibull_info(method, tail, tail_model, loc, threshold=threshold, n=nfit)
+    info = _weibull_info(
+        method, tail, tail_model, loc, threshold=threshold, n=nfit, plotting_positions=plotting_positions
+    )
 
     kwargs = dict(method=method.lower(), tail=tail, tail_model=tail_model)
+    if plotting_positions is not None:
+        kwargs["plotting_positions"] = plotting_positions
     if loc == "mean":
         kwargs["loc"] = mean
     elif loc == "threshold":

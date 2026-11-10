@@ -6,8 +6,11 @@ import os
 
 import numpy as np
 
+from .._validation import QatsValueError
+from ..fatigue.rainflow import _create_bins
 from ..fatigue.rainflow import rebin as rebin_cycles
-from ..stats.gumbel import pwm as gumbel_pwm
+from ..stats.gumbel import _FIT_METHODS as GUMBEL_FIT_METHODS
+from ..stats.gumbel import Gumbel
 from ..stats.paper import probability_paper
 from ..stats.weibull import Weibull
 from ..tsdb import TsDB
@@ -54,42 +57,41 @@ def calculate_psd(container, twin, fargs, nperseg, normalize):
 
 def calculate_rfc(container, twin, fargs, nbins):
     """
-    Count cycles using Rainflow counting method
+    Count cycles using Rainflow counting method, and group them by range
+
+    .. versionchanged :: 5.6.0
+        Returns the bar widths with the ranges and counts.
 
     Parameters
     ----------
     container : dict
         TimeSeries objects
     twin : tuple
-        Time window. Time series are cropped to time window before estimating psd.
+        Time window. Time series are cropped to time window before counting cycles.
     fargs : tuple
-        Filter arguments. Time series are filtered before estimating psd.
+        Filter arguments. Time series are filtered before counting cycles.
     nbins : int
-        Number of bins in cycle distribution.
+        Number of equal bins of cycle range, from zero to the largest range, see
+        :func:`qats.fatigue.rainflow.rebin`.
 
     Returns
     -------
     dict
-        Cycle magnitude versus count
+        Cycle range, count and bar width of each time series, as a tuple of arrays: the bin mid points, the number of
+        cycles in each bin and the bin width. Empty arrays if no cycles were found.
     """
     container_out = dict()
 
     for name, ts in container.items():
-        # rainflow counting
-        cycles = ts.rfc(twin=twin, filterargs=fargs)
-
-        # rebin
-        if nbins is not None:
-            cycles = rebin_cycles(cycles, binby="range", n=nbins)
-
-        # handle empty cycles
-        if len(cycles) == 0:
-            container_out[name] = ((), ())
+        # rainflow counting, grouped by range in bins from zero to the largest range, as rebin() does
+        cycles = np.asarray(ts.rfc(twin=twin, filterargs=fargs), dtype=float).reshape(-1, 3)
+        if cycles.shape[0] == 0:
+            container_out[name] = (np.array([]), np.array([]), np.array([]))
             continue
 
-        # unpack pairs (tuples) in list
-        r, _, c = zip(*cycles)
-        container_out[name] = tuple([r, c])
+        edges = _create_bins(0.0, cycles[:, 0].max(), n=nbins)
+        r, _, c = rebin_cycles(cycles, binby="range", n=nbins).T
+        container_out[name] = (r, c, np.diff(edges))
 
     return container_out
 
@@ -124,7 +126,7 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
-def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median"):
+def calculate_stats(container, twin, fargs, minima=False, fit=None, plotting_positions="median"):
     """
     Calculate time series statistics, and the maxima/minima with the fitted Weibull distribution on Rayleigh paper
 
@@ -141,8 +143,9 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
     fit : dict, optional
         Weibull fit options for :meth:`qats.TimeSeries.stats`: `method`, `tail`, `tail_model` and `loc`. Default
         the defaults of :meth:`qats.TimeSeries.stats`.
-    kind : str, optional
-        Plotting positions on the probability paper, see :func:`qats.stats.empirical.empirical_cdf`.
+    plotting_positions : str, optional
+        Plotting positions on the probability paper, see :func:`qats.stats.empirical.empirical_cdf`. An ``lse`` fit
+        is fitted to these plotting positions, so the fitted line is drawn against the points it was fitted to.
 
     Returns
     -------
@@ -150,7 +153,9 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
         Statistics of each time series, see :meth:`qats.TimeSeries.stats`, with the sample and the fitted
         distribution on Rayleigh paper as :class:`qats.stats.paper.ProbabilityPaper` under the key 'paper'
     """
-    fit = dict() if fit is None else fit
+    fit = dict() if fit is None else dict(fit)
+    if fit.get("method", "").lower() == "lse":
+        fit["plotting_positions"] = plotting_positions
     container_out = dict()
     for name, ts in container.items():
         s = ts.stats(
@@ -167,7 +172,7 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
             s["paper"] = probability_paper(
                 s["sample"],
                 Weibull(s["wloc"], s["wscale"], s["wshape"]),
-                kind=kind,
+                plotting_positions=plotting_positions,
                 tail=s["wtail"],
                 tail_model=s["wtail_model"] or "censored",
                 is_minima=minima,
@@ -176,51 +181,74 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
     return container_out
 
 
-def calculate_gumbel_fit(container, twin, fargs, minima=False):
+def calculate_gumbel_fit(container, twin, fargs, minima=False, plotting_positions="median", method="pwm"):
     """
-    Calculate time series extremes and fit Gumbel distribution
+    Sample the extreme of each time series, fit a Gumbel distribution, and put both on Gumbel paper
+
+    .. versionchanged :: 5.6.0
+        New arguments `plotting_positions` and `method`. The sample and the fitted distribution are returned on
+        Gumbel paper, from
+        :func:`qats.stats.paper.probability_paper`, and the sample in its original units, also for minima.
 
     Parameters
     ----------
     container : dict
-        TimeSeries objects
+        TimeSeries objects, at least 2.
     twin : tuple
-        Time window. Time series are cropped to time window before extracting maxima.
+        Time window. Time series are cropped to time window before extracting the extremes.
     fargs : tuple
-        Filter arguments. Time series are filtered before extracting maxima.
+        Filter arguments. Time series are filtered before extracting the extremes.
     minima : bool, optional
-        Fit to sample of minima instead of maxima. The sample is multiplied by -1 prior to parameter estimation.
+        Sample the minimum of each time series instead of the maximum. The Gumbel distribution is fitted to the
+        minima multiplied by -1, and the paper is mirrored.
+    plotting_positions : str, optional
+        Plotting positions on the Gumbel paper, see :func:`qats.stats.empirical.empirical_cdf`. An ``lse`` fit is
+        fitted to these plotting positions.
+    method : str, optional
+        Method of the Gumbel fit, see :meth:`qats.stats.gumbel.Gumbel.fit`. Default 'pwm'.
 
     Returns
     -------
     dict
-        Sample and fitted gumbel distribution parameters
+        - 'sample': the extremes sorted ascending, in their original units
+        - 'loc', 'scale': the Gumbel parameters, of the minima multiplied by -1 for minima. NaN if the fit fails.
+        - 'method': the method of the fit
+        - 'minima', 'plotting_positions': as given
+        - 'paper': the sample and the fitted distribution on Gumbel paper,
+          :class:`qats.stats.paper.ProbabilityPaper`. Without a fitted line if the fit fails.
     """
     if len(container.keys()) < 2:
         raise ValueError("Select more than 1 time series to fit Gumbel CDF to extremes sample.")
+    # an invalid method raises here, not as a failed fit below
+    if not isinstance(method, str) or method.lower() not in GUMBEL_FIT_METHODS:
+        raise QatsValueError(f"The Gumbel fit method must be one of {', '.join(GUMBEL_FIT_METHODS)}, got {method!r}")
+    method = method.lower()
 
-    # create sample of extremes
+    # the extreme of each time series, in its original units
     sample = list()
     for name, ts in container.items():
         _, x = ts.get(twin=twin, filterargs=fargs)
-
-        if minima:
-            # sample minimum value
-            sample.append(np.min(x))
-        else:
-            # sample maximum value
-            sample.append(np.max(x))
-
-    # numpy array sorted ascending
+        sample.append(np.min(x) if minima else np.max(x))
     sample = np.sort(np.array(sample))
 
-    # flip sample of minima to enable Gumbel fit
-    if minima:
-        sample *= -1
-
-    # estimate gumbel distribution parameters
-    loc, scale = gumbel_pwm(sample)
-    return dict(loc=loc, scale=scale, sample=sample, minima=minima)
+    # fit to the maxima, or to the minima multiplied by -1. A fit that fails (e.g. equal extremes, so the scale is
+    # zero) gives NaN parameters and the sample without a fitted line.
+    try:
+        fitargs = dict(plotting_positions=plotting_positions) if method == "lse" else dict()
+        gumbel = Gumbel.fit(-sample if minima else sample, method=method, **fitargs)
+    except QatsValueError:
+        gumbel = None
+    paper = probability_paper(sample, gumbel, paper="gumbel", plotting_positions=plotting_positions, is_minima=minima)
+    loc, scale = (np.nan, np.nan) if gumbel is None else (gumbel.loc, gumbel.scale)
+    return dict(
+        loc=loc,
+        scale=scale,
+        method=method,
+        sample=sample,
+        minima=minima,
+        plotting_positions=plotting_positions,
+        paper=paper,
+    )
 
 
 def export_to_file(filename, db, names, twin, fargs):

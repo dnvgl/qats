@@ -11,7 +11,7 @@ from scipy.special import binom, zetac
 
 from .._deprecation import warn_deprecated
 from .._validation import QatsValueError
-from .empirical import empirical_cdf
+from .empirical import _check_plotting_positions, empirical_cdf
 from .paper import _plot_distribution
 
 # todo: build documentation and check that docstrings behave as intended
@@ -110,7 +110,8 @@ class Gumbel(object):
         Returns
         -------
         dict or None
-            A copy of the fit settings: `method`, the method of the fit, and `n`, the number of values fitted.
+            A copy of the fit settings: `method`, the method of the fit, `n`, the number of values fitted, and
+            `plotting_positions`, the plotting positions of an ``lse`` fit (None for the other methods).
         """
         return None if self._fit_info is None else dict(self._fit_info)
 
@@ -298,12 +299,13 @@ class Gumbel(object):
         return p
 
     @classmethod
-    def fit(cls, data, method="msm", verbose=False):
+    def fit(cls, data, method="msm", verbose=False, *, plotting_positions=None):
         """
         Determine distribution parameters by fit to sample.
 
         .. versionchanged :: 5.6.0
-            The fit settings are kept in :attr:`fit_info`.
+            New argument `plotting_positions`. The fit settings are kept in :attr:`fit_info`. The method name is not
+            case sensitive; before, a name that wasn't lowercase raised :class:`KeyError`.
 
         Parameters
         ----------
@@ -319,6 +321,9 @@ class Gumbel(object):
 
         verbose : bool, optional
             If true, fitted parameters are written to screen.
+        plotting_positions : str, optional
+            Plotting positions an ``lse`` fit is fitted to, see :func:`lse` and
+            :func:`qats.stats.empirical.empirical_cdf`. Default 'median'. Only with ``lse``.
 
         Examples
         --------
@@ -328,18 +333,28 @@ class Gumbel(object):
         >>> gumb = Gumbel.fit(data, method="msm")
 
         """
-        options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-        if method.lower() not in options.keys():
-            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+        if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+            raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
+        method = method.lower()
+        if plotting_positions is not None:
+            if method != "lse":
+                raise QatsValueError(f"plotting_positions= is only for the method lse, not {method}")
+            _check_plotting_positions(plotting_positions)
 
         data = np.array(data)  # ensure numpy array
 
-        loc, scale = options[method](data)
+        loc, scale = (
+            lse(data, plotting_positions=plotting_positions)
+            if plotting_positions is not None
+            else _FIT_FUNCTIONS[method](data)
+        )
         if verbose:
             print("Fitted parameters:\nloc = %5.3g\nscale = %5.3g" % (loc, scale))
 
         gumb = cls(loc, scale, data=data)
-        gumb._fit_info = dict(method=method.lower(), n=data.size)
+        gumb._fit_info = dict(
+            method=method, n=data.size, plotting_positions=(plotting_positions or "median") if method == "lse" else None
+        )
 
         return gumb
 
@@ -458,12 +473,12 @@ class Gumbel(object):
         p = (1.0 / self.scale) * np.exp(-z - np.exp(-z))
         return p
 
-    def plot(self, filename=None, *, paper=None, kind=None, ax=None):
+    def plot(self, filename=None, *, paper=None, plotting_positions=None, ax=None):
         """
         Plot the distribution, and the sample it was fitted to, on probability paper
 
         .. versionchanged :: 5.6.0
-            New arguments `paper`, `kind` and `ax`, and the axes are returned. The plot is drawn with
+            New arguments `paper`, `plotting_positions` and `ax`, and the axes are returned. The plot is drawn with
             :func:`qats.stats.paper.probability_paper`. With the default arguments the data and the fitted
             distribution are drawn as before, but the fitted line spans the probability axis, from the lowest data
             point to the top tick. A figure that is shown is no longer closed afterwards.
@@ -475,9 +490,9 @@ class Gumbel(object):
         paper : str, optional
             Probability paper: 'linear' (cumulative probability on a linear scale), 'gumbel', 'rayleigh' or
             'weibull'. See :mod:`qats.stats.paper`. Default 'linear'; will be 'gumbel' from 6.0.
-        kind : str, optional
-            Plotting positions of the data, see :func:`qats.stats.empirical.empirical_cdf`. Default 'median',
-            ``(i-0.3)/(n+0.4)``, as :attr:`ecdf`.
+        plotting_positions : str, optional
+            Plotting positions of the data, see :func:`qats.stats.empirical.empirical_cdf`. Default those an
+            ``lse`` fit was fitted to (see :attr:`fit_info`), otherwise 'median', ``(i-0.3)/(n+0.4)``, as :attr:`ecdf`.
         ax : matplotlib.axes.Axes, optional
             Draw on these axes. The figure is then neither shown nor closed, only saved if `filename` is given.
 
@@ -494,9 +509,10 @@ class Gumbel(object):
         >>> Gumbel.fit(extremes, method="mle").plot(paper="gumbel")
 
         """
-        return _plot_distribution(
-            self, filename, "linear" if paper is None else paper, "median" if kind is None else kind, ax
-        )
+        if plotting_positions is None:
+            # the plotting positions an lse fit was fitted to
+            plotting_positions = (self._fit_info or dict()).get("plotting_positions") or "median"
+        return _plot_distribution(self, filename, "linear" if paper is None else paper, plotting_positions, ax)
 
     def plot_linear(self, filename=None):
         """
@@ -659,9 +675,9 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
     >>> m, cv = bootstrap(10, 2.5, 5, 100)
 
     """
-    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-    if method.lower() not in options.keys():
-        raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+    if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+        raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
+    fit = _FIT_FUNCTIONS[method.lower()]
 
     # initiate distribution
     distribution = Gumbel(loc, scale)
@@ -673,7 +689,7 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
         x = distribution.rnd(size=size)
 
         # estimate distribution parameters to random sample
-        par[i, :] = options[method](x)
+        par[i, :] = fit(x)
         i += 1
 
     # calculate mean value and coefficient of variation of the distribution parameters
@@ -683,26 +699,40 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
     return m, cv
 
 
-def lse(x):
+def lse(x, plotting_positions="median"):
     """
     Fit Gumbel distribution parameters to sample by method of least square fit to empirical cdf
+
+    .. versionchanged :: 5.6.0
+        New argument `plotting_positions`.
 
     Parameters
     ----------
     x : array_like
         data sample
+    plotting_positions : str, optional
+        Plotting positions the distribution is fitted to, see :func:`qats.stats.empirical.empirical_cdf`. Default
+        'median', ``(i-0.3)/(n+0.4)``. Gringorten, ``(i-0.44)/(n+0.12)``, is the usual nearly unbiased choice for
+        Gumbel distributions.
 
     Returns
     -------
     floats
         distribution `loc` and `scale` parameters
 
+    Raises
+    ------
+    QatsValueError
+        If `plotting_positions` is not one of the plotting positions of :func:`qats.stats.empirical.empirical_cdf`.
+
     Notes
     -----
-    Uses an approximate median rank estimate for the empirical cdf.
+    The cumulative distribution function is fitted to the given plotting positions of the sample, by default an
+    approximate median rank estimate.
     """
+    _check_plotting_positions(plotting_positions)
     x = np.sort(x)
-    f = empirical_cdf(x.size, kind="median")  # median rank cdf
+    f = empirical_cdf(x.size, kind=plotting_positions)  # plotting positions the cdf is fitted to
 
     def fp(v, z):
         # parametric Gumbel function
@@ -820,18 +850,16 @@ def plot_fits(data, filename=None, methods=None):
     plt.plot(x, z, "ko", label="Data")
 
     # fit distributions and plot
-    options = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
-
     # default if not specified
     if not methods:
-        methods = options.keys()
+        methods = _FIT_METHODS
 
     for method in methods:
-        if method.lower() not in options.keys():
-            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
+        if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+            raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
 
         # estimate location and scale parameter
-        loc, scale = options[method](x)
+        loc, scale = _FIT_FUNCTIONS[method.lower()](x)
 
         # linarize and plot
         z = (x - loc) / scale
@@ -918,3 +946,9 @@ def pwm(x):
     a = m0 - _euler_masceroni() * b
 
     return a, b
+
+
+# fit functions by method, defined once for Gumbel.fit(), bootstrap() and plot_fits(), and for the methods offered by
+# the desktop application. The method name is not case sensitive.
+_FIT_FUNCTIONS = {"msm": msm, "lse": lse, "pwm": pwm, "mle": mle}
+_FIT_METHODS = tuple(_FIT_FUNCTIONS)
