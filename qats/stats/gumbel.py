@@ -12,6 +12,7 @@ from scipy.special import binom, zetac
 from .._deprecation import warn_deprecated
 from .._validation import QatsValueError
 from .empirical import empirical_cdf
+from .paper import _plot_distribution
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -493,8 +494,6 @@ class Gumbel(object):
         >>> Gumbel.fit(extremes, method="mle").plot(paper="gumbel")
 
         """
-        from .paper import _plot_distribution  # here to avoid a circular import
-
         return _plot_distribution(
             self, filename, "linear" if paper is None else paper, "median" if kind is None else kind, ax
         )

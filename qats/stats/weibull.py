@@ -15,7 +15,7 @@ from .._deprecation import warn_deprecated
 from .._validation import QatsTypeError, QatsValueError
 from ..signal import find_maxima
 from .empirical import _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
-from .paper import paper_coordinates
+from .paper import _plot_distribution, paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -644,8 +644,6 @@ class Weibull(object):
         >>> plt.show()
 
         """
-        from .paper import _plot_distribution  # here to avoid a circular import
-
         return _plot_distribution(
             self, filename, "linear" if paper is None else paper, "mean" if kind is None else kind, ax
         )
