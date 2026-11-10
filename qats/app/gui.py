@@ -28,6 +28,7 @@ from qtpy.QtWidgets import (
     QDialogButtonBox,
     QDoubleSpinBox,
     QFileDialog,
+    QFormLayout,
     QFrame,
     QGroupBox,
     QHBoxLayout,
@@ -50,11 +51,14 @@ import matplotlib
 import numpy as np
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
+from matplotlib.ticker import FuncFormatter
 
 from .. import __version__
-from .._validation import QatsValueError
+from .._validation import QatsTypeError, QatsValueError
 from ..io import registry
 from ..stats.empirical import empirical_cdf
+from ..ts import _check_weibull_options
 from ..tsdb import TsDB
 from . import LOGGING_LEVELS
 from .funcs import (
@@ -99,6 +103,9 @@ STATS_ORDER = [
     "wloc",
     "wscale",
     "wshape",
+    "wthreshold",
+    "wn",
+    "gn",
     "gloc",
     "gscale",
     "p_37.00",
@@ -125,6 +132,17 @@ STATS_LABELS_TOOLTIPS = {
     "wshape": (
         "Wshape",
         "Weibull shape parameter in distribution fitted to\nsample maxima or -1 multiplied with the sample minima.",
+    ),
+    "wthreshold": (
+        "u",
+        "Threshold value of a tail fit: the largest maximum outside the tail\n"
+        "(minima: -1 multiplied with the minimum). Empty when all maxima are fitted.",
+    ),
+    "wn": ("n fit", "Number of maxima/minima fitted."),
+    "gn": (
+        "n Gumbel",
+        "Number of maxima/minima in 3 hours in the Gumbel (extreme value) distribution:\n"
+        "all maxima/minima, or only the exceedances of u in a fit to the exceedances.",
     ),
     "gloc": (
         "Gloc",
@@ -155,6 +173,61 @@ STATS_LABELS_TOOLTIPS = {
         "Weibull distribution fitted to sample maxima/minima.",
     ),
 }
+
+# Weibull fit to maxima/minima: methods, tail models and plotting positions offered in the settings
+WEIBULL_METHODS = ("pwm", "msm", "lse", "mle")
+WEIBULL_FIT_DEFAULTS = dict(method="pwm", tail=None, tail_model="censored", loc=None)
+TAIL_MODELS = {
+    "censored": "Censored: the fit describes all maxima, only the largest are fitted",
+    "exceedances": "Exceedances: the fit describes only the maxima above the threshold value u",
+}
+PLOTTING_POSITIONS = {
+    "median": "Median ranks, (i - 0.3)/(n + 0.4)",
+    "mean": "Mean ranks, i/(n + 1)",
+    "symmetrical": "Symmetrical, (i - 0.5)/n",
+    "beard": "Beard, (i - 0.31)/(n + 0.38)",
+    "gringorten": "Gringorten, (i - 0.44)/(n + 0.12)",
+}
+# maxima/minima left out of a tail fit: faded and smaller, so dense clusters recede behind the fitted ones
+_UNFITTED_STYLE = dict(alpha=0.3, markersize=4.5)
+
+
+def fit_description(fit, kind, minima=False):
+    """
+    One line describing the Weibull fit settings and plotting positions, for the statistics table and plots.
+
+    Parameters
+    ----------
+    fit : dict
+        Weibull fit options: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
+    kind : str
+        Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
+    minima : bool, optional
+        The fit is to minima.
+
+    Returns
+    -------
+    str
+        Description
+    """
+    sample = "minima" if minima else "maxima"
+    parts = [fit["method"]]
+    if fit["tail"] is None:
+        parts.append(f"all {sample}")
+    else:
+        parts.append(f"the {100 * fit['tail']:g} % {'lowest' if minima else 'largest'} {sample}")
+        parts.append(fit["tail_model"])
+    loc = fit["loc"]
+    if loc is None:
+        parts.append("location fitted")
+    elif loc == "mean":
+        parts.append("location at the mean level")
+    elif loc == "threshold":
+        parts.append("location at u")
+    else:
+        parts.append(f"location {loc:g}")
+    return f"Weibull fit: {', '.join(parts)}; {kind} plotting positions"
+
 
 # todo: New method that generalize threading
 # todo: Explore how to create consecutive threads without handshake in main loop
@@ -211,6 +284,11 @@ class Qats(QMainWindow):
 
         # load settings from previous sessions
         self.load_settings()
+
+        # time series shown in the tabs, recalculated when the settings change
+        self._displayed = None
+        # description of the Weibull fit in the shown statistics and maxima/minima distribution
+        self._fit_description = ""
 
         # clipboard
         self.clip = QGuiApplication.clipboard()
@@ -275,7 +353,10 @@ class Qats(QMainWindow):
         self.stats_table = CustomTableWidget()
         self.stats_table_initial_sort = None  # variable used to enable resetting of sorting order
         self.stats_table_initial_order = None  # variable used to enable resetting of sorting order
+        self.stats_fit_label = QLabel()  # the Weibull fit settings of the statistics in the table
+        self.stats_fit_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         vbox = QVBoxLayout()
+        vbox.addWidget(self.stats_fit_label)
         vbox.addWidget(self.stats_table)
         w.setLayout(vbox)
         self.reset_stats_table()
@@ -656,7 +737,9 @@ class Qats(QMainWindow):
     def keyPressEvent(self, e):
         selected = self.stats_table.selectedRanges()
         if e.key() == Qt.Key_C:  # Ctr+C
-            s = (
+            # the Weibull fit settings first, so that a pasted table states its method
+            s = self.stats_fit_label.text() + "\n" if self.stats_fit_label.text() else ""
+            s += (
                 "\t".join(
                     [
                         str(self.stats_table.horizontalHeaderItem(i).text())
@@ -821,6 +904,7 @@ class Qats(QMainWindow):
         """
         self.db.clear(names="*", display=False)
         self.db_source_model.clear()
+        self._displayed = None
         self.reset_axes()
         self.reset_stats_table()
         logging.info("Cleared all time series from database...")
@@ -1021,7 +1105,10 @@ class Qats(QMainWindow):
         """
         # load settings dialog with current settings
         defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins(), self.twin_ndec())
-        psdnorm, nperseg, nbins, twindec, ok = SettingsDialog.settings(defaults, parent=self)
+        before = self._processing_settings()
+        psdnorm, nperseg, nbins, twindec, fit, kind, ok = SettingsDialog.settings(
+            defaults, fit=self.weibull_fit(), kind=self.plotting_positions(), parent=self
+        )
 
         # update settings
         if ok:
@@ -1029,6 +1116,16 @@ class Qats(QMainWindow):
             self.settings["psd_nperseg"] = nperseg
             self.settings["rfc_nbins"] = nbins
             self.settings["twin_ndec"] = twindec
+            self.settings["weibull_method"] = fit["method"]
+            self.settings["weibull_tail"] = fit["tail"]
+            self.settings["weibull_tail_model"] = fit["tail_model"]
+            self.settings["weibull_loc"] = fit["loc"]
+            self.settings["plotting_positions"] = kind
+
+            # recalculate the shown time series with the new settings
+            if self._displayed is not None and self._processing_settings() != before:
+                self.reset_stats_table()
+                self.start_times_series_processing_thread(self._displayed)
 
     def on_unselect_all(self):
         """
@@ -1139,89 +1236,68 @@ class Qats(QMainWindow):
 
     def plot_weibull(self, container):
         """
-        Plot maxima/minima sample on linearized weibull axes
+        Plot maxima/minima and the fitted Weibull distributions on Rayleigh paper
 
         Parameters
         ----------
         container : dict
-            Sample and fitted weibull parameters
+            Statistics of each time series, with the maxima/minima and the fitted distribution on Rayleigh paper
+            under the key 'paper', see :func:`qats.app.funcs.calculate_stats`
         """
-        self.weibull_axes.clear()
-        self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel("X - location")
-        self.weibull_axes.set_ylabel("Cumulative probability (-)")
+        axes = self.weibull_axes
+        axes.clear()
+        axes.grid(True)
+        colors = cycle(matplotlib.rcParams["axes.prop_cycle"].by_key()["color"])
+        handles = []
+        yticks = dict()
+        is_minima = False
+        is_tail_fit = False
 
-        # labels and tick positions for weibull paper plot
-        p_labels = np.array([0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-        p_ticks = np.log(np.log(1.0 / (1.0 - p_labels)))
-        x_lb, x_ub = None, None
-
-        # draw
-        for name, value in container.items():
-            x = value.get("sample")
-            loc = value.get("wloc")
-            scale = value.get("wscale")
-            shape = value.get("wshape")
-            is_minima = value.get("is_minima")
-
-            if x is None:
-                # skip
+        # draw: the fitted maxima, the others faded, and the threshold value u of a tail fit dashed. The x axis of
+        # Rayleigh paper is in data units, so matplotlib's ticks serve all series (the paper's own x ticks are made
+        # for one series' range).
+        for name, data in container.items():
+            p = data.get("paper")
+            if p is None:
                 continue
+            is_minima = data.get("is_minima", False)
+            sign = -1.0 if is_minima else 1.0
+            color = next(colors)
+            u = data.get("wthreshold")
+            label = name if u is None else f"{name} (u = {sign * u:.5g}, n = {data.get('wn')})"
+            axes.plot(p.x[p.fitted], p.y[p.fitted], "o", color=color)
+            axes.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color=color, **_UNFITTED_STYLE)
+            axes.plot(p.fit_x, p.fit_y, "-", color=color)
+            if u is not None:
+                is_tail_fit = True
+                axes.axvline(u, color=color, linestyle="--", linewidth=1.0)
+            handles.append(Line2D([], [], color=color, marker="o", label=label))
+            yticks.update(zip(p.yticklabels, p.yticks))
+            if p.excluded.size > 0:
+                logging.warning(f"{p.excluded.size} maxima/minima of '{name}' can not be shown on this paper.")
+            if p.fit_x.size == 0:
+                logging.warning(f"The Weibull distribution could not be fitted to '{name}'.")
 
-            # flip sample to be able to plot sample on weibull scales
-            if is_minima:
-                x *= -1.0
-
-            # normalize maxima/minima sample on weibull scales
-            x = np.sort(x)  # sort ascending
-            mask = x >= loc  # weibull paper plot will fail for mv-loc < 0
-            x_norm = np.log(x[mask] - loc)
-            ecdf_norm = np.log(np.log(1.0 / (1.0 - (np.arange(x.size) + 1.0) / (x.size + 1.0))))
-            q_fitted = scale * (-np.log(1.0 - p_labels)) ** (1.0 / shape)  # x-loc
-
-            # consider switching to np.any(), not sure what is more correct
-            if np.all(q_fitted <= 0.0):
-                logging.warning("Invalid sample for time series '%s'. Cannot fit Weibull distribution." % name)
-
-            else:
-                # normalized quantiles from fitted distribution (inside if-statement to avoid log(negative_num)
-                q_norm_fitted = np.log(q_fitted)
-
-                # calculate data range for xtick/label calculation later
-                if not x_lb:
-                    # first time
-                    x_lb = np.min(q_fitted)
-                elif np.min(q_fitted) < x_lb:
-                    # lower value
-                    x_lb = np.min(q_fitted)
-
-                if not x_ub:
-                    x_ub = np.max(q_fitted)
-                elif np.max(q_fitted) > x_ub:
-                    x_ub = np.max(q_fitted)
-
-                # calculate axes tick and labels
-                labels_sample = np.around(np.linspace(x_lb, x_ub, 4), decimals=1)
-
-                ticks_sample = np.log(labels_sample[labels_sample > 0.0])
-
-                # and draw weibull paper plot (avoid log(0))
-                self.weibull_axes.plot(x_norm, ecdf_norm[mask], "o", label=name)
-                self.weibull_axes.plot(q_norm_fitted, p_ticks, "-")
-
-                self.weibull_axes.set_xticks(ticks_sample)
-                if self.maxima.isChecked():
-                    self.weibull_axes.set_xticklabels(labels_sample[labels_sample > 0.0])
-                else:
-                    self.weibull_axes.set_xticklabels(-1.0 * labels_sample[labels_sample > 0.0])
-
-                self.weibull_axes.set_ylim((p_labels[0], p_labels[-1]))
-                self.weibull_axes.set_yticks(p_ticks)
-                self.weibull_axes.set_yticklabels(p_labels)
-                self.weibull_axes.legend(loc="upper left")
-                self.weibull_canvas.draw()
-
-            self.set_status("Weibull distribution plot updated", msecs=3000)
+        if yticks:
+            labels, ticks = zip(*sorted(yticks.items(), key=lambda item: item[1]))
+            axes.set_yticks(ticks, labels)
+            axes.set_ylim(ticks[0], ticks[-1])
+        if is_minima:
+            # the paper is drawn for the minima multiplied by -1, label with the minima
+            axes.xaxis.set_major_formatter(FuncFormatter(lambda v, pos: f"{-v + 0.0:g}"))
+        axes.set_xlabel("Minima" if is_minima else "Maxima")
+        axes.set_ylabel("Cumulative probability (-)")
+        axes.set_title(self._fit_description, fontsize="small")
+        if handles and is_tail_fit:
+            # explain the markers once for all series
+            handles.append(Line2D([], [], color="0.3", marker="o", linestyle="none", label="Fitted"))
+            handles.append(
+                Line2D([], [], color="0.3", marker="o", linestyle="none", label="Not fitted", **_UNFITTED_STYLE)
+            )
+        if handles:
+            axes.legend(handles=handles, loc="upper left")
+        self.weibull_canvas.draw()
+        self.set_status("Weibull distribution plot updated", msecs=3000)
 
     def plot_gumbel(self, container):
         """
@@ -1305,6 +1381,44 @@ class Qats(QMainWindow):
         """int: Number of decimals in time window for data processing."""
         return self.settings.get("twin_ndec", 2)
 
+    def weibull_fit(self):
+        """
+        dict: Weibull fit to maxima/minima, the options `method`, `tail`, `tail_model` and `loc` of
+        :meth:`qats.TimeSeries.stats`. Invalid stored settings give the defaults.
+        """
+        fit = dict(
+            method=self.settings.get("weibull_method", WEIBULL_FIT_DEFAULTS["method"]),
+            tail=self.settings.get("weibull_tail", WEIBULL_FIT_DEFAULTS["tail"]),
+            tail_model=self.settings.get("weibull_tail_model", WEIBULL_FIT_DEFAULTS["tail_model"]),
+            loc=self.settings.get("weibull_loc", WEIBULL_FIT_DEFAULTS["loc"]),
+        )
+        try:
+            if fit["method"] not in WEIBULL_METHODS:
+                raise QatsValueError(f"The method must be one of {', '.join(WEIBULL_METHODS)}, got {fit['method']!r}")
+            _check_weibull_options(**fit)
+        except (QatsValueError, QatsTypeError) as err:
+            logging.warning(f"Invalid Weibull fit settings, using the defaults: {err}")
+            fit = dict(WEIBULL_FIT_DEFAULTS)
+        return fit
+
+    def plotting_positions(self):
+        """str: Plotting positions on probability paper, see :func:`qats.stats.empirical.empirical_cdf`."""
+        kind = self.settings.get("plotting_positions", "median")
+        if kind not in PLOTTING_POSITIONS:
+            logging.warning(f"Invalid plotting positions setting {kind!r}, using 'median'")
+            kind = "median"
+        return kind
+
+    def _processing_settings(self):
+        """Settings that change the calculated statistics and plots."""
+        return (
+            self.psd_normalized(),
+            self.psd_nperseg(),
+            self.rfc_nbins(),
+            self.weibull_fit(),
+            self.plotting_positions(),
+        )
+
     def _init_plot_theme(self):
         """
         Match matplotlib plot colors to the Qt color scheme (e.g. Windows dark mode).
@@ -1367,7 +1481,7 @@ class Qats(QMainWindow):
         self.spectrum_canvas.draw()
         self.weibull_axes.clear()
         self.weibull_axes.grid(True)
-        self.weibull_axes.set_xlabel("X - location")
+        self.weibull_axes.set_xlabel("Maxima")
         self.weibull_axes.set_ylabel("Cumulative probability (-)")
         self.weibull_canvas.draw()
         self.cycles_axes.clear()
@@ -1379,6 +1493,7 @@ class Qats(QMainWindow):
     def reset_stats_table(self):
         """Reset statistics table."""
         # re-create empty table with header
+        self.stats_fit_label.setText("")
         self.stats_table.setRowCount(0)
         self.stats_table.setColumnCount(len(STATS_ORDER))
         self.stats_table.setAlternatingRowColors(True)
@@ -1473,6 +1588,10 @@ class Qats(QMainWindow):
         psdnorm = self.psd_normalized()
         nbins = self.rfc_nbins()
         minima_stats = self.minima.isChecked()
+        fit = self.weibull_fit()
+        kind = self.plotting_positions()
+        self._displayed = container
+        self._fit_description = fit_description(fit, kind, minima=minima_stats)
 
         # start calculation of filtered and windows time series trace
         worker = Worker(calculate_trace, container, twin, fargs)
@@ -1481,7 +1600,7 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of statistics
-        worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats)
+        worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats, fit=fit, kind=kind)
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.tabulate_stats)
         worker.signals.result.connect(self.plot_weibull)
@@ -1529,6 +1648,7 @@ class Qats(QMainWindow):
         container : dict
             Time series statistics
         """
+        self.stats_fit_label.setText(self._fit_description)
         # disable sorting
         self.stats_table.setSortingEnabled(False)
         # populate table
@@ -1540,7 +1660,8 @@ class Qats(QMainWindow):
                     cell.setToolTip(name)
                 else:
                     value = data.get(key, np.nan)
-                    cell = CustomTableWidgetItem(f"{value:12.5g}")  # works also with nan values
+                    # works also with nan values, None (e.g. no threshold value) gives an empty cell
+                    cell = CustomTableWidgetItem("" if value is None else f"{value:12.5g}")
                 cell.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 self.stats_table.setItem(i, j, cell)
         # store original sorting order first time this function is called
@@ -1607,9 +1728,13 @@ class SettingsDialog(QDialog):
         Default number of decimals in time window for data processing.
     parent : QWidget, optional
         Parent widget.
+    fit : dict, optional
+        Default Weibull fit to maxima/minima: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
+    kind : str, optional
+        Default plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
     """
 
-    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None):
+    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None, *, fit=None, kind="median"):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle("Configure application settings")
         self.setWindowIcon(QIcon(ICON_FILE))
@@ -1677,6 +1802,9 @@ class SettingsDialog(QDialog):
         twindeclayout.addWidget(self.twindecspinbox)
         layout.addLayout(twindeclayout)
 
+        # settings group: Weibull fit to maxima/minima and plotting positions
+        layout.addWidget(self._fit_group(dict(WEIBULL_FIT_DEFAULTS) if fit is None else fit, kind))
+
         # help text
         helptext = QHBoxLayout()
         helptext.addWidget(
@@ -1698,6 +1826,128 @@ class SettingsDialog(QDialog):
         # conclude layout
         self.setLayout(layout)
 
+    def _fit_group(self, fit, kind):
+        """Group of widgets for the Weibull fit to maxima/minima and the plotting positions."""
+        group = QGroupBox("Maxima/minima distribution (statistics and maxima/minima CDF)")
+        form = QFormLayout()
+
+        self.methodcombo = QComboBox()
+        for method in WEIBULL_METHODS:
+            self.methodcombo.addItem(method, method)
+        self.methodcombo.setCurrentIndex(WEIBULL_METHODS.index(fit["method"]))
+        self.methodcombo.setToolTip(
+            "Method of the Weibull fit to the maxima/minima: probability weighted moments (pwm),\n"
+            "method of moments (msm), least squares (lse) or maximum likelihood (mle)."
+        )
+        form.addRow("Weibull fit method", self.methodcombo)
+
+        self.tailcheckbox = QCheckBox("Fit only the largest maxima (lowest minima)")
+        self.tailcheckbox.setChecked(fit["tail"] is not None)
+        self.tailspinbox = QDoubleSpinBox()
+        self.tailspinbox.setRange(0.01, 1.0)
+        self.tailspinbox.setSingleStep(0.05)
+        self.tailspinbox.setDecimals(2)
+        self.tailspinbox.setValue(0.2 if fit["tail"] is None else fit["tail"])
+        self.tailspinbox.setToolTip(
+            "Fraction of the maxima/minima to fit: 0.2 fits the 20 % largest maxima.\nA larger value includes more."
+        )
+        taillayout = QHBoxLayout()
+        taillayout.addWidget(self.tailcheckbox)
+        taillayout.addStretch(1)
+        taillayout.addWidget(self.tailspinbox)
+        form.addRow("Tail", taillayout)
+
+        self.tailmodelcombo = QComboBox()
+        for i, (model, tooltip) in enumerate(TAIL_MODELS.items()):
+            self.tailmodelcombo.addItem(model, model)
+            self.tailmodelcombo.setItemData(i, tooltip, Qt.ToolTipRole)
+        self.tailmodelcombo.setCurrentIndex(list(TAIL_MODELS).index(fit["tail_model"]))
+        self.tailmodelcombo.setToolTip(
+            "Censored: the smaller maxima count only by their number, and the fit describes all maxima.\n"
+            "Exceedances: the maxima above the threshold value u are fitted as a complete sample, and the\n"
+            "fit and the extremes derived from it describe only those maxima."
+        )
+        form.addRow("Tail model", self.tailmodelcombo)
+
+        self.loccombo = QComboBox()
+        for text, value in (
+            ("fitted", None),
+            ("mean level", "mean"),
+            ("value", "value"),
+            ("threshold value u", "threshold"),
+        ):
+            self.loccombo.addItem(text, value)
+        loc = fit["loc"]
+        self.loccombo.setCurrentIndex(self.loccombo.findData("value" if isinstance(loc, (int, float)) else loc))
+        self.locspinbox = QDoubleSpinBox()
+        self.locspinbox.setRange(-1e12, 1e12)
+        self.locspinbox.setDecimals(4)
+        self.locspinbox.setValue(loc if isinstance(loc, (int, float)) else 0.0)
+        self.locspinbox.setToolTip(
+            "Location parameter of the Weibull distribution. For minima the fit is to the minima\n"
+            "multiplied by -1, so give the value as -1 multiplied with the level."
+        )
+        self.loccombo.setToolTip(
+            "Location parameter of the Weibull distribution: fitted, at the mean level of the signal,\n"
+            "at a value, or at the threshold value u in a fit to the exceedances."
+        )
+        loclayout = QHBoxLayout()
+        loclayout.addWidget(self.loccombo)
+        loclayout.addStretch(1)
+        loclayout.addWidget(self.locspinbox)
+        form.addRow("Location parameter", loclayout)
+
+        self.kindcombo = QComboBox()
+        for i, (name, tooltip) in enumerate(PLOTTING_POSITIONS.items()):
+            self.kindcombo.addItem(name, name)
+            self.kindcombo.setItemData(i, tooltip, Qt.ToolTipRole)
+        self.kindcombo.setCurrentIndex(list(PLOTTING_POSITIONS).index(kind))
+        self.kindcombo.setToolTip("Plotting positions of the maxima/minima on probability paper.")
+        form.addRow("Plotting positions", self.kindcombo)
+
+        # keep the combination of options valid
+        self.tailcheckbox.toggled.connect(self._update_fit_controls)
+        self.tailmodelcombo.currentIndexChanged.connect(self._update_fit_controls)
+        self.loccombo.currentIndexChanged.connect(self._update_fit_controls)
+        self._update_fit_controls()
+
+        group.setLayout(form)
+        return group
+
+    def _update_fit_controls(self):
+        """Enable the fit options that can be combined with the chosen tail and tail model, and only those."""
+        tail = self.tailcheckbox.isChecked()
+        self.tailspinbox.setEnabled(tail)
+        self.tailmodelcombo.setEnabled(tail)
+        censored = tail and self.tailmodelcombo.currentData() == "censored"
+        exceedances = tail and not censored
+
+        # methods without a censored tail fit
+        model = self.methodcombo.model()
+        for i, method in enumerate(WEIBULL_METHODS):
+            available = not (censored and method in ("pwm", "msm"))
+            model.item(i).setEnabled(available)
+            model.item(i).setToolTip(
+                ""
+                if available
+                else f"{method} has no censored tail fit. Use lse or mle, or fit the exceedances (tail model)."
+            )
+        if not model.item(self.methodcombo.currentIndex()).isEnabled():
+            self.methodcombo.setCurrentIndex(WEIBULL_METHODS.index("lse"))
+
+        # the location at the threshold value only in a fit to the exceedances
+        model = self.loccombo.model()
+        i = self.loccombo.findData("threshold")
+        model.item(i).setEnabled(exceedances)
+        model.item(i).setToolTip(
+            ""
+            if exceedances
+            else "Only in a fit to the exceedances. In a censored fit the location must be below the censored maxima."
+        )
+        if not exceedances and self.loccombo.currentIndex() == i:
+            self.loccombo.setCurrentIndex(self.loccombo.findData(None))
+        self.locspinbox.setEnabled(self.loccombo.currentData() == "value")
+
     def get_settings(self):
         """Collect settings."""
         return (
@@ -1707,8 +1957,25 @@ class SettingsDialog(QDialog):
             self.twindecspinbox.value(),
         )
 
+    def get_fit(self):
+        """Collect the Weibull fit settings, as options for :meth:`qats.TimeSeries.stats`."""
+        tail = round(self.tailspinbox.value(), 2) if self.tailcheckbox.isChecked() else None
+        loc = self.loccombo.currentData()
+        if loc == "value":
+            loc = self.locspinbox.value()
+        return dict(
+            method=self.methodcombo.currentData(),
+            tail=tail,
+            tail_model=self.tailmodelcombo.currentData() if tail is not None else "censored",
+            loc=loc,
+        )
+
+    def get_plotting_positions(self):
+        """Collect the plotting positions setting."""
+        return self.kindcombo.currentData()
+
     @staticmethod
-    def settings(defaults, parent=None):
+    def settings(defaults, parent=None, fit=None, kind="median"):
         """Create settings dialog and return settings.
 
         Parameters
@@ -1717,6 +1984,10 @@ class SettingsDialog(QDialog):
             Default values for parameters norm, nperseg and nbins.
         parent : QWidget, optional
             Parent widget
+        fit : dict, optional
+            Default Weibull fit to maxima/minima.
+        kind : str, optional
+            Default plotting positions.
 
         Returns
         -------
@@ -1728,15 +1999,24 @@ class SettingsDialog(QDialog):
             Number of bins in cycle distributions.
         twindec : int
             Number of decimals in time window for data processing.
+        fit : dict
+            Weibull fit to maxima/minima: method, tail, tail_model and loc.
+        kind : str
+            Plotting positions.
+        accepted : bool
+            The dialog was closed with OK.
         """
         dnorm, dnperseg, dnbins, dtwindec = defaults
-        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent)
+        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent, fit=fit, kind=kind)
         result = dialog.exec_()
         norm, nperseg, nbins, twindec = dialog.get_settings()
+        fit = dialog.get_fit()
+        kind = dialog.get_plotting_positions()
         # --- settings dialogue box debugging
         logging.debug(f"settings saved: norm = {norm}")
         logging.debug(f"settings saved: nperseg = {nperseg}")
         logging.debug(f"settings saved: nbins = {nbins}")
         logging.debug(f"settings saved: twindec = {twindec}")
+        logging.debug(f"settings saved: fit = {fit}, kind = {kind}")
         # ---
-        return norm, nperseg, nbins, twindec, result == QDialog.Accepted
+        return norm, nperseg, nbins, twindec, fit, kind, result == QDialog.Accepted
