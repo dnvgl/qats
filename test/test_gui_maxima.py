@@ -232,11 +232,11 @@ class TestGuiOptionsMatchLibrary(unittest.TestCase):
     def test_options(self):
         from qats.app.gui import PLOTTING_POSITIONS, TAIL_MODELS, WEIBULL_METHODS
         from qats.stats.empirical import _PLOTTING_POSITIONS, _TAIL_MODELS
-        from qats.stats.weibull import _FIT_METHODS
+        from qats.stats.weibull import _FIT_FUNCTIONS
 
         self.assertEqual(set(TAIL_MODELS), set(_TAIL_MODELS))
         self.assertEqual(set(PLOTTING_POSITIONS), set(_PLOTTING_POSITIONS))
-        self.assertLessEqual(set(WEIBULL_METHODS), set(_FIT_METHODS))
+        self.assertLessEqual(set(WEIBULL_METHODS), set(_FIT_FUNCTIONS))
 
 
 @requires_qt

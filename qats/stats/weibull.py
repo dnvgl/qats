@@ -1454,4 +1454,3 @@ def _shape_root(f, statistic, value):
 # fit functions of Weibull.fit() by method, defined once for the library: TimeSeries.fit_weibull() and stats() offer the
 # same methods
 _FIT_FUNCTIONS = {"msm": msm, "lse": lse, "mle": mle, "pwm": pwm, "pwm2": pwm2}
-_FIT_METHODS = tuple(_FIT_FUNCTIONS)
