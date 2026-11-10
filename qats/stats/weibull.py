@@ -12,6 +12,7 @@ from scipy.special import binom, gamma
 from .._validation import QatsValueError
 from ..signal import find_maxima
 from .empirical import empirical_cdf
+from .paper import paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -545,6 +546,10 @@ class Weibull(object):
         """
         Plot data on Weibull paper (linearized scales))
 
+        .. versionchanged :: 5.6.0
+            The coordinates come from :func:`qats.stats.paper.paper_coordinates`, and data at or below the location
+            parameter, which can't be shown on Weibull paper, are left out explicitly. The figure is unchanged.
+
         Parameters
         ----------
         filename : str, optional
@@ -571,16 +576,15 @@ class Weibull(object):
         """
         plt.figure()
 
-        # plot data if that exists
+        # plot data if that exists, except values at or below the location parameter
         if self.data is not None:
-            x = np.log(np.sort(self.data - self.loc))
-            y = np.log(-np.log(1.0 - self.ecdf))
-            plt.plot(x, y, "ko", label="Data")
+            x, y = paper_coordinates(np.sort(self.data), self.ecdf, paper="weibull", loc=self.loc)
+            shown = np.isfinite(x)
+            plt.plot(x[shown], y[shown], "ko", label="Data")
 
         # plot fitted distribution
         yy = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-        y = np.log(-np.log(1.0 - yy))
-        x = np.log(self.invcdf(p=yy) - self.loc)
+        x, y = paper_coordinates(self.invcdf(p=yy), yy, paper="weibull", loc=self.loc)
         plt.plot(x, y, label="Fitted")
 
         plt.xlim(x[0], x[-1])
