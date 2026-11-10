@@ -23,7 +23,7 @@ from .signal import average_frequency, bandblock, bandpass, find_maxima, highpas
 from .signal import threshold as thresholdpass
 from .stats.empirical import _check_plotting_positions, _check_tail, _check_tail_model, _tail_count, tail_threshold
 from .stats.gumbel import Gumbel
-from .stats.weibull import _FIT_METHODS, Weibull, _pwm3, weibull2gumbel
+from .stats.weibull import _FIT_FUNCTIONS, Weibull, _pwm3, weibull2gumbel
 
 # todo: weibull and gumbel + plotting (self.pd = Weibull(), self.evd = Gumbel())
 # todo: autocorrelation (see signal module)
@@ -1653,8 +1653,8 @@ def _check_weibull_options(method, tail, tail_model, loc, plotting_positions=Non
     Raise if the options of a Weibull fit to maxima in :meth:`TimeSeries.stats` and :meth:`TimeSeries.fit_weibull`
     are invalid or can't be combined.
     """
-    if not isinstance(method, str) or method.lower() not in _FIT_METHODS:
-        raise QatsValueError(f"The method must be one of {', '.join(_FIT_METHODS)}, got {method!r}")
+    if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+        raise QatsValueError(f"The method must be one of {', '.join(_FIT_FUNCTIONS)}, got {method!r}")
     if tail is not None:
         _check_tail(tail)
     _check_tail_model(tail_model, tail)
