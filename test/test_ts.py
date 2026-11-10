@@ -11,6 +11,8 @@ from datetime import datetime
 import numpy as np
 
 from qats import TimeSeries, TsDB
+from qats._validation import QatsTypeError, QatsValueError
+from qats.stats.weibull import Weibull, _pwm3, lse, weibull2gumbel
 
 
 class TestTs(unittest.TestCase):
@@ -232,6 +234,168 @@ class TestTs(unittest.TestCase):
             (628.6977387879958, 16.075909034042294, 0.7713810419072378, 772.9552088937547, 34.41691465498858),
             rtol=1e-12,
         )
+
+    def test_fit_weibull_unchanged(self):
+        """
+        Test that fit_weibull() without the arguments added in 5.6.0 gives the parameters of QATS 5.5.0
+        """
+        np.testing.assert_allclose(
+            self.ts.fit_weibull().params, (625.538004079687, 20.93291628966276, 0.9115119725895221), rtol=1e-12
+        )
+
+
+class TestTsWeibullFit(unittest.TestCase):
+    """Weibull fit options of TimeSeries.stats() and fit_weibull()."""
+
+    def setUp(self):
+        # narrow-banded process around the mean level 100 for three hours
+        rng = np.random.default_rng(1)
+        t = np.arange(0.0, 10800.0, 0.5)
+        f = np.linspace(0.08, 0.12, 60)
+        x = 100.0 + np.sum(np.cos(2.0 * np.pi * np.outer(t, f) + rng.uniform(0.0, 2.0 * np.pi, f.size)), axis=1)
+        self.ts = TimeSeries("x", t, x)
+        self.mx = self.ts.stats(include_sample=True)["sample"]
+        self.tail = 0.2
+        # tail maxima: mean rank i / (n + 1) at or above 1 - tail, threshold value: the largest maximum below them
+        n = self.mx.size
+        self.r = int(np.ceil((1.0 - self.tail) * (n + 1))) - 1
+        self.u = np.sort(self.mx)[self.r - 1]
+
+    def check_cell(self, stats_kwargs, sample, fit_kwargs, ndist):
+        """stats() and fit_weibull() give the parameters of Weibull.fit(), and Gumbel parameters from ndist maxima"""
+        expected = Weibull.fit(sample, **fit_kwargs).params
+        s = self.ts.stats(**stats_kwargs)
+        self.assertEqual((s["wloc"], s["wscale"], s["wshape"]), expected)
+        self.assertEqual(self.ts.fit_weibull(**stats_kwargs).params, expected)
+        gn = round(10800.0 / (self.ts.t[-1] - self.ts.t[0]) * ndist)
+        self.assertEqual(s["gn"], gn)
+        self.assertEqual((s["gloc"], s["gscale"]), weibull2gumbel(*expected, gn))
+
+    def test_threshold_value(self):
+        s = self.ts.stats(method="lse", tail=self.tail)
+        self.assertEqual(s["wthreshold"], self.u)
+        self.assertEqual(s["wn"], self.mx.size - self.r)
+        # the maxima above u are the tail maxima
+        self.assertEqual(np.count_nonzero(self.mx > self.u), self.mx.size - self.r)
+
+    def test_all_maxima(self):
+        for method in ("pwm", "pwm2", "msm", "lse", "mle"):
+            for loc, fixed in ((None, None), ("mean", self.ts.mean()), (95.0, 95.0)):
+                if method == "pwm" and loc is None:
+                    continue  # the unchecked default fit, see test_default_unchanged
+                with self.subTest(method=method, loc=loc):
+                    fit_kwargs = dict(method=method) if fixed is None else dict(method=method, loc=fixed)
+                    self.check_cell(dict(method=method, loc=loc), self.mx, fit_kwargs, self.mx.size)
+
+    def test_censored(self):
+        for method in ("lse", "mle"):
+            for loc, fixed in ((None, None), ("mean", self.ts.mean()), (95.0, 95.0)):
+                with self.subTest(method=method, loc=loc):
+                    fit_kwargs = dict(method=method, tail=self.tail)
+                    if fixed is not None:
+                        fit_kwargs["loc"] = fixed
+                    self.check_cell(dict(method=method, tail=self.tail, loc=loc), self.mx, fit_kwargs, self.mx.size)
+
+    def test_censored_lse_is_lse_threshold(self):
+        s = self.ts.stats(method="lse", tail=self.tail)
+        self.assertEqual((s["wloc"], s["wscale"], s["wshape"]), lse(self.mx, threshold=1 - self.tail))
+
+    def test_exceedances(self):
+        exceedances = self.mx[self.mx > self.u]
+        for method in ("pwm", "pwm2", "msm", "lse", "mle"):
+            for loc, fixed in ((None, None), ("threshold", self.u), ("mean", self.ts.mean()), (95.0, 95.0)):
+                if method == "mle" and loc is None:
+                    continue  # does not converge on this sample, see test_failed_fit
+                with self.subTest(method=method, loc=loc):
+                    fit_kwargs = dict(method=method) if fixed is None else dict(method=method, loc=fixed)
+                    self.check_cell(
+                        dict(method=method, tail=self.tail, tail_model="exceedances", loc=loc),
+                        exceedances,
+                        fit_kwargs,
+                        exceedances.size,
+                    )
+
+    def test_reported_options(self):
+        s = self.ts.stats(method="MLE", tail=self.tail, tail_model="exceedances", loc="threshold")
+        self.assertEqual(
+            {k: s[k] for k in ("wmethod", "wtail", "wtail_model", "wloc_from", "wthreshold", "wn")},
+            dict(
+                wmethod="mle",
+                wtail=self.tail,
+                wtail_model="exceedances",
+                wloc_from="threshold",
+                wthreshold=self.u,
+                wn=self.mx.size - self.r,
+            ),
+        )
+        s = self.ts.stats()
+        self.assertEqual(
+            {k: s[k] for k in ("wmethod", "wtail", "wtail_model", "wloc_from", "wthreshold", "wn")},
+            dict(wmethod="pwm", wtail=None, wtail_model=None, wloc_from="fitted", wthreshold=None, wn=self.mx.size),
+        )
+        self.assertEqual(self.ts.stats(method="pwm2")["wloc_from"], "value")
+        self.assertEqual(self.ts.stats(method="lse", loc=95.0)["wloc_from"], "value")
+
+    def test_default_unchanged(self):
+        s = self.ts.stats()
+        self.assertEqual((s["wloc"], s["wscale"], s["wshape"]), _pwm3(self.mx))
+        self.assertEqual(s["gn"], round(10800.0 / (self.ts.t[-1] - self.ts.t[0]) * self.mx.size))
+
+    def test_minima(self):
+        s = self.ts.stats(is_minima=True, include_sample=True, method="lse", tail=self.tail, loc="mean")
+        mn = -s["sample"]
+        expected = Weibull.fit(mn, method="lse", tail=self.tail, loc=-self.ts.mean()).params
+        self.assertEqual((s["wloc"], s["wscale"], s["wshape"]), expected)
+
+    def test_failed_fit(self):
+        # the fit to the exceedances by mle with the location parameter fitted does not converge on this sample
+        kwargs = dict(method="mle", tail=self.tail, tail_model="exceedances")
+        s = self.ts.stats(**kwargs)
+        for key in ("wloc", "wscale", "wshape", "gn", "gloc", "gscale", "p_90.00"):
+            with self.subTest(key=key):
+                self.assertTrue(np.isnan(s[key]))
+        self.assertEqual(s["wthreshold"], self.u)
+        with self.assertRaisesRegex(QatsValueError, "did not converge"):
+            self.ts.fit_weibull(**kwargs)
+        # a fixed location parameter at the smallest fitted maximum
+        loc = np.sort(self.mx)[self.r]
+        self.assertTrue(np.isnan(self.ts.stats(method="lse", tail=self.tail, loc=loc)["wloc"]))
+        with self.assertRaisesRegex(QatsValueError, "must be below"):
+            self.ts.fit_weibull(method="lse", tail=self.tail, loc=loc)
+
+    def test_not_possible(self):
+        cases = [
+            (dict(method="pwm", tail=0.2), "no censored tail fit"),
+            (dict(method="pwm2", tail=0.2), "no censored tail fit"),
+            (dict(method="msm", tail=0.2), "no censored tail fit"),
+            (dict(method="lse", tail=0.2, loc="threshold"), "only in a fit to the exceedances"),
+            (dict(method="lse", loc="threshold"), "only in a fit to the exceedances"),
+            (dict(method="lse", tail_model="exceedances"), "needs the tail fraction"),
+        ]
+        for kwargs, message in cases:
+            for f in (self.ts.stats, self.ts.fit_weibull):
+                with self.subTest(fn=f.__name__, **kwargs), self.assertRaisesRegex(QatsValueError, message):
+                    f(**kwargs)
+        # the message names the alternatives
+        with self.assertRaisesRegex(QatsValueError, "'lse' or 'mle'.*tail_model='exceedances'"):
+            self.ts.stats(tail=0.2)
+
+    def test_invalid_options(self):
+        cases = [
+            (dict(method="gumbel"), QatsValueError),
+            (dict(method=None), QatsValueError),
+            (dict(method="lse", tail=0.0), QatsValueError),
+            (dict(method="lse", tail=1.5), QatsValueError),
+            (dict(method="lse", tail="0.2"), QatsTypeError),
+            (dict(method="lse", tail=0.2, tail_model="peaks"), QatsValueError),
+            (dict(method="lse", loc="median"), QatsValueError),
+            (dict(method="lse", loc=[95.0]), QatsTypeError),
+        ]
+        for kwargs, error in cases:
+            for f in (self.ts.stats, self.ts.fit_weibull):
+                with self.subTest(fn=f.__name__, **{k: repr(v) for k, v in kwargs.items()}):
+                    with self.assertRaises(error):
+                        f(**kwargs)
 
 
 class TestTsPlots(unittest.TestCase):
