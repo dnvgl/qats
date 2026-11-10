@@ -12,6 +12,7 @@ from scipy.special import binom, zetac
 from .._deprecation import warn_deprecated
 from .._validation import QatsValueError
 from .empirical import _check_plotting_positions, empirical_cdf
+from .paper import _plot_distribution
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -508,8 +509,6 @@ class Gumbel(object):
         >>> Gumbel.fit(extremes, method="mle").plot(paper="gumbel")
 
         """
-        from .paper import _plot_distribution  # here to avoid a circular import
-
         if plotting_positions is None:
             # the plotting positions an lse fit was fitted to
             plotting_positions = (self._fit_info or dict()).get("plotting_positions") or "median"

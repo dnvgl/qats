@@ -31,7 +31,6 @@ from .empirical import (
     empirical_cdf,
     tail_threshold,
 )
-from .weibull import Weibull
 
 _PAPERS = ("rayleigh", "weibull", "gumbel", "linear")
 
@@ -183,9 +182,10 @@ def probability_paper(
           sample from u upwards.
 
     loc : float, optional
-        Location of the Weibull paper, the x axis is ln(x - loc). Default the location of `fitted` if it is a
-        :class:`~qats.stats.weibull.Weibull` distribution, otherwise 0. Only for Weibull paper. With `is_minima`,
-        the location of the minima multiplied by -1.
+        Location of the Weibull paper, the x axis is ln(x - loc). Default the lower bound of `fitted`,
+        ``fitted.invcdf(0)``, which is the location of a :class:`~qats.stats.weibull.Weibull` distribution, or 0 if
+        `fitted` has no finite lower bound. Only for Weibull paper. With `is_minima`, the location of the minima
+        multiplied by -1.
     is_minima : bool, optional
         The sample is minima. The paper is drawn for the minima multiplied by -1, with x tick labels in the original
         units.
@@ -275,7 +275,8 @@ def probability_paper(
     # location of the Weibull paper, and the values it can show
     if paper == "weibull":
         if loc is None:
-            loc = float(fitted.loc) if isinstance(fitted, Weibull) else 0.0
+            bound = _lower_bound(fitted) if fitted is not None else -np.inf
+            loc = 0.0 if bound == -np.inf else bound
         shown = z > loc
     else:
         loc = 0.0
@@ -378,12 +379,21 @@ def _paper_f(y, paper):
         return y.copy()
 
 
+def _lower_bound(fitted):
+    """
+    Lower end of the support of the fitted distribution, ``invcdf(0)``: the location of a Weibull distribution, -inf
+    for a Gumbel distribution, and NaN if the parameters are NaN.
+    """
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return float(np.asarray(fitted.invcdf(np.array([0.0])), dtype=float)[0])
+
+
 def _cdf_at(fitted, x):
     """
-    Cumulative probability of the fitted distribution at x, zero at or below the lower bound of a Weibull distribution
-    (and with a location that is NaN, where the fitted line is empty).
+    Cumulative probability of the fitted distribution at x, zero at or below its lower bound (and with a lower bound
+    that is NaN, where the fitted line is empty). A Weibull distribution's cdf is NaN below its location.
     """
-    if isinstance(fitted, Weibull) and not x > fitted.loc:
+    if not x > _lower_bound(fitted):
         return 0.0
     return float(fitted.cdf(np.array([x]))[0])
 

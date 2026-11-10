@@ -22,6 +22,7 @@ from .empirical import (
     empirical_cdf,
     tail_threshold,
 )
+from .paper import _plot_distribution, paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -664,8 +665,6 @@ class Weibull(object):
         >>> plt.show()
 
         """
-        from .paper import _plot_distribution  # here to avoid a circular import
-
         if plotting_positions is None:
             # the plotting positions an lse fit was fitted to
             plotting_positions = (self._fit_info or dict()).get("plotting_positions") or "mean"
@@ -712,8 +711,6 @@ class Weibull(object):
             "6.0.0",
             alternative="Weibull.plot(paper='weibull', plotting_positions='mean')",
         )
-        from .paper import paper_coordinates  # here to avoid a circular import
-
         plt.figure()
 
         # plot data if that exists, except values at or below the location parameter
