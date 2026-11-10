@@ -729,7 +729,7 @@ class WeibullPlotTestCases(unittest.TestCase):
     def test_censored_tail(self):
         w = Weibull.fit(self.x, method="lse", tail=0.2)
         ax = w.plot(paper="rayleigh", ax=self.axes())
-        (fitted, other), (line,), (u,) = self.lines(ax)
+        (fitted, other), (_,), (u,) = self.lines(ax)
         info = w.fit_info
         self.assertEqual(fitted.get_xdata().size, info["n"])
         self.assertTrue(np.all(fitted.get_xdata() > info["threshold"]))
@@ -743,7 +743,7 @@ class WeibullPlotTestCases(unittest.TestCase):
     def test_exceedances_tail(self):
         w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
         ax = w.plot(paper="rayleigh", ax=self.axes())
-        (fitted, _), (line,), (u,) = self.lines(ax)
+        (fitted, _), (line,), (_,) = self.lines(ax)
         u_value = w.fit_info["threshold"]
         self.assertEqual(fitted.get_xdata().size, np.count_nonzero(self.x > u_value))
         # the fitted distribution describes the values above u, so the line starts at u
