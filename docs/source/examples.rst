@@ -130,6 +130,20 @@ Fit a parametric Weibull distribution to the largest 13% of the peak sample. Oft
     Comparison of empirical sample distribution and fitted parametric distribution on linearized scales.
 
 
+Weibull fits to the tail of the maxima
+**************************************
+
+Fit the Weibull distribution to all maxima of a time series, or only to the largest 20%, with
+:meth:`~qats.TimeSeries.stats`: censored fits, where the smaller maxima count only by their number, and fits to the
+maxima above a threshold value. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
+The Notes of :meth:`~qats.TimeSeries.stats` describe the options.
+
+.. literalinclude:: examples/weibull_tail_fits.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+
 Weibull fit with fixed location parameter
 *****************************************
 

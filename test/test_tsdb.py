@@ -657,6 +657,18 @@ class TestTsDB(unittest.TestCase):
                     failed.append((k, kstat))
         self.assertFalse(failed, "Statistics dataframe values don't match the statistics dict")
 
+    def test_stats_weibull_fit_options(self):
+        """Test that stats() passes the Weibull fit options on to TimeSeries.stats()"""
+        db = TsDB.fromfile(os.path.join(self.data_directory, "mooring.ts"))
+        kwargs = dict(method="lse", tail=0.2, tail_model="exceedances", loc="threshold")
+        stats = db.stats(names="Mooring line 4", twin=(500.0, 1e12), **kwargs)
+        expected = db.get(name="Mooring line 4").stats(twin=(500.0, 1e12), **kwargs)
+        self.assertEqual(len(stats), 1)
+        s = next(iter(stats.values()))
+        for key in ("wmethod", "wtail", "wtail_model", "wloc_from", "wthreshold", "wloc", "wscale", "wshape", "gn"):
+            with self.subTest(key=key):
+                self.assertEqual(s[key], expected[key])
+
 
 class TestTsDBWithoutCommonPath(unittest.TestCase):
     """
