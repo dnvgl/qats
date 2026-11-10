@@ -12,6 +12,7 @@ from scipy.special import binom, gamma
 from .._validation import QatsValueError
 from ..signal import find_maxima
 from .empirical import empirical_cdf
+from .paper import paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -573,8 +574,6 @@ class Weibull(object):
         1. `Continuous univariate distributions, Volume 1`, N.L.Johnson, S.Kotz and N.Balakrishnan, 1994, \
             John Wiley and sons inc.
         """
-        from .paper import paper_coordinates  # here to avoid a circular import
-
         plt.figure()
 
         # plot data if that exists, except values at or below the location parameter
