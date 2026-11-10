@@ -21,7 +21,7 @@ from .fatigue.rainflow import rebin as rebin_cycles
 from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 from .signal import threshold as thresholdpass
 from .stats.gumbel import Gumbel
-from .stats.weibull import Weibull, pwm, weibull2gumbel
+from .stats.weibull import Weibull, _pwm3, weibull2gumbel
 
 # todo: weibull and gumbel + plotting (self.pd = Weibull(), self.evd = Gumbel())
 # todo: autocorrelation (see signal module)
@@ -1415,7 +1415,8 @@ class TimeSeries(object):
             wloc = wscale = wshape = gloc = gscale = np.nan
             pvalues = {f"p_{100 * q:.2f}": np.nan for q in quantiles}
         else:
-            wloc, wscale, wshape = pwm(mx)
+            # unchecked fit: unlike pwm(), a location parameter at or above the smallest maximum is kept
+            wloc, wscale, wshape = _pwm3(mx)
             if any(np.isnan([wloc, wscale, wshape])):
                 # force all parameters to nan if one (typically scale or shape) is
                 wloc = wscale = wshape = np.nan
