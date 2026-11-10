@@ -21,9 +21,9 @@ from .fatigue.rainflow import count_cycles, mesh
 from .fatigue.rainflow import rebin as rebin_cycles
 from .signal import average_frequency, bandblock, bandpass, find_maxima, highpass, lowpass, psd, smooth, taper
 from .signal import threshold as thresholdpass
-from .stats.empirical import _tail_count
+from .stats.empirical import _check_tail, _check_tail_model, _tail_count, tail_threshold
 from .stats.gumbel import Gumbel
-from .stats.weibull import Weibull, _pwm3, weibull2gumbel
+from .stats.weibull import _FIT_FUNCTIONS, Weibull, _pwm3, weibull2gumbel
 
 # todo: weibull and gumbel + plotting (self.pd = Weibull(), self.evd = Gumbel())
 # todo: autocorrelation (see signal module)
@@ -557,8 +557,8 @@ class TimeSeries(object):
         _check_weibull_options(method, tail, tail_model, loc)
         maxima = self.maxima(local=False, threshold=None, twin=twin, rettime=False)
         mean = self.mean(twin=twin) if loc == "mean" else None
-        sample, kwargs, _, _ = _setup_weibull_fit(maxima, mean, method, tail, tail_model, loc)
-        return Weibull.fit(sample, **kwargs)
+        kwargs, _, _ = _setup_weibull_fit(maxima, mean, method, tail, tail_model, loc)
+        return Weibull.fit(maxima, **kwargs)
 
     def get(self, twin=None, resample=None, window_len=None, filterargs=None, window="rectangular", taperfrac=None):
         """
@@ -1529,8 +1529,8 @@ class TimeSeries(object):
                 n = round(statsdur / (t[-1] - t[0]) * np.size(mx))
             else:
                 try:
-                    sample, fitargs, winfo, ndist = _setup_weibull_fit(mx, f * x.mean(), method, tail, tail_model, loc)
-                    wloc, wscale, wshape = Weibull.fit(sample, **fitargs).params
+                    fitargs, winfo, ndist = _setup_weibull_fit(mx, f * x.mean(), method, tail, tail_model, loc)
+                    wloc, wscale, wshape = Weibull.fit(mx, **fitargs).params
                 except QatsValueError:
                     # failed fit
                     wloc = wscale = wshape = np.nan
@@ -1634,24 +1634,16 @@ class TimeSeries(object):
         return skew(x, bias=bias)
 
 
-_WEIBULL_METHODS = ("pwm", "pwm2", "msm", "lse", "mle")
-_TAIL_MODELS = ("censored", "exceedances")
-
-
 def _check_weibull_options(method, tail, tail_model, loc):
     """
     Raise if the options of a Weibull fit to maxima in :meth:`TimeSeries.stats` and :meth:`TimeSeries.fit_weibull`
     are invalid or can't be combined.
     """
-    if not isinstance(method, str) or method.lower() not in _WEIBULL_METHODS:
-        raise QatsValueError(f"The method must be one of {', '.join(_WEIBULL_METHODS)}, got {method!r}")
+    if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+        raise QatsValueError(f"The method must be one of {', '.join(_FIT_FUNCTIONS)}, got {method!r}")
     if tail is not None:
-        if isinstance(tail, bool) or not isinstance(tail, numbers.Real):
-            raise QatsTypeError(f"The tail must be a number, got {type(tail).__name__}")
-        if not 0.0 < tail <= 1.0:
-            raise QatsValueError(f"The tail must be larger than 0 and at most 1, got {tail}")
-    if tail_model not in _TAIL_MODELS:
-        raise QatsValueError(f"The tail model must be one of {', '.join(_TAIL_MODELS)}, got {tail_model!r}")
+        _check_tail(tail)
+    _check_tail_model(tail_model, tail)
     if isinstance(loc, str):
         if loc not in ("mean", "threshold"):
             raise QatsValueError(f"The location must be None, 'mean', 'threshold' or a number, got {loc!r}")
@@ -1659,8 +1651,6 @@ def _check_weibull_options(method, tail, tail_model, loc):
         raise QatsTypeError(f"The location must be None, 'mean', 'threshold' or a number, got {type(loc).__name__}")
 
     method = method.lower()
-    if tail is None and tail_model == "exceedances":
-        raise QatsValueError("A fit to the exceedances (tail_model='exceedances') needs the tail fraction, tail=")
     exceedances = tail is not None and tail_model == "exceedances"
     if loc == "threshold" and not exceedances:
         raise QatsValueError(
@@ -1694,8 +1684,8 @@ def _weibull_info(method, tail, tail_model, loc, threshold=None, n=np.nan):
 
 def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
     """
-    Sample and arguments for :meth:`qats.stats.weibull.Weibull.fit` with the options of :meth:`TimeSeries.stats` and
-    :meth:`TimeSeries.fit_weibull`, which must be checked with :func:`_check_weibull_options` first.
+    Arguments for :meth:`qats.stats.weibull.Weibull.fit` of the maxima with the options of :meth:`TimeSeries.stats`
+    and :meth:`TimeSeries.fit_weibull`, which must be checked with :func:`_check_weibull_options` first.
 
     Parameters
     ----------
@@ -1708,10 +1698,8 @@ def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
 
     Returns
     -------
-    array
-        Sample to fit: the maxima, or the exceedances of the threshold value u.
     dict
-        Keyword arguments for :meth:`Weibull.fit`.
+        Keyword arguments for :meth:`Weibull.fit` of all the maxima, with a numeric location.
     dict
         Fit options and sample sizes, see :func:`_weibull_info`.
     int
@@ -1721,23 +1709,16 @@ def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
     n = mx.size
     exceedances = tail is not None and tail_model == "exceedances"
 
-    # threshold value u: the largest maximum outside the tail, selected as in qats.stats.weibull.lse() and mle()
-    threshold = None
-    nfit = n
-    if tail is not None:
-        r = _tail_count(n, tail)
-        nfit = n - r
-        if r > 0:
-            threshold = np.sort(mx)[r - 1]
-
-    sample = mx
+    # threshold value u: the largest maximum outside the tail
+    threshold = tail_threshold(mx, tail) if tail is not None else None
+    nfit = n - _tail_count(n, tail) if tail is not None else n
+    ndist = n
     if exceedances and threshold is not None:
-        sample = mx[mx > threshold]
-        nfit = sample.size
+        nfit = ndist = int(np.count_nonzero(mx > threshold))
 
     info = _weibull_info(method, tail, tail_model, loc, threshold=threshold, n=nfit)
 
-    kwargs = dict(method=method.lower())
+    kwargs = dict(method=method.lower(), tail=tail, tail_model=tail_model)
     if loc == "mean":
         kwargs["loc"] = mean
     elif loc == "threshold":
@@ -1746,7 +1727,5 @@ def _setup_weibull_fit(mx, mean, method, tail, tail_model, loc):
         kwargs["loc"] = threshold
     elif loc is not None:
         kwargs["loc"] = loc
-    if tail is not None and not exceedances:
-        kwargs["tail"] = tail
 
-    return sample, kwargs, info, sample.size
+    return kwargs, info, ndist

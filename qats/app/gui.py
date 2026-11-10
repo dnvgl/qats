@@ -58,6 +58,7 @@ from .. import __version__
 from .._validation import QatsTypeError, QatsValueError
 from ..io import registry
 from ..stats.empirical import empirical_cdf
+from ..stats.paper import _UNFITTED_STYLE
 from ..ts import _check_weibull_options
 from ..tsdb import TsDB
 from . import LOGGING_LEVELS
@@ -188,8 +189,6 @@ PLOTTING_POSITIONS = {
     "beard": "Beard, (i - 0.31)/(n + 0.38)",
     "gringorten": "Gringorten, (i - 0.44)/(n + 0.12)",
 }
-# maxima/minima left out of a tail fit: faded and smaller, so dense clusters recede behind the fitted ones
-_UNFITTED_STYLE = dict(alpha=0.3, markersize=4.5)
 
 
 def fit_description(fit, kind, minima=False):

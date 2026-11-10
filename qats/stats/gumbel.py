@@ -9,8 +9,10 @@ import numpy as np
 from scipy.optimize import fsolve, leastsq
 from scipy.special import binom, zetac
 
+from .._deprecation import warn_deprecated
 from .._validation import QatsValueError
 from .empirical import empirical_cdf
+from .paper import _plot_distribution
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -96,6 +98,21 @@ class Gumbel(object):
             self.data = np.array(data)
         else:
             self.data = None
+        self._fit_info = None  # set by Gumbel.fit()
+
+    @property
+    def fit_info(self):
+        """
+        How the distribution was fitted by :meth:`Gumbel.fit`, None if it was not.
+
+        .. versionadded :: 5.6.0
+
+        Returns
+        -------
+        dict or None
+            A copy of the fit settings: `method`, the method of the fit, and `n`, the number of values fitted.
+        """
+        return None if self._fit_info is None else dict(self._fit_info)
 
     @property
     def cov(self):
@@ -285,6 +302,9 @@ class Gumbel(object):
         """
         Determine distribution parameters by fit to sample.
 
+        .. versionchanged :: 5.6.0
+            The fit settings are kept in :attr:`fit_info`.
+
         Parameters
         ----------
         data : array_like
@@ -319,6 +339,7 @@ class Gumbel(object):
             print("Fitted parameters:\nloc = %5.3g\nscale = %5.3g" % (loc, scale))
 
         gumb = cls(loc, scale, data=data)
+        gumb._fit_info = dict(method=method.lower(), n=data.size)
 
         return gumb
 
@@ -437,51 +458,65 @@ class Gumbel(object):
         p = (1.0 / self.scale) * np.exp(-z - np.exp(-z))
         return p
 
-    def plot(self, filename=None):
+    def plot(self, filename=None, *, paper=None, kind=None, ax=None):
         """
-        Plot cumulative distribution function
+        Plot the distribution, and the sample it was fitted to, on probability paper
+
+        .. versionchanged :: 5.6.0
+            New arguments `paper`, `kind` and `ax`, and the axes are returned. The plot is drawn with
+            :func:`qats.stats.paper.probability_paper`. With the default arguments the data and the fitted
+            distribution are drawn as before, but the fitted line spans the probability axis, from the lowest data
+            point to the top tick. A figure that is shown is no longer closed afterwards.
 
         Parameters
         ----------
         filename : str, optional
             Save plot as `filename`, default is to show plot on screen
+        paper : str, optional
+            Probability paper: 'linear' (cumulative probability on a linear scale), 'gumbel', 'rayleigh' or
+            'weibull'. See :mod:`qats.stats.paper`. Default 'linear'; will be 'gumbel' from 6.0.
+        kind : str, optional
+            Plotting positions of the data, see :func:`qats.stats.empirical.empirical_cdf`. Default 'median',
+            ``(i-0.3)/(n+0.4)``, as :attr:`ecdf`.
+        ax : matplotlib.axes.Axes, optional
+            Draw on these axes. The figure is then neither shown nor closed, only saved if `filename` is given.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+            The axes drawn on.
+
+        Examples
+        --------
+        Plot a distribution fitted to a sample of extremes on Gumbel paper
+
+        >>> from qats.stats.gumbel import Gumbel
+        >>> Gumbel.fit(extremes, method="mle").plot(paper="gumbel")
 
         """
-        plt.figure()
-
-        # plot sample versus empirical distribution
-        if self.data is not None:
-            plt.plot(np.sort(self.data), self.ecdf, "ko", label="Data")
-
-        # plot fitted/specified distribution
-        y = np.linspace(0.001, 0.9999, 1000)
-        x = self.invcdf(p=y)
-        plt.plot(x, y, "-r", label="Fitted")
-
-        plt.xlabel("X")
-        plt.ylabel("Cumulative probability")
-        plt.legend(loc="upper left")
-        plt.grid(True)
-
-        if filename is not None:
-            plt.savefig(filename)
-
-        else:
-            plt.show()
-
-        # close figure to avoid high memory consumption
-        plt.close()
+        return _plot_distribution(
+            self, filename, "linear" if paper is None else paper, "median" if kind is None else kind, ax
+        )
 
     def plot_linear(self, filename=None):
         """
         Plot cumulative distribution function on linearized Gumbel scales
 
+        .. deprecated :: 5.6.0
+            Use :meth:`Gumbel.plot` with ``paper="gumbel"`` instead. ``plot_linear`` will be removed in 6.0.
+
         Parameters
         ----------
         filename : str, optional
             Save plot as `filename`, default is to show plot on screen
 
         """
+        warn_deprecated(
+            "qats.stats.gumbel.Gumbel.plot_linear()",
+            "5.6.0",
+            "6.0.0",
+            alternative="Gumbel.plot(paper='gumbel')",
+        )
         plt.figure()
 
         # plot sample versus empirical distribution function

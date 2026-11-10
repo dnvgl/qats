@@ -116,7 +116,10 @@ the sum of those.
 Tail fitting with Weibull
 *************************
 
-Fit a parametric Weibull distribution to the largest 13% of the peak sample. Often called tail fitting.
+Fit a parametric Weibull distribution to the largest 13% of the peak sample, often called tail fitting, by a censored
+fit and by a fit to the exceedances of the threshold value u. The fitted distribution keeps its fit settings in
+:attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which
+maxima were fitted.
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python
@@ -127,7 +130,7 @@ Fit a parametric Weibull distribution to the largest 13% of the peak sample. Oft
     :figclass: align-center
     :target: _images/weibull_tail_fit.png
 
-    Comparison of empirical sample distribution and fitted parametric distribution on linearized scales.
+    The maxima and the two tail fits on Rayleigh paper. The maxima outside the tail are faded, and u is dashed.
 
 
 Weibull fits to the tail of the maxima

@@ -226,6 +226,20 @@ class TestGuiMaxima(unittest.TestCase):
 
 
 @requires_qt
+class TestGuiOptionsMatchLibrary(unittest.TestCase):
+    """The fit options the GUI offers are the library's, so they can't drift apart."""
+
+    def test_options(self):
+        from qats.app.gui import PLOTTING_POSITIONS, TAIL_MODELS, WEIBULL_METHODS
+        from qats.stats.empirical import _PLOTTING_POSITIONS, _TAIL_MODELS
+        from qats.stats.weibull import _FIT_FUNCTIONS
+
+        self.assertEqual(set(TAIL_MODELS), set(_TAIL_MODELS))
+        self.assertEqual(set(PLOTTING_POSITIONS), set(_PLOTTING_POSITIONS))
+        self.assertLessEqual(set(WEIBULL_METHODS), set(_FIT_FUNCTIONS))
+
+
+@requires_qt
 class TestSettingsDialogFit(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
