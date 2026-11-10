@@ -1,5 +1,6 @@
 import os
 import unittest
+import warnings
 
 import numpy as np
 
@@ -201,8 +202,25 @@ class PaperExcludedTestCases(unittest.TestCase):
         self.assertTrue(np.all(p.fit_x > -np.inf))
 
     def test_location_not_weibull(self):
-        p = probability_paper([1.0, 2.0, 3.0], Gumbel(2.0, 1.0), paper="weibull")
+        # a Gumbel distribution has no lower bound, invcdf(0) is -inf
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            p = probability_paper([1.0, 2.0, 3.0], Gumbel(2.0, 1.0), paper="weibull")
         self.assertEqual(p.loc, 0.0)
+
+    def test_location_from_lower_bound(self):
+        # any distribution with a finite lower bound, not only Weibull: an exponential distribution above 1.5
+        class Exponential:
+            def cdf(self, x):
+                return np.where(x > 1.5, 1.0 - np.exp(-(np.asarray(x) - 1.5)), 0.0)
+
+            def invcdf(self, p):
+                return 1.5 - np.log(1.0 - np.asarray(p))
+
+        x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
+        p = probability_paper(x, Exponential(), paper="weibull", tail=0.5, tail_model="exceedances")
+        self.assertEqual(p.loc, 1.5)
+        np.testing.assert_array_equal(p.excluded, [1.0])
 
     def test_other_papers_show_all(self):
         p = probability_paper([-1.0, 0.0, 1.0], Weibull(2.5, 2.0, 1.5))

@@ -15,6 +15,7 @@ from .._deprecation import warn_deprecated
 from .._validation import QatsTypeError, QatsValueError
 from ..signal import find_maxima
 from .empirical import _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
+from .paper import paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -690,8 +691,6 @@ class Weibull(object):
             "6.0.0",
             alternative="Weibull.plot(paper='weibull', kind='mean')",
         )
-        from .paper import paper_coordinates  # here to avoid a circular import
-
         plt.figure()
 
         # plot data if that exists, except values at or below the location parameter
