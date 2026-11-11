@@ -41,3 +41,24 @@ def realisations(n=12, duration=10800.0, dt=0.5):
         x = 100.0 + np.fft.irfft(spectrum, n=t.size)
         out[f"seed {seed}"] = TimeSeries(f"seed {seed}", t, x)
     return out
+
+
+@functools.cache
+def riser_seeds():
+    """
+    20 realisations of one process from simulations: the top tension of a catenary riser in the same sea state with
+    different wave seeds, 3 hours each at 0.1 s, from `data/riser_tension_seeds.ts` (see `data/README.md`).
+
+    Unlike :func:`realisations`, a non-Gaussian response: the largest maxima are short peaks after near-slack.
+
+    Returns
+    -------
+    dict
+        TimeSeries by name, 'seed01' ... 'seed20'. Cached: don't change the series.
+    """
+    import os
+
+    from qats import TsDB
+
+    db = TsDB.fromfile(os.path.join(os.path.dirname(__file__), "..", "data", "riser_tension_seeds.ts"))
+    return {name: db.get(name=name) for name in db.list(names="seed*", display=False)}

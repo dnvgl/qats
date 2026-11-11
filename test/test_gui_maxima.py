@@ -4,6 +4,7 @@ The Weibull fit settings of the desktop application (#154): the Statistics and M
 fit, the settings dialog can't produce an invalid combination, and changed settings recalculate the shown series.
 """
 
+import itertools
 import logging
 import os
 import tempfile
@@ -13,7 +14,7 @@ import unittest.mock
 
 import numpy as np
 
-from . import realisations, requires_qt
+from . import realisations, requires_qt, riser_seeds
 from .test_reader_snapshot import DATA
 
 NAMES = ("Mooring line 4", "Mooring line 5")
@@ -341,14 +342,17 @@ class TestGuiMaxima(unittest.TestCase):
 
     def test_extremes_cdf(self):
         # the tab follows the maxima/minima selection and its own Gumbel fit method and plotting positions, and draws
-        # what the library returns, for the extremes of 12 realisations of the same process
+        # what the library returns, for the extremes of 12 generated realisations of the same process and of 20
+        # realisations of riser top tension from simulations
         from qats.app.funcs import calculate_gumbel_fit
 
-        container = realisations()
         self.window.settings["plotting_positions"] = "symmetrical"  # of the Maxima/Minima CDF tab, not used here
         self.window.settings["gumbel_plotting_positions"] = "mean"
-        for minima, method in ((False, "pwm"), (True, "pwm"), (False, "mle"), (True, "lse")):
-            with self.subTest(minima=minima, method=method):
+        for (sample, container), (minima, method) in itertools.product(
+            (("generated", realisations()), ("riser", riser_seeds())),
+            ((False, "pwm"), (True, "pwm"), (False, "mle"), (True, "lse")),
+        ):
+            with self.subTest(sample=sample, minima=minima, method=method):
                 self.window.settings["gumbel_method"] = method
                 self.window.minima.setChecked(minima)
                 self.window.maxima.setChecked(not minima)
@@ -379,15 +383,17 @@ class TestGuiMaxima(unittest.TestCase):
 
     def test_extremes_cdf_time_window_and_filter(self):
         # the library's fit to the extremes of the cropped and filtered series. The low-pass filter removes the upper
-        # half of the process's frequency band (0.08 to 0.12 Hz), so it changes the extremes.
+        # half of the generated process's frequency band (0.08 to 0.12 Hz), and the wave-frequency peak of the riser
+        # tension (about 0.13 Hz), so it changes the extremes.
         from qats.stats.gumbel import Gumbel
         from qats.stats.paper import probability_paper
 
-        container = realisations()
         self.set_time_window_and_filter((1000.0, 9000.0), 0.1)
         self.window.settings.update(gumbel_method="lse", gumbel_plotting_positions="gringorten")
-        for minima in (False, True):
-            with self.subTest(minima=minima):
+        for (sample, container), minima in itertools.product(
+            (("generated", realisations()), ("riser", riser_seeds())), (False, True)
+        ):
+            with self.subTest(sample=sample, minima=minima):
                 self.window.minima.setChecked(minima)
                 self.window.maxima.setChecked(not minima)
                 self.window.start_gumbel_fit_thread(container)

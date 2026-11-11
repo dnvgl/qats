@@ -11,7 +11,7 @@ from qats.stats.gumbel import pwm as gumbel_pwm
 from qats.stats.paper import probability_paper
 from qats.stats.weibull import Weibull
 
-from . import realisations, requires_qt
+from . import realisations, requires_qt, riser_seeds
 
 FIT_OPTIONS = [
     dict(),
@@ -217,7 +217,7 @@ class TestCalculateGumbelFit(unittest.TestCase):
         # the same realisation twice: equal extremes, zero scale, NaN parameters and the points without a line
         from qats.app.funcs import calculate_gumbel_fit
 
-        ts = self.container["seed 1"]
+        ts = next(iter(self.container.values()))
         for minima in (False, True):
             with self.subTest(minima=minima):
                 g = calculate_gumbel_fit({"a": ts, "b": ts}, None, None, minima=minima)
@@ -257,8 +257,31 @@ class TestCalculateGumbelFit(unittest.TestCase):
     def test_too_few_series(self):
         from qats.app.funcs import calculate_gumbel_fit
 
+        name, ts = next(iter(self.container.items()))
         with self.assertRaises(ValueError):
-            calculate_gumbel_fit({"seed 1": self.container["seed 1"]}, None, None)
+            calculate_gumbel_fit({name: ts}, None, None)
+
+
+@requires_qt
+class TestCalculateGumbelFitRiser(TestCalculateGumbelFit):
+    """
+    The same checks for the maxima and minima of 20 realisations from simulations, the top tension of a catenary
+    riser: a non-Gaussian response with short peaks after near-slack.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.container = riser_seeds()
+
+    def test_sample(self):
+        # the file holds 20 realisations of 3 hours at 0.1 s; the extremes are those of the source simulations
+        self.assertEqual(len(self.container), 20)
+        for ts in self.container.values():
+            self.assertEqual(ts.n, 108001)
+            self.assertAlmostEqual(ts.t[-1] - ts.t[0], 10800.0, places=6)
+        maxima = np.sort([ts.x.max() for ts in self.container.values()])
+        self.assertAlmostEqual(maxima[0], 225.26, places=2)
+        self.assertAlmostEqual(maxima[-1], 295.04, places=2)
 
 
 @requires_qt
