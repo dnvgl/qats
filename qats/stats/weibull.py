@@ -82,33 +82,26 @@ class Weibull(object):
     2. Continuous univariate distributions, Volume 1, N.L.Johnson, S.Kotz and N.Balakrishnan, 1994,  John Wiley and sons
        inc.
 
-    3. `weibull.com <http://www.weibull.com/hotwire/issue15/relbasics15.htm>`_, About location parameter
+    3. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
-    4. `Plotting positions <http://en.wikipedia.org/wiki/Q%E2%80%93Q_plot>`_, About plotting positions
+    4. Applying medical survival data to estimate the three-parameter Weibull distribution by the method of probability
+       weighted moments, Bartolucci, A. A.; Singh, K. P.; Bartolucci, A. D.; Bae, S., 1999, Mathematics and Computers
+       in Simulation, 48(4): 385-392,
+       `doi:10.1016/S0378-4754(99)00018-X <https://doi.org/10.1016/S0378-4754(99)00018-X>`_
 
-    5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
+    5. Theory and derivation for Weibull parameter probability weighted moment estimators, Grender, J.M., Dell, T.R.,
+       Reich, R.M., 1991, United States Department of Agriculture
 
-    6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
-       J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
+    6. Probability weighted moments: definition and relation to parameters of several distributions expressable in
+       inverse form, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research,
+       15(5): 1049-1054, `doi:10.1029/WR015i005p01049 <https://doi.org/10.1029/WR015i005p01049>`_
 
-    7. Estimating the three-parameter Weibull distribution by the method of probability weighted moments with
-       application to medical survival data, Bortolucci, A. A. et.al.
+    7. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
+       ISBN 978-0-471-37215-8. Censored and truncated samples.
 
-    8. Theory and derivation for Weibull parameter probability weighted moment estimators, Grender, J.M., Dell, T.R.,
-       Reich, R.M., 1991 United Sates Department of Agriculture
-
-    9. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water
-       Resources Research. 15(5): 1049-1054.
-
-    10. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
-        quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
-
-    11. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
-        ISBN 978-0-471-37215-8. Censored and truncated samples.
-
-    12. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer,
-        `doi:10.1007/978-1-4471-3675-0 <https://doi.org/10.1007/978-1-4471-3675-0>`_. Threshold exceedances (ch. 4),
-        and the likelihood of the exceedances with the values below the threshold censored (sec. 7.6).
+    8. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer,
+       `doi:10.1007/978-1-4471-3675-0 <https://doi.org/10.1007/978-1-4471-3675-0>`_. Threshold exceedances (ch. 4),
+       and the likelihood of the exceedances with the values below the threshold censored (sec. 7.6).
 
     """
 
@@ -684,7 +677,7 @@ def bootstrap(loc, scale, shape, size, repetitions, method="pwm"):
     given available computing power and time, should be used. Increasing the number of
     samples cannot increase the amount of information in the original data, it can only
     reduce the effects of random sampling errors which can arise from a bootstrap procedure itself.
-    See [5] about bootstrapping.
+    See [3] about bootstrapping.
 
     Examples
     --------
@@ -846,10 +839,10 @@ def mle(x, tail: float = None, loc: float = None):
 
     All values are known, and the censoring is a choice of the fit: the smaller values set how much of the
     distribution lies at or below `xc`, but not its shape. `L` is the likelihood of values censored at a known value
-    [11], here `xc`, which is itself one of the censored values; see also [12, sec. 7.6, eq. 7.12], which has the same
+    [7], here `xc`, which is itself one of the censored values; see also [8, sec. 7.6, eq. 7.12], which has the same
     form. In Type II censoring of a life test, by contrast, the `r` smallest values are not observed, and the censoring
     value is the smallest observed value x(r+1). A fit to the exceedances, see :meth:`Weibull.fit`, leaves out the
-    factor ``F(xc)^r`` and fits the distribution truncated at `xc` instead [11], [12, ch. 4].
+    factor ``F(xc)^r`` and fits the distribution truncated at `xc` instead [7], [8, ch. 4].
 
     The likelihood equations [2, p. 656 eq. 21.73-21.75] are then summed over the n - r fitted values and each gets
     the derivative of ``r * ln F(xc)``. With no censored values (`r` = 0) the fit is the same as without `tail`.
@@ -950,7 +943,7 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
 
     Notes
     -----
-    The probability weighted moment `Mljk` is defined by Greenwood and others (1979) as::
+    The probability weighted moment `Mljk` is defined by Greenwood and others (1979) [6] as::
 
         M_{l,j,k} = E[X^l * F^j * (1-F)^k]
 
@@ -961,7 +954,7 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
     PWMs can be applied either when the small observations are more important than the large observations (k=0), as in
     strength properties of materials, or when the large observations should have more influence than the smaller
     observations (k=0) as with three diameter distribution modelling. Here we have chosen the latter and derived
-    unbiased estimators for moments `M_{l,j,0}(k=0)`, see eq. 32 in [8]::
+    unbiased estimators for moments `M_{l,j,0}(k=0)`, see eq. 32 in [5]::
 
         M_{l,j,0} = (1 / n) * sum(x[i]^l * binom(i-1, j) / binom(n-1, j))
 
@@ -981,7 +974,7 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
     # drawn from n.
     bc = np.array([binom(i - 1.0, j) / binom(n - 1.0, j) for i in ii])
 
-    return (1.0 / n) * np.sum(xi**l * bc)  # eq. 32 in [8]
+    return (1.0 / n) * np.sum(xi**l * bc)  # eq. 32 in [5]
 
 
 def msm(x, loc: float = None):
@@ -1012,7 +1005,8 @@ def msm(x, loc: float = None):
 
     Notes
     -----
-    See description in [1]. With a fixed location parameter, the shape parameter is the one that gives the sample
+    See description in [1]. The method uses the whole sample and has no form for censored samples [1, p. 1], so it
+    has no censored tail fit. With a fixed location parameter, the shape parameter is the one that gives the sample
     coefficient of variation of ``x - loc``, and the scale parameter follows from the sample mean of ``x - loc``.
     """
     x = np.array(x)
@@ -1143,7 +1137,9 @@ def pwm(x, loc: float = None):
 
     Notes
     -----
-    Details on probability weighted moments are provided in [8].
+    The parameters follow from the probability weighted moments as in [6, Table 3] (location parameter not zero),
+    with `M_(k) = M_{1,0,k}` written in terms of `M_{1,j,0}` by [6, eq. 4]. Details on probability weighted moments
+    are provided in [5].
 
     See Also
     --------
@@ -1202,8 +1198,9 @@ def pwm2(x):
 
     Notes
     -----
-    Details on probability weighted moments are provided on p.14-15 in [8]. Note that only the scale and parameters are
-    estimated, the location parameter is assumed zero. The result is the same as from ``pwm(x, loc=0)``.
+    The parameters follow from [6, Table 3] (location parameter zero). Details on probability weighted moments are
+    provided on p.14-15 in [5]. Note that only the scale and shape parameters are estimated, the location parameter
+    is assumed zero. The result is the same as from ``pwm(x, loc=0)``.
 
     See Also
     --------
