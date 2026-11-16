@@ -124,7 +124,7 @@ def calculate_trace(container, twin, fargs):
     return container_out
 
 
-def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median"):
+def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median", view="exceedances"):
     """
     Calculate time series statistics, and the maxima/minima with the fitted Weibull distribution on Rayleigh paper
 
@@ -143,6 +143,9 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
         the defaults of :meth:`qats.TimeSeries.stats`.
     kind : str, optional
         Plotting positions on the probability paper, see :func:`qats.stats.empirical.empirical_cdf`.
+    view : {'exceedances', 'full-sample'}, optional
+        How a fit to the exceedances is drawn, see :func:`qats.stats.paper.probability_paper`: as fitted, with only the
+        maxima/minima beyond u (default), or with all of them. Other fits are drawn with all maxima/minima.
 
     Returns
     -------
@@ -170,7 +173,7 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
                 kind=kind,
                 tail=s["wtail"],
                 tail_model=s["wtail_model"] or "censored",
-                view="full-sample",  # series with different threshold values share the axes
+                view=view if s["wtail_model"] == "exceedances" else None,
                 is_minima=minima,
             )
         container_out[name] = s
