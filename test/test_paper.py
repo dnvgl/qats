@@ -1,3 +1,4 @@
+import dataclasses
 import os
 import unittest
 import warnings
@@ -133,14 +134,14 @@ class PaperTailTestCases(unittest.TestCase):
 
     def test_exceedances(self):
         w = Weibull(3.0, 2.0, 1.5)
-        p = probability_paper(self.x, w, tail=0.5, tail_model="exceedances")
+        p = probability_paper(self.x, w, tail=0.5, tail_model="exceedances", view="full-sample")
         np.testing.assert_array_equal(p.fitted, self.x > 3.0)
         self.assertEqual(p.x.size, 10)
 
     def test_exceedances_line(self):
         # hand calculation: F(x) = 1 - p exp(-((x - u)/b)^c) with p = 4/10, the actual fraction above u = 3
         u, b, c, frac = 3.0, 2.0, 1.5, 0.4
-        p = probability_paper(self.x, Weibull(u, b, c), tail=0.5, tail_model="exceedances")
+        p = probability_paper(self.x, Weibull(u, b, c), tail=0.5, tail_model="exceedances", view="full-sample")
         f = 1.0 - frac * np.exp(-(((p.fit_x - u) / b) ** c))
         np.testing.assert_allclose(p.fit_y, np.sqrt(-np.log(1.0 - f)), rtol=1e-10)
         self.assertAlmostEqual(p.fit_x[0], u, delta=1e-12)  # the line starts at u
@@ -149,13 +150,20 @@ class PaperTailTestCases(unittest.TestCase):
         # with the location fitted below u, the line still starts at u
         u = 3.0
         w = Weibull(2.0, 2.5, 1.5)
-        p = probability_paper(self.x, w, tail=0.5, tail_model="exceedances")
+        p = probability_paper(self.x, w, tail=0.5, tail_model="exceedances", view="full-sample")
         self.assertAlmostEqual(p.fit_x[0], u, delta=1e-9)
         f = 1.0 - 0.4 * (1.0 - w.cdf(p.fit_x))
         np.testing.assert_allclose(p.fit_y, np.sqrt(-np.log(1.0 - f)), rtol=1e-10)
 
     def test_default_view(self):
+        # a fit to the exceedances is drawn as fitted by default, any other fit with the full sample
+        w = Weibull(3.0, 2.0, 1.5)
+        self.assertEqual(probability_paper(self.x).view, "full-sample")
         self.assertEqual(probability_paper(self.x, tail=0.5).view, "full-sample")
+        default = probability_paper(self.x, w, tail=0.5, tail_model="exceedances")
+        explicit = probability_paper(self.x, w, tail=0.5, tail_model="exceedances", view="exceedances")
+        for field in dataclasses.fields(default):
+            np.testing.assert_array_equal(getattr(default, field.name), getattr(explicit, field.name), field.name)
 
     def test_exceedances_view_same_as_exceedances_alone(self):
         # view='exceedances' draws the m = 4 values above u = 3 as a complete sample of their own
@@ -214,11 +222,17 @@ class PaperTailTestCases(unittest.TestCase):
 
     def test_failed_fit(self):
         # a fit that failed has NaN parameters: no fitted line
-        for tail_model in ("censored", "exceedances"):
-            with self.subTest(tail_model=tail_model):
-                p = probability_paper(self.x, Weibull(np.nan, np.nan, np.nan), tail=0.5, tail_model=tail_model)
+        for tail_model, view, n in (
+            ("censored", None, 10),
+            ("exceedances", "full-sample", 10),
+            ("exceedances", None, 4),
+        ):
+            with self.subTest(tail_model=tail_model, view=view):
+                p = probability_paper(
+                    self.x, Weibull(np.nan, np.nan, np.nan), tail=0.5, tail_model=tail_model, view=view
+                )
                 self.assertEqual(p.fit_x.size, 0)
-                self.assertEqual(p.x.size, 10)
+                self.assertEqual(p.x.size, n)
 
     def test_whole_sample_in_tail(self):
         p = probability_paper(self.x, Weibull(0.0, 4.0, 2.0), tail=1.0, tail_model="exceedances")
@@ -230,7 +244,7 @@ class PaperTailTestCases(unittest.TestCase):
             with self.subTest(tail_model=tail_model):
                 s = ts.stats(method=method, tail=0.2, tail_model=tail_model, include_sample=True)
                 w = Weibull(s["wloc"], s["wscale"], s["wshape"])
-                p = probability_paper(s["sample"], w, tail=0.2, tail_model=tail_model)
+                p = probability_paper(s["sample"], w, tail=0.2, tail_model=tail_model, view="full-sample")
                 self.assertEqual(np.count_nonzero(p.fitted), s["wn"])
                 self.assertEqual(p.sample[~p.fitted].max(), s["wthreshold"])
 
@@ -271,7 +285,7 @@ class PaperExcludedTestCases(unittest.TestCase):
                 return 1.5 - np.log(1.0 - np.asarray(p))
 
         x = np.array([1.0, 2.0, 3.0, 4.0, 5.0])
-        p = probability_paper(x, Exponential(), paper="weibull", tail=0.5, tail_model="exceedances")
+        p = probability_paper(x, Exponential(), paper="weibull", tail=0.5, tail_model="exceedances", view="full-sample")
         self.assertEqual(p.loc, 1.5)
         np.testing.assert_array_equal(p.excluded, [1.0])
 
