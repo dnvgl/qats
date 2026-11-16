@@ -33,6 +33,7 @@ from .empirical import (
 )
 
 _PAPERS = ("rayleigh", "weibull", "gumbel", "linear")
+_VIEWS = ("full-sample", "exceedances")
 
 # candidate probabilities for the ticks on the probability axis of each paper, spread evenly enough on that paper
 _UPPER = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999, 0.999999]
@@ -89,6 +90,9 @@ class ProbabilityPaper:
         Tick positions on the y axis.
     yticklabels : list of str
         Tick labels on the y axis, cumulative probabilities.
+    view : str
+        How a fit to the exceedances is drawn: 'full-sample', or 'exceedances' for only the exceedances and the
+        fitted distribution conditional on exceeding u. See :func:`probability_paper`.
     """
 
     paper: str
@@ -105,6 +109,7 @@ class ProbabilityPaper:
     xticklabels: list[str]
     yticks: np.ndarray
     yticklabels: list[str]
+    view: str
 
 
 def paper_coordinates(x, f, paper="rayleigh", loc=0.0):
@@ -148,6 +153,7 @@ def probability_paper(
     plotting_positions="median",
     tail=None,
     tail_model="censored",
+    view="full-sample",
     loc=None,
     is_minima=False,
 ):
@@ -177,10 +183,15 @@ def probability_paper(
 
         - 'censored' (default): `fitted` describes the full sample, as a censored fit to the tail does.
         - 'exceedances': `fitted` describes only the values above the threshold value u, as a fit to the
-          exceedances does: it is the distribution truncated at u. Its cumulative distribution F_u, conditional on
-          exceeding u, is drawn as ``F = 1 - p (1 - F_u)``, where p
-          is the fraction of the sample above u, so the fitted line runs through the upper values of the whole
-          sample from u upwards.
+          exceedances does: it is the distribution truncated at u, with cumulative distribution F_u conditional on
+          exceeding u. How it is drawn is set by `view`.
+
+    view : {'full-sample', 'exceedances'}, optional
+        How a fit to the exceedances (``tail_model='exceedances'``) is drawn, see Notes:
+
+        - 'full-sample' (default): the full sample, and the fitted distribution as the distribution of the full
+          sample above u, ``F = 1 - p (1 - F_u)``, where p is the fraction of the sample above u.
+        - 'exceedances': only the values above u, as a complete sample of their own, and F_u itself.
 
     loc : float, optional
         Location of the Weibull paper, the x axis is ln(x - loc). Default the lower bound of `fitted`,
@@ -214,8 +225,30 @@ def probability_paper(
     ``1 - tail``. The threshold value u is the largest value outside the tail. The values marked as fitted are those
     in the tail with the 'censored' tail model, and those above u with 'exceedances'.
 
-    A fit to the exceedances describes only the values above u. To draw it without `tail`, pass the exceedances as
-    `sample`: they are then drawn as a complete sample of their own.
+    **A fit to the exceedances.** The m values above u are fitted as a complete sample of their own, so the fitted
+    distribution is that of the exceedances, the distribution truncated at u::
+
+        F_u(x) = Pr{X <= x | X > u} = [F(x) - F(u)] / [1 - F(u)],    x > u
+
+    where F is the distribution of the full sample, whose probability of exceeding u, ``1 - F(u)``, is estimated by
+    ``p = m / n``. The two views draw this fit as follows:
+
+    - ``view='full-sample'``: all n values of the sample at their plotting positions in the full sample, with mean
+      ranks ``i / (n + 1)``, and the fitted distribution solved for F::
+
+          F(x) = 1 - p [1 - F_u(x)],    x > u
+
+      so the fitted line runs through the values above u. This is what the fit implies for the full sample, from
+      which extremes are derived, and it can be compared with a censored fit on the same paper.
+    - ``view='exceedances'``: only the m values above u, at their plotting positions as a sample of their own, with
+      mean ranks ``j / (m + 1)``, and F_u itself. This shows the fit as it was made, and is the usual check of the
+      fit. It is the same as passing only the values above u as `sample`, without `tail`.
+
+    The two views are not the same points relabelled. With mean ranks, the exceedance with rank j among the m
+    exceedances is drawn at ``1 - F = (m + 1 - j) / (n + 1)`` in the full-sample view, while its conditional
+    position mapped to the full sample is ``1 - F = p (m + 1 - j) / (m + 1)``. The ratio of the two is
+    ``n (m + 1) / [m (n + 1)]``, close to but not equal to 1, so the values sit slightly differently relative to the
+    fitted line in the two views.
 
     Examples
     --------
@@ -233,6 +266,13 @@ def probability_paper(
     >>> plt.xticks(p.xticks, p.xticklabels)
     >>> plt.yticks(p.yticks, p.yticklabels)
     >>> plt.show()
+
+    Draw a fit to the exceedances of the threshold value u as it was made: only the maxima above u, and the fitted
+    distribution conditional on exceeding u
+
+    >>> from qats.stats.empirical import tail_threshold
+    >>> w = Weibull.fit(mx, method="mle", tail=0.2, tail_model="exceedances", loc=tail_threshold(mx, 0.2))
+    >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances", view="exceedances")
     """
     _check_paper(paper)
     _check_plotting_positions(plotting_positions)
@@ -242,6 +282,12 @@ def probability_paper(
     exceedances = tail is not None and tail_model == "exceedances"
     if exceedances and fitted is None:
         raise QatsValueError("The tail model 'exceedances' describes a fitted distribution, give fitted=")
+    if view not in _VIEWS:
+        raise QatsValueError(f"The view must be one of {', '.join(_VIEWS)}, got {view!r}")
+    if view == "exceedances" and not exceedances:
+        raise QatsValueError(
+            "The view 'exceedances' is for a fit to the exceedances, give tail= and tail_model='exceedances'"
+        )
     if fitted is not None and not callable(getattr(fitted, "invcdf", None)):
         raise QatsTypeError(f"The fitted distribution must have a method invcdf(), got {type(fitted).__name__}")
     if sample is None and fitted is None:
@@ -272,6 +318,14 @@ def probability_paper(
     else:
         used = np.arange(n) >= r
     p = np.count_nonzero(used) / n if exceedances else 1.0
+    if view == "exceedances" and u is not None:
+        # only the exceedances, as a complete sample of their own, and the fitted distribution conditional on
+        # exceeding u: the same as the exceedances given as the sample, without a tail
+        z = z[used]
+        n = z.size
+        f = empirical_cdf(n, kind=plotting_positions)
+        used = np.ones(n, dtype=bool)
+        exceedances, p = False, 1.0
 
     # location of the Weibull paper, and the values it can show
     if paper == "weibull":
@@ -337,6 +391,7 @@ def probability_paper(
         xticklabels=[_format(sign * v) for v in xtick],
         yticks=_paper_y(ptick, paper),
         yticklabels=[_format(v) for v in ptick],
+        view=view,
     )
 
 
@@ -427,7 +482,7 @@ def _format(v):
     return f"{v + 0.0:g}"
 
 
-def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
+def _plot_distribution(distribution, filename, paper, plotting_positions, ax, view="full-sample"):
     """
     Draw a fitted distribution and the sample it was fitted to on probability paper.
 
@@ -446,6 +501,8 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
         Plotting positions of the sample, see :func:`qats.stats.empirical.empirical_cdf`.
     ax : matplotlib.axes.Axes or None
         Axes to draw on. None draws on a new figure.
+    view : {'full-sample', 'exceedances'}, optional
+        How a fit to the exceedances is drawn, see :func:`probability_paper`.
 
     Returns
     -------
@@ -455,7 +512,9 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
     Notes
     -----
     With a tail fit, the sample values outside the fit are drawn faded and smaller, and the threshold value u as a
-    dashed vertical line.
+    dashed vertical line. A fit to the exceedances is labelled by what the line is: ``F = 1 - p(1 - F_u)`` with the
+    fraction p above u in the full-sample view, and ``F_u`` with the probability axis conditional on exceeding u in
+    the exceedances view.
 
     A new figure (`ax` is None) is shown, or saved to `filename` and then closed. A figure given through `ax` is only
     saved, if `filename` is given, and is neither shown nor closed.
@@ -465,14 +524,26 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
     info = distribution.fit_info or dict()
     tail = info.get("tail")
     u = info.get("threshold")
+    tail_model = info.get("tail_model") or "censored"
     p = probability_paper(
         distribution.data,
         distribution,
         paper=paper,
         plotting_positions=plotting_positions,
         tail=tail,
-        tail_model=info.get("tail_model") or "censored",
+        tail_model=tail_model,
+        view=view,
     )
+
+    # labels: a fit to the exceedances is labelled by what the line is
+    data_label, fit_label, ylabel = "Data", "Fitted", "Cumulative probability"
+    if tail_model == "exceedances" and u is not None:
+        if view == "exceedances":
+            data_label, fit_label = "Exceedances", "Fitted, F_u"
+            ylabel = "Cumulative probability given X > u"
+        else:
+            frac = np.count_nonzero(p.fitted) / (p.sample.size + p.excluded.size)
+            fit_label = f"Fitted, F = 1 - p(1 - F_u), p = {frac:.3g}"
 
     new_figure = ax is None
     if new_figure:
@@ -480,10 +551,10 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
 
     # the sample: with a tail fit, the values outside the fit faded
     if p.x.size > 0:
-        ax.plot(p.x[p.fitted], p.y[p.fitted], "ko", label="Data")
+        ax.plot(p.x[p.fitted], p.y[p.fitted], "ko", label=data_label)
         if not np.all(p.fitted):
             ax.plot(p.x[~p.fitted], p.y[~p.fitted], "ko", label="Data not fitted", **_UNFITTED_STYLE)
-    ax.plot(p.fit_x, p.fit_y, "-r", label="Fitted")
+    ax.plot(p.fit_x, p.fit_y, "-r", label=fit_label)
     if u is not None:
         xu = float(_paper_x(u, paper, p.loc))
         if np.isfinite(xu):
@@ -493,7 +564,7 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax):
     ax.set_yticks(p.yticks, p.yticklabels)
     ax.set_ylim(p.yticks[0], p.yticks[-1])
     ax.set_xlabel("X")
-    ax.set_ylabel("Cumulative probability")
+    ax.set_ylabel(ylabel)
     ax.legend(loc="upper left")
     ax.grid(True)
 
