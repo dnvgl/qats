@@ -78,11 +78,13 @@ class Gumbel(object):
 
     5. `Bootstrapping statistics <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_
 
-    6. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979,
-       Water Resources Research. 15(5): 1049-1054.
+    6. Probability weighted moments: definition and relation to parameters of several distributions expressable in
+       inverse form, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research,
+       15(5): 1049-1054, `doi:10.1029/WR015i005p01049 <https://doi.org/10.1029/WR015i005p01049>`_
 
-    7. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
-       quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
+    7. Probability weighted moments compared with some traditional techniques in estimating Gumbel parameters and
+       quantiles, Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research, 15(5): 1055-1064,
+       `doi:10.1029/WR015i005p01055 <https://doi.org/10.1029/WR015i005p01055>`_
 
     """
 
@@ -859,7 +861,7 @@ def plot_fits(data, filename=None, methods=None):
 def pwm(x):
     """
     Fit Gumbel distribution parameters to sample by method of probability weighted
-    moments [7].
+    moments [7, Table 2], see also [6, Table 3].
 
     Parameters
     ----------
@@ -885,7 +887,7 @@ def pwm(x):
 
         Notes
         -----
-        The probability weighted moment Mljk is defined by Greenwood and others (1979)::
+        The probability weighted moment Mljk is defined by Greenwood and others (1979) [6]::
 
             M_{l,j,k} = E[X^l F^j (1-F)^k]
 
@@ -897,7 +899,7 @@ def pwm(x):
         in
         strength properties of materials, or when the large observations should have more influence than the smaller
         observations (k=0) as with three diameter distribution modelling. Here we have chose the former and derived
-        unbiased estimators for moments M_{1,0,k} (j=0), see eq. 16 in [6]::
+        unbiased estimators for moments M_{1,0,k} (j=0), see eq. 16 in [7]::
 
             M_{1,0,k} = \\frac{1}{n}\\sum_{i=1}^{n}{X_{(i)}\\frac{\\binom{n-i}{k}}{\\binom{n-1}{k}}}
 
@@ -909,7 +911,7 @@ def pwm(x):
         # ratio of binomial coefficients
         bc = np.array([binom(n - i, k) / binom(n - 1.0, k) for i in ii])
 
-        return (1.0 / n) * np.sum(xi * bc)  # eq. 16 in [6]
+        return (1.0 / n) * np.sum(xi * bc)  # eq. 16 in [7]
 
     m0 = mk(x, 0.0)
     m1 = mk(x, 1.0)
