@@ -122,6 +122,7 @@ class TestGuiMaxima(unittest.TestCase):
                 Weibull(s["wloc"], s["wscale"], s["wshape"]),
                 tail=fit.get("tail"),
                 tail_model=fit.get("tail_model", "censored"),
+                view="full-sample",
                 is_minima=minima,
             )
             fitted, other, line = lines[3 * i : 3 * i + 3]

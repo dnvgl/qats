@@ -121,8 +121,8 @@ fit to all maxima and by a fit to the exceedances of the threshold value u as a 
 fit is fitted to median rank plotting positions (``plotting_positions``). The fitted distribution keeps its fit
 settings in :attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to
 show which maxima were fitted, against the plotting positions of the least squares fit. A fit to the exceedances is
-drawn either with all maxima (``view="full-sample"``, the default) or as fitted, with only the exceedances and the
-distribution conditional on exceeding u (``view="exceedances"``).
+drawn as fitted, with only the exceedances and the distribution conditional on exceeding u (``view="exceedances"``,
+the default), or with all maxima (``view="full-sample"``).
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python

@@ -91,8 +91,8 @@ class ProbabilityPaper:
     yticklabels : list of str
         Tick labels on the y axis, cumulative probabilities.
     view : str
-        How a fit to the exceedances is drawn: 'full-sample', or 'exceedances' for only the exceedances and the
-        fitted distribution conditional on exceeding u. See :func:`probability_paper`.
+        How the fit is drawn: 'exceedances' for only the exceedances and the fitted distribution conditional on
+        exceeding u, or 'full-sample'. See :func:`probability_paper`.
     """
 
     paper: str
@@ -153,7 +153,7 @@ def probability_paper(
     plotting_positions="median",
     tail=None,
     tail_model="censored",
-    view="full-sample",
+    view=None,
     loc=None,
     is_minima=False,
 ):
@@ -186,12 +186,15 @@ def probability_paper(
           exceedances does: it is the distribution truncated at u, with cumulative distribution F_u conditional on
           exceeding u. How it is drawn is set by `view`.
 
-    view : {'full-sample', 'exceedances'}, optional
+    view : {'exceedances', 'full-sample'}, optional
         How a fit to the exceedances (``tail_model='exceedances'``) is drawn, see Notes:
 
-        - 'full-sample' (default): the full sample, and the fitted distribution as the distribution of the full
-          sample above u, ``F = 1 - p (1 - F_u)``, where p is the fraction of the sample above u.
-        - 'exceedances': only the values above u, as a complete sample of their own, and F_u itself.
+        - 'exceedances': only the values above u, as a complete sample of their own, and F_u itself, as fitted.
+        - 'full-sample': the full sample, and the fitted distribution as the distribution of the full sample above
+          u, ``F = 1 - p (1 - F_u)``, where p is the fraction of the sample above u.
+
+        Default 'exceedances' for a fit to the exceedances, otherwise 'full-sample', the only view of a censored fit
+        or a fit to the full sample.
 
     loc : float, optional
         Location of the Weibull paper, the x axis is ln(x - loc). Default the lower bound of `fitted`,
@@ -240,9 +243,9 @@ def probability_paper(
 
       so the fitted line runs through the values above u. This is what the fit implies for the full sample, from
       which extremes are derived, and it can be compared with a censored fit on the same paper.
-    - ``view='exceedances'``: only the m values above u, at their plotting positions as a sample of their own, with
-      mean ranks ``j / (m + 1)``, and F_u itself. This shows the fit as it was made, and is the usual check of the
-      fit. It is the same as passing only the values above u as `sample`, without `tail`.
+    - ``view='exceedances'`` (default): only the m values above u, at their plotting positions as a sample of their
+      own, with mean ranks ``j / (m + 1)``, and F_u itself. This shows the fit as it was made, and is the usual
+      check of the fit. It is the same as passing only the values above u as `sample`, without `tail`.
 
     The two views are not the same points relabelled. With mean ranks, the exceedance with rank j among the m
     exceedances is drawn at ``1 - F = (m + 1 - j) / (n + 1)`` in the full-sample view, while its conditional
@@ -267,12 +270,14 @@ def probability_paper(
     >>> plt.yticks(p.yticks, p.yticklabels)
     >>> plt.show()
 
-    Draw a fit to the exceedances of the threshold value u as it was made: only the maxima above u, and the fitted
-    distribution conditional on exceeding u
+    Draw a fit to the exceedances of the threshold value u of the 20% largest maxima: by default as it was made, with
+    only the maxima above u and the fitted distribution conditional on exceeding u, or with all maxima and the fitted
+    distribution solved for all maxima
 
     >>> from qats.stats.empirical import tail_threshold
     >>> w = Weibull.fit(mx, method="mle", tail=0.2, tail_model="exceedances", loc=tail_threshold(mx, 0.2))
-    >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances", view="exceedances")
+    >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances")
+    >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances", view="full-sample")
     """
     _check_paper(paper)
     _check_plotting_positions(plotting_positions)
@@ -282,6 +287,8 @@ def probability_paper(
     exceedances = tail is not None and tail_model == "exceedances"
     if exceedances and fitted is None:
         raise QatsValueError("The tail model 'exceedances' describes a fitted distribution, give fitted=")
+    if view is None:
+        view = "exceedances" if exceedances else "full-sample"
     if view not in _VIEWS:
         raise QatsValueError(f"The view must be one of {', '.join(_VIEWS)}, got {view!r}")
     if view == "exceedances" and not exceedances:
@@ -482,7 +489,7 @@ def _format(v):
     return f"{v + 0.0:g}"
 
 
-def _plot_distribution(distribution, filename, paper, plotting_positions, ax, view="full-sample"):
+def _plot_distribution(distribution, filename, paper, plotting_positions, ax, view=None):
     """
     Draw a fitted distribution and the sample it was fitted to on probability paper.
 
@@ -501,8 +508,8 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax, vi
         Plotting positions of the sample, see :func:`qats.stats.empirical.empirical_cdf`.
     ax : matplotlib.axes.Axes or None
         Axes to draw on. None draws on a new figure.
-    view : {'full-sample', 'exceedances'}, optional
-        How a fit to the exceedances is drawn, see :func:`probability_paper`.
+    view : {'exceedances', 'full-sample'}, optional
+        How a fit to the exceedances is drawn, default 'exceedances', see :func:`probability_paper`.
 
     Returns
     -------
@@ -538,7 +545,7 @@ def _plot_distribution(distribution, filename, paper, plotting_positions, ax, vi
     # labels: a fit to the exceedances is labelled by what the line is
     data_label, fit_label, ylabel = "Data", "Fitted", "Cumulative probability"
     if tail_model == "exceedances" and u is not None:
-        if view == "exceedances":
+        if p.view == "exceedances":
             data_label, fit_label = "Exceedances", "Fitted, F_u"
             ylabel = "Cumulative probability given X > u"
         else:
