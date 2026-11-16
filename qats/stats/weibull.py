@@ -941,7 +941,7 @@ def mle(x, tail: float = None, loc: float = None):
         Fit distribution to the tail of the sample by censored maximum likelihood: the fraction <0, 1] of the largest
         values is fitted, so 0.13 fits the 13% largest values. The values are selected as in :func:`lse`, those with
         empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored: they count only by their
-        number. The fitted distribution describes the whole sample. See Notes.
+        number. The fitted distribution describes the full sample. See Notes.
     loc : float, optional
         Fixed location parameter. Only the scale and shape parameters are fitted. Must be below the smallest value in
         the likelihood, which is the censoring value in a tail fit.
@@ -1132,7 +1132,7 @@ def msm(x, loc: float = None):
 
     Notes
     -----
-    See description in [1]. The method uses the whole sample and has no form for censored samples [1, p. 1], so it
+    See description in [1]. The method uses the full sample and has no form for censored samples [1, p. 1], so it
     has no censored tail fit. With a fixed location parameter, the shape parameter is the one that gives the sample
     coefficient of variation of ``x - loc``, and the scale parameter follows from the sample mean of ``x - loc``.
     """
