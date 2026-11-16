@@ -117,8 +117,9 @@ Tail fitting with Weibull
 *************************
 
 Fit a parametric Weibull distribution to the largest 13% of the peak sample, often called tail fitting, by a censored
-fit and by a fit to the exceedances of the threshold value u. The least squares fit is fitted to median rank
-plotting positions (``plotting_positions``). The fitted distribution keeps its fit settings in
+fit to all maxima and by a fit to the exceedances of the threshold value u as a sample of their own. The least squares
+fit is fitted to median rank plotting positions (``plotting_positions``). The fitted distribution keeps its fit
+settings in
 :attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which
 maxima were fitted, against the plotting positions of the least squares fit.
 
@@ -138,8 +139,8 @@ Weibull fits to the tail of the maxima
 **************************************
 
 Fit the Weibull distribution to all maxima of a time series, or only to the largest 20%, with
-:meth:`~qats.TimeSeries.stats`: censored fits, where the smaller maxima count only by their number, and fits to the
-maxima above a threshold value. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
+:meth:`~qats.TimeSeries.stats`: censored fits to all maxima, where the smaller maxima count only by their number,
+and fits to the maxima above a threshold value as a sample of their own. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
 The Notes of :meth:`~qats.TimeSeries.stats` describe the options. The figure shows each fit on Rayleigh paper, with the
 coordinates from :func:`~qats.stats.paper.probability_paper`.
 

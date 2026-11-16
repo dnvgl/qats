@@ -175,9 +175,10 @@ def probability_paper(
     tail_model : {'censored', 'exceedances'}, optional
         How `fitted` describes the sample, with `tail`:
 
-        - 'censored' (default): `fitted` describes the whole sample, as a censored fit does.
+        - 'censored' (default): `fitted` describes the whole sample, as a censored fit to the tail does.
         - 'exceedances': `fitted` describes only the values above the threshold value u, as a fit to the
-          exceedances does. Its conditional cumulative distribution F_u is drawn as ``F = 1 - p (1 - F_u)``, where p
+          exceedances does: it is the distribution truncated at u. Its cumulative distribution F_u, conditional on
+          exceeding u, is drawn as ``F = 1 - p (1 - F_u)``, where p
           is the fraction of the sample above u, so the fitted line runs through the upper values of the whole
           sample from u upwards.
 

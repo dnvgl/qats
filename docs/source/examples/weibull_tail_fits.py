@@ -17,12 +17,14 @@ ts = db.get(name="mooring line 4")
 
 # Weibull fits to the global maxima, and the 3-hour extremes of the Gumbel distribution derived from each fit:
 # - all maxima: the default of stats(), 'pwm' fitted to all maxima
-# - censored: only the 20% largest maxima are fitted, the others count only by their number. The fit describes all
-#   maxima, so the extremes are derived from all maxima. 'lse' and 'mle' have a censored fit.
+# - censored: a censored fit to all maxima. Only the 20% largest maxima are fitted by value, the others count only
+#   by their number. The fit describes all maxima, so the extremes are derived from all maxima. 'lse' and 'mle' have
+#   a censored fit.
 # - censored, location at the mean level: the mean level is a lower bound of global maxima, and fixing the location
 #   parameter makes a fit to a short tail more stable
-# - exceedances: the maxima above the threshold value u are fitted as a complete sample, with the location parameter
-#   fitted or at u. The fit describes only the maxima above u, so the extremes are derived from those maxima only.
+# - exceedances: the maxima above the threshold value u are fitted as a complete sample of their own, with the
+#   location parameter fitted or at u. The fit is the distribution truncated at u and describes only the maxima above
+#   u, so the extremes are derived from those maxima only.
 #   With the location parameter fitted below u, part of the fitted distribution lies below u, where there are no
 #   exceedances, and that lowers the extremes. The location at u avoids this.
 options = {
