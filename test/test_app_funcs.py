@@ -27,10 +27,10 @@ class TestCalculateStats(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "..", "data", "mooring.ts")
         cls.ts = TsDB.fromfile(path).get(name="mooring line 4")
 
-    def check(self, fit, minima=False, kind="median"):
+    def check(self, fit, minima=False, kind="median", view="exceedances"):
         from qats.app.funcs import calculate_stats
 
-        s = calculate_stats({"a": self.ts}, None, None, minima=minima, fit=fit, kind=kind)["a"]
+        s = calculate_stats({"a": self.ts}, None, None, minima=minima, fit=fit, kind=kind, view=view)["a"]
         expected = self.ts.stats(
             statsdur=10800.0, quantiles=(0.37, 0.57, 0.9), is_minima=minima, include_sample=True, **fit
         )
@@ -48,7 +48,7 @@ class TestCalculateStats(unittest.TestCase):
             kind=kind,
             tail=fit.get("tail"),
             tail_model=fit.get("tail_model", "censored"),
-            view="full-sample",
+            view=view if fit.get("tail_model") == "exceedances" else None,
             is_minima=minima,
         )
         for attr in ("x", "y", "fitted", "fit_x", "fit_y", "yticks"):
@@ -68,6 +68,15 @@ class TestCalculateStats(unittest.TestCase):
 
     def test_plotting_positions(self):
         self.check(dict(), kind="mean")
+
+    def test_views(self):
+        # the view applies to a fit to the exceedances; the other fits are drawn with all maxima in either view
+        for view in ("exceedances", "full-sample"):
+            for fit in FIT_OPTIONS:
+                with self.subTest(view=view, **fit):
+                    self.check(fit, view=view)
+            with self.subTest(view=view, minima=True):
+                self.check(dict(method="msm", tail=0.2, tail_model="exceedances"), minima=True, view=view)
 
     def test_failed_fit(self):
         # mle to the exceedances with the location fitted doesn't converge on these maxima: NaN, points without a line

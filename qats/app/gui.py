@@ -182,6 +182,12 @@ TAIL_MODELS = {
     "censored": "Censored fit to all maxima: the largest are fitted, the others count only by their number",
     "exceedances": "Exceedances: the maxima above u as a sample of their own, the distribution truncated at u",
 }
+# how a fit to the exceedances is drawn on the Maxima/minima CDF tab, see qats.stats.paper.probability_paper
+WEIBULL_VIEWS = {
+    "exceedances": "As fitted: only the maxima above u, and the fitted distribution F_u conditional on exceeding u",
+    "full-sample": "All maxima, and the fitted distribution solved for all maxima, F = 1 - p (1 - F_u)",
+}
+WEIBULL_VIEW_DEFAULT = "exceedances"
 PLOTTING_POSITIONS = {
     "median": "Median ranks, (i - 0.3)/(n + 0.4)",
     "mean": "Mean ranks, i/(n + 1)",
@@ -1105,8 +1111,8 @@ class Qats(QMainWindow):
         # load settings dialog with current settings
         defaults = (self.psd_normalized(), self.psd_nperseg(), self.rfc_nbins(), self.twin_ndec())
         before = self._processing_settings()
-        psdnorm, nperseg, nbins, twindec, fit, kind, ok = SettingsDialog.settings(
-            defaults, fit=self.weibull_fit(), kind=self.plotting_positions(), parent=self
+        psdnorm, nperseg, nbins, twindec, fit, kind, view, ok = SettingsDialog.settings(
+            defaults, fit=self.weibull_fit(), kind=self.plotting_positions(), view=self.weibull_view(), parent=self
         )
 
         # update settings
@@ -1120,6 +1126,7 @@ class Qats(QMainWindow):
             self.settings["weibull_tail_model"] = fit["tail_model"]
             self.settings["weibull_loc"] = fit["loc"]
             self.settings["plotting_positions"] = kind
+            self.settings["weibull_view"] = view
 
             # recalculate the shown time series with the new settings
             if self._displayed is not None and self._processing_settings() != before:
@@ -1251,6 +1258,8 @@ class Qats(QMainWindow):
         yticks = dict()
         is_minima = False
         is_tail_fit = False
+        has_unfitted = False
+        is_conditional = False
 
         # draw: the fitted maxima, the others faded, and the threshold value u of a tail fit dashed. The x axis of
         # Rayleigh paper is in data units, so matplotlib's ticks serve all series (the paper's own x ticks are made
@@ -1267,6 +1276,8 @@ class Qats(QMainWindow):
             axes.plot(p.x[p.fitted], p.y[p.fitted], "o", color=color)
             axes.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color=color, **_UNFITTED_STYLE)
             axes.plot(p.fit_x, p.fit_y, "-", color=color)
+            has_unfitted = has_unfitted or not np.all(p.fitted)
+            is_conditional = is_conditional or (p.view == "exceedances" and u is not None)
             if u is not None:
                 is_tail_fit = True
                 axes.axvline(u, color=color, linestyle="--", linewidth=1.0)
@@ -1285,9 +1296,13 @@ class Qats(QMainWindow):
             # the paper is drawn for the minima multiplied by -1, label with the minima
             axes.xaxis.set_major_formatter(FuncFormatter(lambda v, pos: f"{-v + 0.0:g}"))
         axes.set_xlabel("Minima" if is_minima else "Maxima")
-        axes.set_ylabel("Cumulative probability (-)")
+        if is_conditional:
+            # a fit to the exceedances as fitted: the probability is conditional on exceeding u of each series
+            axes.set_ylabel(f"Cumulative probability given {'X < u' if is_minima else 'X > u'} (-)")
+        else:
+            axes.set_ylabel("Cumulative probability (-)")
         axes.set_title(self._fit_description, fontsize="small")
-        if handles and is_tail_fit:
+        if handles and is_tail_fit and has_unfitted:
             # explain the markers once for all series
             handles.append(Line2D([], [], color="0.3", marker="o", linestyle="none", label="Fitted"))
             handles.append(
@@ -1400,6 +1415,17 @@ class Qats(QMainWindow):
             fit = dict(WEIBULL_FIT_DEFAULTS)
         return fit
 
+    def weibull_view(self):
+        """
+        str: How a fit to the exceedances is drawn on the Maxima/minima CDF tab, 'exceedances' or 'full-sample', see
+        :func:`qats.stats.paper.probability_paper`.
+        """
+        view = self.settings.get("weibull_view", WEIBULL_VIEW_DEFAULT)
+        if view not in WEIBULL_VIEWS:
+            logging.warning(f"Invalid Weibull view setting {view!r}, using {WEIBULL_VIEW_DEFAULT!r}")
+            view = WEIBULL_VIEW_DEFAULT
+        return view
+
     def plotting_positions(self):
         """str: Plotting positions on probability paper, see :func:`qats.stats.empirical.empirical_cdf`."""
         kind = self.settings.get("plotting_positions", "median")
@@ -1416,6 +1442,7 @@ class Qats(QMainWindow):
             self.rfc_nbins(),
             self.weibull_fit(),
             self.plotting_positions(),
+            self.weibull_view(),
         )
 
     def _init_plot_theme(self):
@@ -1599,7 +1626,9 @@ class Qats(QMainWindow):
         self.threadpool.start(worker)
 
         # start calculations of statistics
-        worker = Worker(calculate_stats, container, twin, fargs, minima=minima_stats, fit=fit, kind=kind)
+        worker = Worker(
+            calculate_stats, container, twin, fargs, minima=minima_stats, fit=fit, kind=kind, view=self.weibull_view()
+        )
         worker.signals.error.connect(self.log_thread_exception)
         worker.signals.result.connect(self.tabulate_stats)
         worker.signals.result.connect(self.plot_weibull)
@@ -1731,9 +1760,13 @@ class SettingsDialog(QDialog):
         Default Weibull fit to maxima/minima: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
     kind : str, optional
         Default plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
+    view : str, optional
+        Default view of a fit to the exceedances on the Maxima/minima CDF tab, 'exceedances' or 'full-sample'.
     """
 
-    def __init__(self, psdnorm, nperseg, nbins, twindec, parent=None, *, fit=None, kind="median"):
+    def __init__(
+        self, psdnorm, nperseg, nbins, twindec, parent=None, *, fit=None, kind="median", view=WEIBULL_VIEW_DEFAULT
+    ):
         super(SettingsDialog, self).__init__(parent)
         self.setWindowTitle("Configure application settings")
         self.setWindowIcon(QIcon(ICON_FILE))
@@ -1802,7 +1835,7 @@ class SettingsDialog(QDialog):
         layout.addLayout(twindeclayout)
 
         # settings group: Weibull fit to maxima/minima and plotting positions
-        layout.addWidget(self._fit_group(dict(WEIBULL_FIT_DEFAULTS) if fit is None else fit, kind))
+        layout.addWidget(self._fit_group(dict(WEIBULL_FIT_DEFAULTS) if fit is None else fit, kind, view))
 
         # help text
         helptext = QHBoxLayout()
@@ -1825,8 +1858,8 @@ class SettingsDialog(QDialog):
         # conclude layout
         self.setLayout(layout)
 
-    def _fit_group(self, fit, kind):
-        """Group of widgets for the Weibull fit to maxima/minima and the plotting positions."""
+    def _fit_group(self, fit, kind, view=WEIBULL_VIEW_DEFAULT):
+        """Group of widgets for the Weibull fit to maxima/minima, the plotting positions and the view."""
         group = QGroupBox("Maxima/minima distribution (statistics and maxima/minima CDF)")
         form = QFormLayout()
 
@@ -1905,6 +1938,20 @@ class SettingsDialog(QDialog):
         self.kindcombo.setToolTip("Plotting positions of the maxima/minima on probability paper.")
         form.addRow("Plotting positions", self.kindcombo)
 
+        self.viewcombo = QComboBox()
+        for i, (name, tooltip) in enumerate(WEIBULL_VIEWS.items()):
+            self.viewcombo.addItem(name, name)
+            self.viewcombo.setItemData(i, tooltip, Qt.ToolTipRole)
+        self.viewcombo.setCurrentIndex(list(WEIBULL_VIEWS).index(view))
+        self.viewcombo.setToolTip(
+            "How a fit to the exceedances is drawn on the Maxima/minima CDF tab.\n"
+            "Exceedances: as fitted, only the maxima above u at their own plotting positions, and the fitted\n"
+            "distribution F_u, with the probability conditional on exceeding u.\n"
+            "Full-sample: all maxima, and the fitted distribution solved for all maxima, F = 1 - p (1 - F_u),\n"
+            "where p is the fraction of the maxima above u. Comparable with a censored fit."
+        )
+        form.addRow("Fit to the exceedances drawn", self.viewcombo)
+
         # keep the combination of options valid
         self.tailcheckbox.toggled.connect(self._update_fit_controls)
         self.tailmodelcombo.currentIndexChanged.connect(self._update_fit_controls)
@@ -1921,6 +1968,7 @@ class SettingsDialog(QDialog):
         self.tailmodelcombo.setEnabled(tail)
         censored = tail and self.tailmodelcombo.currentData() == "censored"
         exceedances = tail and not censored
+        self.viewcombo.setEnabled(exceedances)  # only a fit to the exceedances has two views
 
         # methods without a censored tail fit
         model = self.methodcombo.model()
@@ -1974,8 +2022,12 @@ class SettingsDialog(QDialog):
         """Collect the plotting positions setting."""
         return self.kindcombo.currentData()
 
+    def get_view(self):
+        """Collect the view of a fit to the exceedances."""
+        return self.viewcombo.currentData()
+
     @staticmethod
-    def settings(defaults, parent=None, fit=None, kind="median"):
+    def settings(defaults, parent=None, fit=None, kind="median", view=WEIBULL_VIEW_DEFAULT):
         """Create settings dialog and return settings.
 
         Parameters
@@ -1988,6 +2040,8 @@ class SettingsDialog(QDialog):
             Default Weibull fit to maxima/minima.
         kind : str, optional
             Default plotting positions.
+        view : str, optional
+            Default view of a fit to the exceedances, 'exceedances' or 'full-sample'.
 
         Returns
         -------
@@ -2003,20 +2057,23 @@ class SettingsDialog(QDialog):
             Weibull fit to maxima/minima: method, tail, tail_model and loc.
         kind : str
             Plotting positions.
+        view : str
+            View of a fit to the exceedances.
         accepted : bool
             The dialog was closed with OK.
         """
         dnorm, dnperseg, dnbins, dtwindec = defaults
-        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent, fit=fit, kind=kind)
+        dialog = SettingsDialog(dnorm, dnperseg, dnbins, dtwindec, parent=parent, fit=fit, kind=kind, view=view)
         result = dialog.exec_()
         norm, nperseg, nbins, twindec = dialog.get_settings()
         fit = dialog.get_fit()
         kind = dialog.get_plotting_positions()
+        view = dialog.get_view()
         # --- settings dialogue box debugging
         logging.debug(f"settings saved: norm = {norm}")
         logging.debug(f"settings saved: nperseg = {nperseg}")
         logging.debug(f"settings saved: nbins = {nbins}")
         logging.debug(f"settings saved: twindec = {twindec}")
-        logging.debug(f"settings saved: fit = {fit}, kind = {kind}")
+        logging.debug(f"settings saved: fit = {fit}, kind = {kind}, view = {view}")
         # ---
-        return norm, nperseg, nbins, twindec, fit, kind, result == QDialog.Accepted
+        return norm, nperseg, nbins, twindec, fit, kind, view, result == QDialog.Accepted
