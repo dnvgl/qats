@@ -393,13 +393,13 @@ class Weibull(object):
             - 'censored' (default): a censored fit to the whole sample. The values in the tail are fitted, and the
               values outside it count only by their number, as values at or below the threshold value u, the largest
               of them. The distribution describes the whole sample. Only with ``lse`` and ``mle``, see :func:`lse`
-              and :func:`mle`.
+              and :func:`mle`; the moment methods have no form for censored samples [1, p. 1].
             - 'exceedances': the values above u are fitted as a complete sample of their own, with any method. The
               distribution is truncated at u and describes only those values.
 
             All values are known in both: the values outside the tail are kept out of the fit by value by choice, so
             that they don't affect the shape of the fitted tail. Censored and truncated samples are described in
-            [11], fits to threshold exceedances in [12, ch. 4], and [12, sec. 7.6] compares the two likelihoods; see
+            [7], fits to threshold exceedances in [8, ch. 4], and [8, sec. 7.6] compares the two likelihoods; see
             the references of :class:`Weibull`.
 
         Returns
