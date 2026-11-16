@@ -18,7 +18,7 @@ _PLOTTING_POSITIONS = {
     "gringorten": "(i-0.44)/(n+0.12)",
 }
 
-# tail models of a fit to the tail of a sample: the fitted distribution describes the whole sample (censored fit), or
+# tail models of a fit to the tail of a sample: the fitted distribution describes the full sample (censored fit), or
 # only the values above the threshold value u (fit to the exceedances)
 _TAIL_MODELS = ("censored", "exceedances")
 
@@ -107,7 +107,7 @@ def tail_threshold(x, tail):
     Returns
     -------
     float or None
-        The threshold value u, or None if the tail holds the whole sample.
+        The threshold value u, or None if the tail holds the full sample.
 
     Raises
     ------

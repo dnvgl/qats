@@ -468,7 +468,7 @@ class WeibullFitTailModelTestCases(unittest.TestCase):
                     kwargs = dict() if loc is None else dict(loc=loc)
                     w = Weibull.fit(self.x, method=method, tail=self.tail, tail_model="exceedances", **kwargs)
                     self.assertEqual(w.params, Weibull.fit(self.exceedances, method=method, **kwargs).params)
-                    # the whole sample is kept
+                    # the full sample is kept
                     np.testing.assert_array_equal(w.data, self.x)
 
     def test_exceedances_whole_sample_in_tail(self):
@@ -594,7 +594,7 @@ class WeibullLseKindTestCases(unittest.TestCase):
                 np.testing.assert_allclose(params, self.reference(self.xs, f, p0=params), rtol=1e-6)
 
     def test_censored_tail(self):
-        # the tail is fitted to the plotting positions of the whole sample
+        # the tail is fitted to the plotting positions of the full sample
         for plotting_positions in ("median", "gringorten"):
             with self.subTest(plotting_positions=plotting_positions):
                 f = empirical_cdf(self.x.size, kind=plotting_positions)
