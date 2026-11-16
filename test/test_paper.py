@@ -120,7 +120,7 @@ class PaperStraightLineTestCases(unittest.TestCase):
 
 
 class PaperTailTestCases(unittest.TestCase):
-    """Fitted points of tail fits, and a fit to the exceedances drawn through the whole sample."""
+    """Fitted points of tail fits, and a fit to the exceedances drawn through the full sample."""
 
     def setUp(self):
         # mean ranks i/11: the 5 values below 0.5 are outside the tail 0.5, u = 3, tied with the next value
@@ -190,7 +190,7 @@ class PaperExcludedTestCases(unittest.TestCase):
         p = probability_paper(x, paper="weibull", loc=2.0)
         np.testing.assert_array_equal(p.excluded, [1.0, 2.0])
         np.testing.assert_array_equal(p.sample, [3.0, 4.0, 5.0])
-        # the shown values keep their plotting positions in the whole sample
+        # the shown values keep their plotting positions in the full sample
         f = (np.arange(3, 6) - 0.3) / 5.4
         np.testing.assert_allclose(p.y, np.log(-np.log(1.0 - f)), rtol=1e-14)
 
