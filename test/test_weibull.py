@@ -749,6 +749,46 @@ class WeibullPlotTestCases(unittest.TestCase):
         # the fitted distribution describes the values above u, so the line starts at u
         self.assertAlmostEqual(line.get_xdata()[0], u_value, delta=1e-6 * u_value)
 
+    def test_exceedances_tail_labels(self):
+        w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
+        ax = w.plot(paper="rayleigh", ax=self.axes())
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels[0], "Data")
+        self.assertEqual(labels[2], f"Fitted, F = 1 - p(1 - F_u), p = {0.2:.3g}")
+        self.assertEqual(ax.get_ylabel(), "Cumulative probability")
+
+    def test_exceedances_view(self):
+        w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
+        u_value = w.fit_info["threshold"]
+        ax = w.plot(paper="rayleigh", plotting_positions="median", ax=self.axes(), view="exceedances")
+        p = probability_paper(
+            self.x,
+            w,
+            paper="rayleigh",
+            plotting_positions="median",
+            tail=0.2,
+            tail_model="exceedances",
+            view="exceedances",
+        )
+        (data,), (line,), (u,) = self.lines(ax)
+        # only the exceedances, at their own plotting positions, and the conditional distribution F_u
+        np.testing.assert_array_equal(data.get_xdata(), np.sort(self.x[self.x > u_value]))
+        np.testing.assert_array_equal(data.get_xdata(), p.x)
+        np.testing.assert_array_equal(data.get_ydata(), p.y)
+        np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+        np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
+        self.assertEqual(u.get_xdata()[0], u_value)
+        labels = [t.get_text() for t in ax.get_legend().get_texts()]
+        self.assertEqual(labels[:2], ["Exceedances", "Fitted, F_u"])
+        self.assertEqual(ax.get_ylabel(), "Cumulative probability given X > u")
+
+    def test_exceedances_view_invalid(self):
+        for w in (Weibull.fit(self.x, method="lse", tail=0.2), Weibull.fit(self.x, method="msm")):
+            with self.subTest(w=w.fit_info["tail_model"]), self.assertRaises(ValueError):
+                w.plot(ax=self.axes(), view="exceedances")
+        with self.assertRaises(ValueError):
+            Weibull.fit(self.x, method="msm").plot(ax=self.axes(), view="tail")
+
     def test_no_data(self):
         w = Weibull(1.0, 2.0, 1.5)
         ax = w.plot(ax=self.axes())
