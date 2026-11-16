@@ -66,7 +66,7 @@ class Weibull(object):
         Weibull shape parameter.
     data: array_like
         Sample data. Exists only if distribution parameters are estimated from a sample. After a fit to the
-        exceedances, the whole sample, of which only the values above the threshold value were fitted.
+        exceedances, the full sample, of which only the values above the threshold value were fitted.
     fit_info: dict or None
         How the distribution was fitted, see :attr:`Weibull.fit_info`.
 
@@ -401,9 +401,9 @@ class Weibull(object):
         tail_model : {'censored', 'exceedances'}, optional
             How a fit to the tail treats the other values:
 
-            - 'censored' (default): a censored fit to the whole sample. The values in the tail are fitted, and the
+            - 'censored' (default): a censored fit to the full sample. The values in the tail are fitted, and the
               values outside it count only by their number, as values at or below the threshold value u, the largest
-              of them. The distribution describes the whole sample. Only with ``lse`` and ``mle``, see :func:`lse`
+              of them. The distribution describes the full sample. Only with ``lse`` and ``mle``, see :func:`lse`
               and :func:`mle`; the moment methods have no form for censored samples [1, p. 1].
             - 'exceedances': the values above u are fitted as a complete sample of their own, with any method. The
               distribution is truncated at u and describes only those values.
@@ -420,7 +420,7 @@ class Weibull(object):
         Returns
         -------
         Weibull
-            Weibull class instance. It keeps the whole sample as `data`, also after a fit to the exceedances, and the
+            Weibull class instance. It keeps the full sample as `data`, also after a fit to the exceedances, and the
             fit settings in :attr:`fit_info`.
 
         Raises
@@ -898,13 +898,13 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None, plott
     Notes
     -----
     The cumulative distribution function is fitted to the given plotting positions of the sample, by default mean
-    rank estimates. In a fit to the tail, the plotting positions are those of the whole sample, and the tail is
+    rank estimates. In a fit to the tail, the plotting positions are those of the full sample, and the tail is
     selected by mean rank whatever the plotting positions: the values with ``i/(n+1)`` at or above ``1 - tail`` (or
     `threshold`).
 
-    A fit to the tail is thus a censored fit to the whole sample: the values in the tail are fitted at their
-    plotting positions in the whole sample, and the other values count only by their number, which sets those
-    positions. The fitted distribution describes the whole sample.
+    A fit to the tail is thus a censored fit to the full sample: the values in the tail are fitted at their
+    plotting positions in the full sample, and the other values count only by their number, which sets those
+    positions. The fitted distribution describes the full sample.
     """
     _check_plotting_positions(plotting_positions)
     x = np.sort(x)  # sorted dataset
@@ -972,7 +972,7 @@ def mle(x, tail: float = None, loc: float = None):
         Fit distribution to the tail of the sample by censored maximum likelihood: the fraction <0, 1] of the largest
         values is fitted, so 0.13 fits the 13% largest values. The values are selected as in :func:`lse`, those with
         empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored: they count only by their
-        number. The fitted distribution describes the whole sample. See Notes.
+        number. The fitted distribution describes the full sample. See Notes.
     loc : float, optional
         Fixed location parameter. Only the scale and shape parameters are fitted. Must be below the smallest value in
         the likelihood, which is the censoring value in a tail fit.
@@ -1163,7 +1163,7 @@ def msm(x, loc: float = None):
 
     Notes
     -----
-    See description in [1]. The method uses the whole sample and has no form for censored samples [1, p. 1], so it
+    See description in [1]. The method uses the full sample and has no form for censored samples [1, p. 1], so it
     has no censored tail fit. With a fixed location parameter, the shape parameter is the one that gives the sample
     coefficient of variation of ``x - loc``, and the scale parameter follows from the sample mean of ``x - loc``.
     """

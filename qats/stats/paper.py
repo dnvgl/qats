@@ -175,7 +175,7 @@ def probability_paper(
     tail_model : {'censored', 'exceedances'}, optional
         How `fitted` describes the sample, with `tail`:
 
-        - 'censored' (default): `fitted` describes the whole sample, as a censored fit to the tail does.
+        - 'censored' (default): `fitted` describes the full sample, as a censored fit to the tail does.
         - 'exceedances': `fitted` describes only the values above the threshold value u, as a fit to the
           exceedances does: it is the distribution truncated at u. Its cumulative distribution F_u, conditional on
           exceeding u, is drawn as ``F = 1 - p (1 - F_u)``, where p
@@ -206,7 +206,7 @@ def probability_paper(
 
     Notes
     -----
-    The plotting positions are computed for the whole sample, also with a tail, and before excluding the values a
+    The plotting positions are computed for the full sample, also with a tail, and before excluding the values a
     Weibull paper can't show, so these don't shift the other values.
 
     The tail is selected as in the tail fits of :mod:`qats.stats.weibull` and :meth:`qats.TimeSeries.stats`,
