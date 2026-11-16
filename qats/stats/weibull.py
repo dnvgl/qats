@@ -88,6 +88,11 @@ class Weibull(object):
 
     5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
+    6. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.
+       Censored and truncated samples.
+
+    7. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer. Threshold exceedances.
+
     6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
        J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
 
@@ -813,7 +818,8 @@ def mle(x, tail: float = None, loc: float = None):
     tail : float, optional
         Fit distribution to the tail of the sample by censored maximum likelihood: the fraction <0, 1] of the largest
         values is fitted, so 0.13 fits the 13% largest values. The values are selected as in :func:`lse`, those with
-        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored.
+        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored: they count only by their
+        number. The fitted distribution describes the whole sample. See Notes.
     loc : float, optional
         Fixed location parameter. Only the scale and shape parameters are fitted. Must be below the smallest value in
         the likelihood, which is the censoring value in a tail fit.
@@ -835,6 +841,13 @@ def mle(x, tail: float = None, loc: float = None):
     them, ``xc = x(r)``. They enter the likelihood only through the probability that a value is at or below `xc`::
 
         L = F(xc)^r * f(x(r+1)) * ... * f(x(n))
+
+    All values are known, and the censoring is a choice of the fit: the smaller values set how much of the
+    distribution lies at or below `xc`, but not its shape. `L` is the likelihood of values censored at a known value
+    [6], here `xc`, which is itself one of the censored values. In Type II censoring of a life test, by contrast, the
+    `r` smallest values are not observed, and the censoring value is the smallest observed value x(r+1). A fit to the
+    exceedances, see :meth:`Weibull.fit`, leaves out the factor ``F(xc)^r`` and fits the distribution truncated at
+    `xc` instead [6, 7].
 
     The likelihood equations [2, p. 656 eq. 21.73-21.75] are then summed over the n - r fitted values and each gets
     the derivative of ``r * ln F(xc)``. With no censored values (`r` = 0) the fit is the same as without `tail`.
