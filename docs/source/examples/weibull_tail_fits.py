@@ -54,7 +54,8 @@ for label, kwargs in options.items():
     )
 
 # each fit and all maxima on Rayleigh paper, with median rank plotting positions. Filled markers are the maxima used
-# in the fit, hollow grey markers the others. A fit to the exceedances is drawn through all maxima from u upwards.
+# in the fit, hollow grey markers the others. A fit to the exceedances is drawn through all maxima from u upwards
+# (view="full-sample"), so that all fits are drawn the same way.
 fig, axes = plt.subplots(2, 3, figsize=(13, 8), sharey=True)
 for ax, (label, kwargs) in zip(axes.flat, options.items()):
     s = results[label]
@@ -63,6 +64,7 @@ for ax, (label, kwargs) in zip(axes.flat, options.items()):
         Weibull(s["wloc"], s["wscale"], s["wshape"]),
         tail=kwargs.get("tail"),
         tail_model=kwargs.get("tail_model", "censored"),
+        view="full-sample",
     )
     ax.plot(p.x[p.fitted], p.y[p.fitted], "o", color="tab:blue", ms=4, label="Fitted maxima")
     ax.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color="tab:gray", mfc="none", ms=4, label="Other maxima")
