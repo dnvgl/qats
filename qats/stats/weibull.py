@@ -405,8 +405,9 @@ class Weibull(object):
               distribution is truncated at u and describes only those values.
 
             All values are known in both: the values outside the tail are kept out of the fit by value by choice, so
-            that they don't affect the shape of the fitted tail. Censored and truncated samples are described in [6],
-            fits to threshold exceedances in [7], see :class:`Weibull`.
+            that they don't affect the shape of the fitted tail. Censored and truncated samples are described in
+            [11], fits to threshold exceedances in [12, ch. 4], and [12, sec. 7.6] compares the two likelihoods; see
+            the references of :class:`Weibull`.
 
         Returns
         -------
