@@ -95,12 +95,13 @@ class Weibull(object):
        in Simulation, 48(4): 385-392,
        `doi:10.1016/S0378-4754(99)00018-X <https://doi.org/10.1016/S0378-4754(99)00018-X>`_
 
-    5. Theory and derivation for Weibull parameter probability weighted moment estimators, Grender, J.M., Dell, T.R.,
-       Reich, R.M., 1991, United States Department of Agriculture
-
-    6. Probability weighted moments: definition and relation to parameters of several distributions expressable in
+    5. Probability weighted moments: definition and relation to parameters of several distributions expressable in
        inverse form, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research,
        15(5): 1049-1054, `doi:10.1029/WR015i005p01049 <https://doi.org/10.1029/WR015i005p01049>`_
+
+    6. Probability weighted moments compared with some traditional techniques in estimating Gumbel parameters and
+       quantiles, Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research, 15(5): 1055-1064,
+       `doi:10.1029/WR015i005p01055 <https://doi.org/10.1029/WR015i005p01055>`_
 
     7. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
        ISBN 978-0-471-37215-8. Censored and truncated samples.
@@ -1069,22 +1070,22 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
 
     Notes
     -----
-    The probability weighted moment `Mljk` is defined by Greenwood and others (1979) [6] as::
+    The probability weighted moment is defined by Greenwood and others [5, eq. 3] as::
 
         M_{l,j,k} = E[X^l * F^j * (1-F)^k]
 
-    where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function.
-    When `j=k=0` and `l` is a non-negative integer, then `M_{l,0,0}` represents the conventional moment of order `l`
-    about the origin.
+    where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function. With
+    ``j = k = 0`` and a non-negative integer `l`, `M_{l,0,0}` is the conventional moment of order `l` about the origin.
 
-    PWMs can be applied either when the small observations are more important than the large observations (k=0), as in
-    strength properties of materials, or when the large observations should have more influence than the smaller
-    observations (k=0) as with three diameter distribution modelling. Here we have chosen the latter and derived
-    unbiased estimators for moments `M_{l,j,0}(k=0)`, see eq. 32 in [5]::
+    The weight `F^j` (``k = 0``) gives the large values more influence, the weight `(1-F)^k` (``j = 0``) the small
+    values. This function estimates `M_{l,j,0}` by the unbiased estimator::
 
         M_{l,j,0} = (1 / n) * sum(x[i]^l * binom(i-1, j) / binom(n-1, j))
 
-    where `i` is a counter from `j+1` to `n` and `binom()` is the binomial coefficient.
+    where `x[i]` is the `i`-th smallest value, `i` runs from `j+1` to `n` and `binom()` is the binomial coefficient.
+    The weight of `x[i]` is the probability that it is the largest value of a subsample of ``j + 1`` values drawn
+    from the sample. This is the counterpart of the estimator of `M_{1,0,k}` in [6, eq. 16], derived in the appendix
+    of [6], whose weight is the probability of being the smallest value.
 
     """
     # todo: include pseudo-code (or Sphinx-friendly LaTex code) for M_{l,j,0} as included below
@@ -1100,7 +1101,7 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
     # drawn from n.
     bc = np.array([binom(i - 1.0, j) / binom(n - 1.0, j) for i in ii])
 
-    return (1.0 / n) * np.sum(xi**l * bc)  # eq. 32 in [5]
+    return (1.0 / n) * np.sum(xi**l * bc)  # see Notes
 
 
 def msm(x, loc: float = None):
@@ -1273,9 +1274,8 @@ def pwm(x, loc: float = None):
 
     Notes
     -----
-    The parameters follow from the probability weighted moments as in [6, Table 3] (location parameter not zero),
-    with `M_(k) = M_{1,0,k}` written in terms of `M_{1,j,0}` by [6, eq. 4]. Details on probability weighted moments
-    are provided in [5].
+    The parameters follow from the probability weighted moments as in [5, Table 3] (location parameter not zero),
+    with `M_(k) = M_{1,0,k}` written in terms of `M_{1,j,0}` by [5, eq. 4].
 
     See Also
     --------
@@ -1334,9 +1334,8 @@ def pwm2(x):
 
     Notes
     -----
-    The parameters follow from [6, Table 3] (location parameter zero). Details on probability weighted moments are
-    provided on p.14-15 in [5]. Note that only the scale and shape parameters are estimated, the location parameter
-    is assumed zero. The result is the same as from ``pwm(x, loc=0)``.
+    The parameters follow from [5, Table 3] (location parameter zero). Only the scale and shape parameters are
+    estimated, the location parameter is assumed zero. The result is the same as from ``pwm(x, loc=0)``.
 
     See Also
     --------
