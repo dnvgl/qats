@@ -31,12 +31,12 @@ class TestCalculateStats(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "..", "data", "mooring.ts")
         cls.ts = TsDB.fromfile(path).get(name="mooring line 4")
 
-    def check(self, fit, minima=False, plotting_positions="median"):
+    def check(self, fit, minima=False, plotting_positions="median", view="exceedances"):
         from qats.app.funcs import calculate_stats
 
-        s = calculate_stats({"a": self.ts}, None, None, minima=minima, fit=fit, plotting_positions=plotting_positions)[
-            "a"
-        ]
+        s = calculate_stats(
+            {"a": self.ts}, None, None, minima=minima, fit=fit, plotting_positions=plotting_positions, view=view
+        )["a"]
         # an lse fit is fitted to the plotting positions of the plot
         lse = dict(plotting_positions=plotting_positions) if fit.get("method") == "lse" else dict()
         expected = self.ts.stats(
@@ -56,7 +56,7 @@ class TestCalculateStats(unittest.TestCase):
             plotting_positions=plotting_positions,
             tail=fit.get("tail"),
             tail_model=fit.get("tail_model", "censored"),
-            view="full-sample",
+            view=view if fit.get("tail_model") == "exceedances" else None,
             is_minima=minima,
         )
         for attr in ("x", "y", "fitted", "fit_x", "fit_y", "yticks"):
@@ -76,6 +76,15 @@ class TestCalculateStats(unittest.TestCase):
 
     def test_plotting_positions(self):
         self.check(dict(), plotting_positions="mean")
+
+    def test_views(self):
+        # the view applies to a fit to the exceedances; the other fits are drawn with all maxima in either view
+        for view in ("exceedances", "full-sample"):
+            for fit in FIT_OPTIONS:
+                with self.subTest(view=view, **fit):
+                    self.check(fit, view=view)
+            with self.subTest(view=view, minima=True):
+                self.check(dict(method="msm", tail=0.2, tail_model="exceedances"), minima=True, view=view)
 
     def test_failed_fit(self):
         # mle to the exceedances with the location fitted doesn't converge on these maxima: NaN, points without a line
