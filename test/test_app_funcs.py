@@ -66,6 +66,7 @@ class TestCalculateStats(unittest.TestCase):
             plotting_positions=plotting_positions,
             tail=fit.get("tail"),
             tail_model=fit.get("tail_model", "censored"),
+            view="full-sample",
             is_minima=minima,
         )
         for attr in ("x", "y", "fitted", "fit_x", "fit_y", "yticks"):

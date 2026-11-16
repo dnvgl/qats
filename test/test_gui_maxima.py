@@ -128,6 +128,7 @@ class TestGuiMaxima(unittest.TestCase):
                 plotting_positions=self.window.plotting_positions(),
                 tail=fit.get("tail"),
                 tail_model=fit.get("tail_model", "censored"),
+                view="full-sample",
                 is_minima=minima,
             )
             fitted, other, line = lines[3 * i : 3 * i + 3]

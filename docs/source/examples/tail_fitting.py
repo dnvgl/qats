@@ -35,13 +35,13 @@ print(exceedances.fit_info)
 # plot the maxima and the fitted distributions on Rayleigh paper, with median rank plotting positions. An lse fit is
 # drawn against the plotting positions it was fitted to by default; the mle fit is given them. The maxima outside the
 # tail are faded, and u is dashed. The fit to the exceedances is drawn in two views:
-# - full-sample (default): all maxima, and the fitted distribution solved for all maxima, F = 1 - p (1 - F_u), where
-#   F_u is the fitted distribution and p the fraction of maxima above u. Comparable with the censored fit.
-# - exceedances: only the maxima above u, at their own plotting positions, and F_u itself, as fitted.
+# - full-sample: all maxima, and the fitted distribution solved for all maxima, F = 1 - p (1 - F_u), where F_u is the
+#   fitted distribution and p the fraction of maxima above u. Comparable with the censored fit.
+# - exceedances (default): only the maxima above u, at their own plotting positions, and F_u itself, as fitted.
 fig, axes = plt.subplots(1, 3, figsize=(16, 5))
 censored.plot(paper="rayleigh", ax=axes[0])
-exceedances.plot(paper="rayleigh", plotting_positions="median", ax=axes[1])
-exceedances.plot(paper="rayleigh", plotting_positions="median", ax=axes[2], view="exceedances")
+exceedances.plot(paper="rayleigh", plotting_positions="median", ax=axes[1], view="full-sample")
+exceedances.plot(paper="rayleigh", plotting_positions="median", ax=axes[2])
 axes[1].sharey(axes[0])
 axes[0].set_title("Censored, lse to median ranks")
 axes[1].set_title("Exceedances, mle, location at u")
