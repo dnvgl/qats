@@ -602,12 +602,12 @@ class Weibull(object):
         )
         return p
 
-    def plot(self, filename=None, *, paper=None, kind=None, ax=None):
+    def plot(self, filename=None, *, paper=None, kind=None, ax=None, view="full-sample"):
         """
         Plot the distribution and the sample it was fitted to on probability paper
 
         .. versionchanged :: 5.6.0
-            New arguments `paper`, `kind` and `ax`, and the axes are returned. The plot is drawn with
+            New arguments `paper`, `kind`, `ax` and `view`, and the axes are returned. The plot is drawn with
             :func:`qats.stats.paper.probability_paper`, and shows a tail fit as :attr:`fit_info` describes it: the
             values outside the fit faded, and the threshold value u dashed. With the default arguments the data and
             the fitted distribution are drawn as before, but the fitted line spans the probability axis, from the
@@ -625,11 +625,21 @@ class Weibull(object):
             ``i/(n+1)``; will be 'median' from 6.0.
         ax : matplotlib.axes.Axes, optional
             Draw on these axes. The figure is then neither shown nor closed, only saved if `filename` is given.
+        view : {'full-sample', 'exceedances'}, optional
+            How a fit to the exceedances (``tail_model='exceedances'``) is drawn: 'full-sample' (default), the full
+            sample and the fitted distribution solved for the full sample, ``F = 1 - p (1 - F_u)``; or 'exceedances',
+            only the values above the threshold value u and the fitted distribution F_u conditional on exceeding u.
+            See the Notes of :func:`qats.stats.paper.probability_paper` for both views and their equations.
 
         Returns
         -------
         matplotlib.axes.Axes
             The axes drawn on.
+
+        Raises
+        ------
+        ValueError
+            If `view` is 'exceedances' and the distribution is not a fit to the exceedances.
 
         Examples
         --------
@@ -651,9 +661,15 @@ class Weibull(object):
         >>> Weibull.fit(maxima, method="mle", tail=0.2).plot(paper="rayleigh", kind="median", ax=ax)
         >>> plt.show()
 
+        Plot a fit to the exceedances as it was made: only the maxima above u, and the fitted distribution
+        conditional on exceeding u
+
+        >>> w = Weibull.fit(maxima, method="mle", tail=0.2, tail_model="exceedances")
+        >>> w.plot(paper="rayleigh", kind="median", view="exceedances")
+
         """
         return _plot_distribution(
-            self, filename, "linear" if paper is None else paper, "mean" if kind is None else kind, ax
+            self, filename, "linear" if paper is None else paper, "mean" if kind is None else kind, ax, view=view
         )
 
     def plot_linear(self, filename=None):

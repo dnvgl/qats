@@ -117,9 +117,11 @@ Tail fitting with Weibull
 *************************
 
 Fit a parametric Weibull distribution to the largest 13% of the peak sample, often called tail fitting, by a censored
-fit to all maxima and by a fit to the exceedances of the threshold value u as a sample of their own. The fitted distribution keeps its fit settings in
-:attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which
-maxima were fitted.
+fit to all maxima and by a fit to the exceedances of the threshold value u as a sample of their own. The fitted
+distribution keeps its fit settings in :attr:`~qats.stats.weibull.Weibull.fit_info`, and
+:meth:`~qats.stats.weibull.Weibull.plot` uses them to show which maxima were fitted. A fit to the exceedances is drawn
+either with all maxima (``view="full-sample"``, the default) or as fitted, with only the exceedances and the
+distribution conditional on exceeding u (``view="exceedances"``).
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python
@@ -130,7 +132,8 @@ maxima were fitted.
     :figclass: align-center
     :target: _images/weibull_tail_fit.png
 
-    The maxima and the two tail fits on Rayleigh paper. The maxima outside the tail are faded, and u is dashed.
+    The maxima and the two tail fits on Rayleigh paper, the fit to the exceedances in both views. The maxima
+    outside the tail are faded, and u is dashed.
 
 
 Weibull fits to the tail of the maxima

@@ -260,10 +260,11 @@ def probability_paper(
     >>> plt.yticks(p.yticks, p.yticklabels)
     >>> plt.show()
 
-    Draw a fit to the exceedances as it was made, where `w` is a Weibull distribution fitted to the maxima above the
-    threshold value u of the 20% largest maxima: only those maxima, and the fitted distribution conditional on
-    exceeding u
+    Draw a fit to the exceedances of the threshold value u as it was made: only the maxima above u, and the fitted
+    distribution conditional on exceeding u
 
+    >>> from qats.stats.empirical import tail_threshold
+    >>> w = Weibull.fit(mx, method="mle", tail=0.2, tail_model="exceedances", loc=tail_threshold(mx, 0.2))
     >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances", view="exceedances")
     """
     _check_paper(paper)
@@ -474,7 +475,7 @@ def _format(v):
     return f"{v + 0.0:g}"
 
 
-def _plot_distribution(distribution, filename, paper, kind, ax):
+def _plot_distribution(distribution, filename, paper, kind, ax, view="full-sample"):
     """
     Draw a fitted distribution and the sample it was fitted to on probability paper.
 
@@ -493,6 +494,8 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
         Plotting positions of the sample, see :func:`qats.stats.empirical.empirical_cdf`.
     ax : matplotlib.axes.Axes or None
         Axes to draw on. None draws on a new figure.
+    view : {'full-sample', 'exceedances'}, optional
+        How a fit to the exceedances is drawn, see :func:`probability_paper`.
 
     Returns
     -------
@@ -502,7 +505,9 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
     Notes
     -----
     With a tail fit, the sample values outside the fit are drawn faded and smaller, and the threshold value u as a
-    dashed vertical line.
+    dashed vertical line. A fit to the exceedances is labelled by what the line is: ``F = 1 - p(1 - F_u)`` with the
+    fraction p above u in the full-sample view, and ``F_u`` with the probability axis conditional on exceeding u in
+    the exceedances view.
 
     A new figure (`ax` is None) is shown, or saved to `filename` and then closed. A figure given through `ax` is only
     saved, if `filename` is given, and is neither shown nor closed.
@@ -512,14 +517,26 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
     info = distribution.fit_info or dict()
     tail = info.get("tail")
     u = info.get("threshold")
+    tail_model = info.get("tail_model") or "censored"
     p = probability_paper(
         distribution.data,
         distribution,
         paper=paper,
         kind=kind,
         tail=tail,
-        tail_model=info.get("tail_model") or "censored",
+        tail_model=tail_model,
+        view=view,
     )
+
+    # labels: a fit to the exceedances is labelled by what the line is
+    data_label, fit_label, ylabel = "Data", "Fitted", "Cumulative probability"
+    if tail_model == "exceedances" and u is not None:
+        if view == "exceedances":
+            data_label, fit_label = "Exceedances", "Fitted, F_u"
+            ylabel = "Cumulative probability given X > u"
+        else:
+            frac = np.count_nonzero(p.fitted) / (p.sample.size + p.excluded.size)
+            fit_label = f"Fitted, F = 1 - p(1 - F_u), p = {frac:.3g}"
 
     new_figure = ax is None
     if new_figure:
@@ -527,10 +544,10 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
 
     # the sample: with a tail fit, the values outside the fit faded
     if p.x.size > 0:
-        ax.plot(p.x[p.fitted], p.y[p.fitted], "ko", label="Data")
+        ax.plot(p.x[p.fitted], p.y[p.fitted], "ko", label=data_label)
         if not np.all(p.fitted):
             ax.plot(p.x[~p.fitted], p.y[~p.fitted], "ko", label="Data not fitted", **_UNFITTED_STYLE)
-    ax.plot(p.fit_x, p.fit_y, "-r", label="Fitted")
+    ax.plot(p.fit_x, p.fit_y, "-r", label=fit_label)
     if u is not None:
         xu = float(_paper_x(u, paper, p.loc))
         if np.isfinite(xu):
@@ -540,7 +557,7 @@ def _plot_distribution(distribution, filename, paper, kind, ax):
     ax.set_yticks(p.yticks, p.yticklabels)
     ax.set_ylim(p.yticks[0], p.yticks[-1])
     ax.set_xlabel("X")
-    ax.set_ylabel("Cumulative probability")
+    ax.set_ylabel(ylabel)
     ax.legend(loc="upper left")
     ax.grid(True)
 
