@@ -59,7 +59,7 @@ class Weibull(object):
         Weibull shape parameter.
     data: array_like
         Sample data. Exists only if distribution parameters are estimated from a sample. After a fit to the
-        exceedances, the whole sample, of which only the values above the threshold value were fitted.
+        exceedances, the full sample, of which only the values above the threshold value were fitted.
     fit_info: dict or None
         How the distribution was fitted, see :attr:`Weibull.fit_info`.
 
@@ -391,9 +391,9 @@ class Weibull(object):
         tail_model : {'censored', 'exceedances'}, optional
             How a fit to the tail treats the other values:
 
-            - 'censored' (default): a censored fit to the whole sample. The values in the tail are fitted, and the
+            - 'censored' (default): a censored fit to the full sample. The values in the tail are fitted, and the
               values outside it count only by their number, as values at or below the threshold value u, the largest
-              of them. The distribution describes the whole sample. Only with ``lse`` and ``mle``, see :func:`lse`
+              of them. The distribution describes the full sample. Only with ``lse`` and ``mle``, see :func:`lse`
               and :func:`mle`; the moment methods have no form for censored samples [1, p. 1].
             - 'exceedances': the values above u are fitted as a complete sample of their own, with any method. The
               distribution is truncated at u and describes only those values.
@@ -406,7 +406,7 @@ class Weibull(object):
         Returns
         -------
         Weibull
-            Weibull class instance. It keeps the whole sample as `data`, also after a fit to the exceedances, and the
+            Weibull class instance. It keeps the full sample as `data`, also after a fit to the exceedances, and the
             fit settings in :attr:`fit_info`.
 
         Raises
@@ -873,9 +873,9 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     -----
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
 
-    A fit to the tail is a censored fit to the whole sample: the values in the tail keep their plotting positions in
-    the whole sample, and the other values count only by their number, which sets those positions. The fitted
-    distribution describes the whole sample.
+    A fit to the tail is a censored fit to the full sample: the values in the tail keep their plotting positions in
+    the full sample, and the other values count only by their number, which sets those positions. The fitted
+    distribution describes the full sample.
     """
     x = np.sort(x)  # sorted dataset
     f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf, i/(n+1)

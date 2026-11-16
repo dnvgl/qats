@@ -468,7 +468,7 @@ class WeibullFitTailModelTestCases(unittest.TestCase):
                     kwargs = dict() if loc is None else dict(loc=loc)
                     w = Weibull.fit(self.x, method=method, tail=self.tail, tail_model="exceedances", **kwargs)
                     self.assertEqual(w.params, Weibull.fit(self.exceedances, method=method, **kwargs).params)
-                    # the whole sample is kept
+                    # the full sample is kept
                     np.testing.assert_array_equal(w.data, self.x)
 
     def test_exceedances_whole_sample_in_tail(self):
