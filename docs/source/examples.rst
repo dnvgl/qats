@@ -134,8 +134,8 @@ Weibull fits to the tail of the maxima
 **************************************
 
 Fit the Weibull distribution to all maxima of a time series, or only to the largest 20%, with
-:meth:`~qats.TimeSeries.stats`: censored fits, where the smaller maxima count only by their number, and fits to the
-maxima above a threshold value. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
+:meth:`~qats.TimeSeries.stats`: censored fits to all maxima, where the smaller maxima count only by their number,
+and fits to the maxima above a threshold value as a sample of their own. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
 The Notes of :meth:`~qats.TimeSeries.stats` describe the options. The figure shows each fit on Rayleigh paper, with the
 coordinates from :func:`~qats.stats.paper.probability_paper`.
 
