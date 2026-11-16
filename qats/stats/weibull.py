@@ -94,12 +94,6 @@ class Weibull(object):
 
     5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
-    6. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
-       ISBN 978-0-471-37215-8. Censored and truncated samples.
-
-    7. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer,
-       `doi:10.1007/978-1-4471-3675-0 <https://doi.org/10.1007/978-1-4471-3675-0>`_. Threshold exceedances.
-
     6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
        J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
 
@@ -114,6 +108,13 @@ class Weibull(object):
 
     10. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
         quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
+
+    11. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
+        ISBN 978-0-471-37215-8. Censored and truncated samples.
+
+    12. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer,
+        `doi:10.1007/978-1-4471-3675-0 <https://doi.org/10.1007/978-1-4471-3675-0>`_. Threshold exceedances (ch. 4),
+        and the likelihood of the exceedances with the values below the threshold censored (sec. 7.6).
 
     """
 
@@ -970,10 +971,10 @@ def mle(x, tail: float = None, loc: float = None):
 
     All values are known, and the censoring is a choice of the fit: the smaller values set how much of the
     distribution lies at or below `xc`, but not its shape. `L` is the likelihood of values censored at a known value
-    [6], here `xc`, which is itself one of the censored values. In Type II censoring of a life test, by contrast, the
-    `r` smallest values are not observed, and the censoring value is the smallest observed value x(r+1). A fit to the
-    exceedances, see :meth:`Weibull.fit`, leaves out the factor ``F(xc)^r`` and fits the distribution truncated at
-    `xc` instead [6, 7].
+    [11], here `xc`, which is itself one of the censored values; see also [12, sec. 7.6, eq. 7.12], which has the same
+    form. In Type II censoring of a life test, by contrast, the `r` smallest values are not observed, and the censoring
+    value is the smallest observed value x(r+1). A fit to the exceedances, see :meth:`Weibull.fit`, leaves out the
+    factor ``F(xc)^r`` and fits the distribution truncated at `xc` instead [11], [12, ch. 4].
 
     The likelihood equations [2, p. 656 eq. 21.73-21.75] are then summed over the n - r fitted values and each gets
     the derivative of ``r * ln F(xc)``. With no censored values (`r` = 0) the fit is the same as without `tail`.
