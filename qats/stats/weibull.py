@@ -88,10 +88,11 @@ class Weibull(object):
 
     5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
-    6. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.
-       Censored and truncated samples.
+    6. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
+       ISBN 978-0-471-37215-8. Censored and truncated samples.
 
-    7. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer. Threshold exceedances.
+    7. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer,
+       `doi:10.1007/978-1-4471-3675-0 <https://doi.org/10.1007/978-1-4471-3675-0>`_. Threshold exceedances.
 
     6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
        J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
