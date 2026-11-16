@@ -65,7 +65,7 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.on_display()
         self.settle()
 
-    def set_fit(self, fit, plotting_positions="median"):
+    def set_fit(self, fit, plotting_positions="median", view=None):
         self.window.settings.update(
             weibull_method=fit.get("method", "pwm"),
             weibull_tail=fit.get("tail"),
@@ -73,6 +73,8 @@ class TestGuiMaxima(unittest.TestCase):
             weibull_loc=fit.get("loc"),
             plotting_positions=plotting_positions,
         )
+        if view is not None:
+            self.window.settings["weibull_view"] = view
 
     def expected(self, name, fit, minima=False):
         ts = self.window.db.get(name=name)
@@ -101,10 +103,10 @@ class TestGuiMaxima(unittest.TestCase):
             rows[os.path.basename(t.item(r, 0).text())] = {k: t.item(r, c).text() for c, k in enumerate(STATS_ORDER)}
         return rows
 
-    def check_same_fit(self, fit, minima=False):
+    def check_same_fit(self, fit, minima=False, view="exceedances"):
         """
         The table and the maxima/minima CDF plot show the library's statistics and fit, for the window's time window,
-        filter and plotting positions and these fit settings.
+        filter and plotting positions and these fit settings and view.
         """
         from qats.app.gui import STATS_ORDER
         from qats.stats.paper import probability_paper
@@ -128,7 +130,7 @@ class TestGuiMaxima(unittest.TestCase):
                 plotting_positions=self.window.plotting_positions(),
                 tail=fit.get("tail"),
                 tail_model=fit.get("tail_model", "censored"),
-                view="full-sample",
+                view=view if fit.get("tail_model") == "exceedances" else None,
                 is_minima=minima,
             )
             fitted, other, line = lines[3 * i : 3 * i + 3]
@@ -240,7 +242,17 @@ class TestGuiMaxima(unittest.TestCase):
         self.display()
         before = self.table()[NAMES[0]]["wloc"]
         fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
-        result = (False, 20000, 256, 2, fit, "median", dict(method="pwm", plotting_positions="median"), True)
+        result = (
+            False,
+            20000,
+            256,
+            2,
+            fit,
+            "median",
+            "exceedances",
+            dict(method="pwm", plotting_positions="median"),
+            True,
+        )
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
         self.settle()
@@ -253,7 +265,8 @@ class TestGuiMaxima(unittest.TestCase):
 
         self.display()
         gumbel = dict(method="mle", plotting_positions="gringorten")
-        result = (False, 20000, 256, 2, self.window.weibull_fit(), self.window.plotting_positions(), gumbel, True)
+        w = self.window
+        result = (False, 20000, 256, 2, w.weibull_fit(), w.plotting_positions(), w.weibull_view(), gumbel, True)
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             with unittest.mock.patch.object(self.window, "start_times_series_processing_thread") as recalculate:
                 self.window.on_open_settings()
@@ -280,6 +293,7 @@ class TestGuiMaxima(unittest.TestCase):
                 2,
                 fit,
                 "median",
+                "full-sample",
                 dict(method="mle", plotting_positions="gringorten"),
                 False,
             ),
@@ -290,6 +304,67 @@ class TestGuiMaxima(unittest.TestCase):
         self.assertNotIn("weibull_method", self.window.settings)
         self.assertNotIn("gumbel_method", self.window.settings)
         self.assertNotIn("gumbel_plotting_positions", self.window.settings)
+        self.assertNotIn("weibull_view", self.window.settings)
+
+    def test_views(self):
+        # a fit to the exceedances is drawn as fitted by default: only the exceedances, on a probability axis
+        # conditional on exceeding u, so there are no maxima outside the fit to explain in the legend
+        fit = dict(method="msm", tail=0.2, tail_model="exceedances")
+        self.set_fit(fit)
+        self.display()
+        self.check_same_fit(fit, view="exceedances")
+        axes = self.window.weibull_axes
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability given X > u (-)")
+        labels = [t.get_text() for t in axes.get_legend().get_texts()]
+        self.assertEqual(len(labels), 2)
+        self.assertTrue(all("u = " in label for label in labels))
+
+        # with all maxima, as before
+        self.set_fit(fit, view="full-sample")
+        self.display()
+        self.check_same_fit(fit, view="full-sample")
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability (-)")
+        labels = [t.get_text() for t in axes.get_legend().get_texts()]
+        self.assertEqual(labels[2:], ["Fitted", "Not fitted"])
+
+        # a censored fit has only one view
+        censored = dict(method="lse", tail=0.2)
+        self.set_fit(censored, view="exceedances")
+        self.display()
+        self.check_same_fit(censored)
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability (-)")
+
+    def test_minima_view(self):
+        fit = dict(method="msm", tail=0.2, tail_model="exceedances")
+        self.set_fit(fit)
+        self.window.minima.setChecked(True)
+        self.display()
+        self.check_same_fit(fit, minima=True, view="exceedances")
+        self.assertEqual(self.window.weibull_axes.get_ylabel(), "Cumulative probability given X < u (-)")
+
+    def test_changed_view_redraws(self):
+        from qats.app.gui import SettingsDialog
+
+        fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
+        self.set_fit(fit)
+        self.display()
+        self.check_same_fit(fit, view="exceedances")
+        result = (
+            False,
+            20000,
+            256,
+            2,
+            fit,
+            "median",
+            "full-sample",
+            dict(method="pwm", plotting_positions="median"),
+            True,
+        )
+        with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
+            self.window.on_open_settings()
+        self.settle()
+        self.assertEqual(self.window.settings["weibull_view"], "full-sample")
+        self.check_same_fit(fit, view="full-sample")
 
     def test_invalid_stored_settings(self):
         from qats.app.gui import WEIBULL_FIT_DEFAULTS
@@ -307,6 +382,9 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.settings = dict(plotting_positions="hazen")
         with self.assertLogs(level="WARNING"):
             self.assertEqual(self.window.plotting_positions(), "median")
+        self.window.settings = dict(weibull_view="conditional")
+        with self.assertLogs(level="WARNING"):
+            self.assertEqual(self.window.weibull_view(), "exceedances")
         for settings, expected in (
             (dict(gumbel_method="gumbel"), dict(method="pwm", plotting_positions="median")),
             (
@@ -466,10 +544,10 @@ class TestSettingsDialogFit(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
-    def dialog(self, fit=None, plotting_positions="median"):
+    def dialog(self, fit=None, plotting_positions="median", **kwargs):
         from qats.app.gui import SettingsDialog
 
-        d = SettingsDialog(False, 512, 50, 1, fit=fit, plotting_positions=plotting_positions)
+        d = SettingsDialog(False, 512, 50, 1, fit=fit, plotting_positions=plotting_positions, **kwargs)
         self.addCleanup(d.close)
         return d
 
@@ -482,6 +560,8 @@ class TestSettingsDialogFit(unittest.TestCase):
         self.assertEqual(d.get_fit(), dict(method="pwm", tail=None, tail_model="censored", loc=None))
         self.assertEqual(d.get_plotting_positions(), "median")
         self.assertEqual(d.get_gumbel(), dict(method="pwm", plotting_positions="median"))
+        self.assertEqual(d.get_view(), "exceedances")
+        self.assertFalse(d.viewcombo.isEnabled())
         self.assertFalse(d.tailspinbox.isEnabled())
         self.assertFalse(d.tailmodelcombo.isEnabled())
         self.assertFalse(d.locspinbox.isEnabled())
@@ -539,6 +619,17 @@ class TestSettingsDialogFit(unittest.TestCase):
                 self.assertEqual(d.get_fit(), fit)
                 self.assertEqual(d.get_plotting_positions(), plotting_positions)
                 _check_weibull_options(**d.get_fit())
+
+    def test_view_only_for_exceedances(self):
+        d = self.dialog(view="full-sample")
+        self.assertEqual(d.get_view(), "full-sample")
+        self.assertFalse(d.viewcombo.isEnabled())  # no tail
+        d.tailcheckbox.setChecked(True)
+        self.assertFalse(d.viewcombo.isEnabled())  # censored
+        d.tailmodelcombo.setCurrentIndex(d.tailmodelcombo.findData("exceedances"))
+        self.assertTrue(d.viewcombo.isEnabled())
+        d.viewcombo.setCurrentIndex(d.viewcombo.findData("exceedances"))
+        self.assertEqual(d.get_view(), "exceedances")
 
     def test_value_location(self):
         d = self.dialog()
