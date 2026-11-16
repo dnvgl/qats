@@ -26,6 +26,7 @@ from .._validation import QatsTypeError, QatsValueError
 from .empirical import _PLOTTING_POSITIONS, _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
 
 _PAPERS = ("rayleigh", "weibull", "gumbel", "linear")
+_VIEWS = ("full-sample", "exceedances")
 
 # candidate probabilities for the ticks on the probability axis of each paper, spread evenly enough on that paper
 _UPPER = [0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999, 0.99999, 0.999999]
@@ -82,6 +83,9 @@ class ProbabilityPaper:
         Tick positions on the y axis.
     yticklabels : list of str
         Tick labels on the y axis, cumulative probabilities.
+    view : str
+        How a fit to the exceedances is drawn: 'full-sample', or 'exceedances' for only the exceedances and the
+        fitted distribution conditional on exceeding u. See :func:`probability_paper`.
     """
 
     paper: str
@@ -98,6 +102,7 @@ class ProbabilityPaper:
     xticklabels: list[str]
     yticks: np.ndarray
     yticklabels: list[str]
+    view: str
 
 
 def paper_coordinates(x, f, paper="rayleigh", loc=0.0):
@@ -141,6 +146,7 @@ def probability_paper(
     kind="median",
     tail=None,
     tail_model="censored",
+    view="full-sample",
     loc=None,
     is_minima=False,
 ):
@@ -170,10 +176,15 @@ def probability_paper(
 
         - 'censored' (default): `fitted` describes the full sample, as a censored fit to the tail does.
         - 'exceedances': `fitted` describes only the values above the threshold value u, as a fit to the
-          exceedances does: it is the distribution truncated at u. Its cumulative distribution F_u, conditional on
-          exceeding u, is drawn as ``F = 1 - p (1 - F_u)``, where p
-          is the fraction of the sample above u, so the fitted line runs through the upper values of the whole
-          sample from u upwards.
+          exceedances does: it is the distribution truncated at u, with cumulative distribution F_u conditional on
+          exceeding u. How it is drawn is set by `view`.
+
+    view : {'full-sample', 'exceedances'}, optional
+        How a fit to the exceedances (``tail_model='exceedances'``) is drawn, see Notes:
+
+        - 'full-sample' (default): the full sample, and the fitted distribution as the distribution of the full
+          sample above u, ``F = 1 - p (1 - F_u)``, where p is the fraction of the sample above u.
+        - 'exceedances': only the values above u, as a complete sample of their own, and F_u itself.
 
     loc : float, optional
         Location of the Weibull paper, the x axis is ln(x - loc). Default the lower bound of `fitted`,
@@ -207,8 +218,30 @@ def probability_paper(
     ``i/(n+1)`` is at least ``1 - tail``. The threshold value u is the largest value outside the tail. With the
     'censored' tail model, the values in the tail are marked as fitted. With 'exceedances', the values above u are.
 
-    A fit to the exceedances describes only the values above u. Without `tail`, it is drawn with only the
-    exceedances as its own complete sample: pass the exceedances as `sample`.
+    **A fit to the exceedances.** The m values above u are fitted as a complete sample of their own, so the fitted
+    distribution is that of the exceedances, the distribution truncated at u::
+
+        F_u(x) = Pr{X <= x | X > u} = [F(x) - F(u)] / [1 - F(u)],    x > u
+
+    where F is the distribution of the full sample, whose probability of exceeding u, ``1 - F(u)``, is estimated by
+    ``p = m / n``. The two views draw this fit as follows:
+
+    - ``view='full-sample'``: all n values of the sample at their plotting positions in the full sample, with mean
+      ranks ``i / (n + 1)``, and the fitted distribution solved for F::
+
+          F(x) = 1 - p [1 - F_u(x)],    x > u
+
+      so the fitted line runs through the values above u. This is what the fit implies for the full sample, from
+      which extremes are derived, and it can be compared with a censored fit on the same paper.
+    - ``view='exceedances'``: only the m values above u, at their plotting positions as a sample of their own, with
+      mean ranks ``j / (m + 1)``, and F_u itself. This shows the fit as it was made, and is the usual check of the
+      fit. It is the same as passing only the values above u as `sample`, without `tail`.
+
+    The two views are not the same points relabelled. With mean ranks, the exceedance with rank j among the m
+    exceedances is drawn at ``1 - F = (m + 1 - j) / (n + 1)`` in the full-sample view, while its conditional
+    position mapped to the full sample is ``1 - F = p (m + 1 - j) / (m + 1)``. The ratio of the two is
+    ``n (m + 1) / [m (n + 1)]``, close to but not equal to 1, so the values sit slightly differently relative to the
+    fitted line in the two views.
 
     Examples
     --------
@@ -226,6 +259,12 @@ def probability_paper(
     >>> plt.xticks(p.xticks, p.xticklabels)
     >>> plt.yticks(p.yticks, p.yticklabels)
     >>> plt.show()
+
+    Draw a fit to the exceedances as it was made, where `w` is a Weibull distribution fitted to the maxima above the
+    threshold value u of the 20% largest maxima: only those maxima, and the fitted distribution conditional on
+    exceeding u
+
+    >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances", view="exceedances")
     """
     _check_paper(paper)
     if kind not in _PLOTTING_POSITIONS:
@@ -238,6 +277,12 @@ def probability_paper(
     exceedances = tail is not None and tail_model == "exceedances"
     if exceedances and fitted is None:
         raise QatsValueError("The tail model 'exceedances' describes a fitted distribution, give fitted=")
+    if view not in _VIEWS:
+        raise QatsValueError(f"The view must be one of {', '.join(_VIEWS)}, got {view!r}")
+    if view == "exceedances" and not exceedances:
+        raise QatsValueError(
+            "The view 'exceedances' is for a fit to the exceedances, give tail= and tail_model='exceedances'"
+        )
     if fitted is not None and not callable(getattr(fitted, "invcdf", None)):
         raise QatsTypeError(f"The fitted distribution must have a method invcdf(), got {type(fitted).__name__}")
     if sample is None and fitted is None:
@@ -268,6 +313,14 @@ def probability_paper(
     else:
         used = np.arange(n) >= r
     p = np.count_nonzero(used) / n if exceedances else 1.0
+    if view == "exceedances" and u is not None:
+        # only the exceedances, as a complete sample of their own, and the fitted distribution conditional on
+        # exceeding u: the same as the exceedances given as the sample, without a tail
+        z = z[used]
+        n = z.size
+        f = empirical_cdf(n, kind=kind)
+        used = np.ones(n, dtype=bool)
+        exceedances, p = False, 1.0
 
     # location of the Weibull paper, and the values it can show
     if paper == "weibull":
@@ -330,6 +383,7 @@ def probability_paper(
         xticklabels=[_format(sign * v) for v in xtick],
         yticks=_paper_y(ptick, paper),
         yticklabels=[_format(v) for v in ptick],
+        view=view,
     )
 
 

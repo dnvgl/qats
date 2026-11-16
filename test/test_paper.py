@@ -154,6 +154,57 @@ class PaperTailTestCases(unittest.TestCase):
         f = 1.0 - 0.4 * (1.0 - w.cdf(p.fit_x))
         np.testing.assert_allclose(p.fit_y, np.sqrt(-np.log(1.0 - f)), rtol=1e-10)
 
+    def test_default_view(self):
+        self.assertEqual(probability_paper(self.x, tail=0.5).view, "full-sample")
+
+    def test_exceedances_view_same_as_exceedances_alone(self):
+        # view='exceedances' draws the m = 4 values above u = 3 as a complete sample of their own
+        w = Weibull(3.0, 2.0, 1.5)
+        a = probability_paper(self.x, w, tail=0.5, tail_model="exceedances", view="exceedances")
+        b = probability_paper(self.x[self.x > 3.0], w)
+        self.assertEqual(a.view, "exceedances")
+        self.assertTrue(np.all(a.fitted))
+        for name in ("sample", "x", "y", "fit_x", "fit_y", "xticks", "yticks"):
+            with self.subTest(name=name):
+                np.testing.assert_array_equal(getattr(a, name), getattr(b, name))
+        self.assertEqual(a.xticklabels, b.xticklabels)
+        self.assertEqual(a.yticklabels, b.yticklabels)
+
+    def test_exceedances_view_positions_and_line(self):
+        # hand calculation: mean ranks j/(m+1), j = 1..4, and the line is F_u itself, not 1 - p (1 - F_u)
+        w = Weibull(3.0, 2.0, 1.5)
+        p = probability_paper(self.x, w, kind="mean", tail=0.5, tail_model="exceedances", view="exceedances")
+        np.testing.assert_array_equal(p.sample, [4.0, 5.0, 6.0, 7.0])
+        np.testing.assert_allclose(p.y, np.sqrt(-np.log(1.0 - np.arange(1, 5) / 5.0)), rtol=1e-12)
+        np.testing.assert_allclose(p.fit_y, np.sqrt(-np.log(1.0 - w.cdf(p.fit_x))), rtol=1e-10)
+
+    def test_views_not_relabelled(self):
+        # with mean ranks, 1 - F of an exceedance in the full-sample view over its conditional position mapped to the
+        # full sample, p (1 - F_u), is n (m + 1) / [m (n + 1)] = 10 * 5 / (4 * 11) = 50 / 44 for every exceedance
+        w = Weibull(3.0, 2.0, 1.5)
+        kwargs = dict(kind="mean", tail=0.5, tail_model="exceedances")
+        full = probability_paper(self.x, w, view="full-sample", **kwargs)
+        cond = probability_paper(self.x, w, view="exceedances", **kwargs)
+        q_full = np.exp(-(full.y[full.fitted] ** 2))  # 1 - F on Rayleigh paper
+        q_cond = np.exp(-(cond.y**2))
+        np.testing.assert_allclose(q_full / (0.4 * q_cond), 50.0 / 44.0, rtol=1e-12)
+
+    def test_exceedances_view_weibull_paper(self):
+        # with the location at u, all exceedances are shown on Weibull paper
+        w = Weibull(3.0, 2.0, 1.5)
+        p = probability_paper(self.x, w, paper="weibull", tail=0.5, tail_model="exceedances", view="exceedances")
+        self.assertEqual(p.loc, 3.0)
+        self.assertEqual(p.x.size, 4)
+        self.assertEqual(p.excluded.size, 0)
+
+    def test_exceedances_view_minima(self):
+        w = Weibull(3.0, 2.0, 1.5)  # fitted to the minima multiplied by -1
+        a = probability_paper(-self.x, w, tail=0.5, tail_model="exceedances", view="exceedances", is_minima=True)
+        b = probability_paper(-self.x[self.x > 3.0], w, is_minima=True)
+        for name in ("sample", "x", "y", "fit_x", "fit_y"):
+            with self.subTest(name=name):
+                np.testing.assert_array_equal(getattr(a, name), getattr(b, name))
+
     def test_censored_line_not_mapped(self):
         w = Weibull(0.0, 4.0, 2.0)
         p = probability_paper(self.x, w, tail=0.5)
@@ -365,6 +416,9 @@ class PaperValidationTestCases(unittest.TestCase):
             (QatsValueError, dict(tail=0.2, tail_model="peaks")),
             (QatsValueError, dict(fitted=w, tail_model="exceedances")),
             (QatsValueError, dict(tail=0.2, tail_model="exceedances")),
+            (QatsValueError, dict(fitted=w, tail=0.2, tail_model="exceedances", view="conditional")),
+            (QatsValueError, dict(fitted=w, tail=0.2, view="exceedances")),
+            (QatsValueError, dict(fitted=w, view="exceedances")),
             (QatsTypeError, dict(fitted=(0.0, 2.0, 1.5))),
             (QatsValueError, dict(loc=0.5)),
             (QatsTypeError, dict(paper="weibull", loc="mean")),
