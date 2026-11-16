@@ -170,6 +170,7 @@ def calculate_stats(container, twin, fargs, minima=False, fit=None, kind="median
                 kind=kind,
                 tail=s["wtail"],
                 tail_model=s["wtail_model"] or "censored",
+                view="full-sample",  # series with different threshold values share the axes
                 is_minima=minima,
             )
         container_out[name] = s
