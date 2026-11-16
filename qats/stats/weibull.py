@@ -602,7 +602,7 @@ class Weibull(object):
         )
         return p
 
-    def plot(self, filename=None, *, paper=None, kind=None, ax=None, view="full-sample"):
+    def plot(self, filename=None, *, paper=None, kind=None, ax=None, view=None):
         """
         Plot the distribution and the sample it was fitted to on probability paper
 
@@ -625,11 +625,12 @@ class Weibull(object):
             ``i/(n+1)``; will be 'median' from 6.0.
         ax : matplotlib.axes.Axes, optional
             Draw on these axes. The figure is then neither shown nor closed, only saved if `filename` is given.
-        view : {'full-sample', 'exceedances'}, optional
-            How a fit to the exceedances (``tail_model='exceedances'``) is drawn: 'full-sample' (default), the full
-            sample and the fitted distribution solved for the full sample, ``F = 1 - p (1 - F_u)``; or 'exceedances',
-            only the values above the threshold value u and the fitted distribution F_u conditional on exceeding u.
-            See the Notes of :func:`qats.stats.paper.probability_paper` for both views and their equations.
+        view : {'exceedances', 'full-sample'}, optional
+            How a fit to the exceedances (``tail_model='exceedances'``) is drawn: 'exceedances' (default), as it was
+            made, with only the values above the threshold value u and the fitted distribution F_u conditional on
+            exceeding u; or 'full-sample', with the full sample and the fitted distribution solved for the full
+            sample, ``F = 1 - p (1 - F_u)``. Any other fit is drawn with the full sample. See the Notes of
+            :func:`qats.stats.paper.probability_paper` for both views and their equations.
 
         Returns
         -------
@@ -661,11 +662,11 @@ class Weibull(object):
         >>> Weibull.fit(maxima, method="mle", tail=0.2).plot(paper="rayleigh", kind="median", ax=ax)
         >>> plt.show()
 
-        Plot a fit to the exceedances as it was made: only the maxima above u, and the fitted distribution
-        conditional on exceeding u
+        Plot a fit to the exceedances with all maxima, and the fitted distribution solved for all maxima. By default
+        it is drawn as it was made, with only the maxima above u and the fitted distribution conditional on exceeding u
 
         >>> w = Weibull.fit(maxima, method="mle", tail=0.2, tail_model="exceedances")
-        >>> w.plot(paper="rayleigh", kind="median", view="exceedances")
+        >>> w.plot(paper="rayleigh", kind="median", view="full-sample")
 
         """
         return _plot_distribution(

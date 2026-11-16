@@ -120,8 +120,8 @@ Fit a parametric Weibull distribution to the largest 13% of the peak sample, oft
 fit to all maxima and by a fit to the exceedances of the threshold value u as a sample of their own. The fitted
 distribution keeps its fit settings in :attr:`~qats.stats.weibull.Weibull.fit_info`, and
 :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which maxima were fitted. A fit to the exceedances is drawn
-either with all maxima (``view="full-sample"``, the default) or as fitted, with only the exceedances and the
-distribution conditional on exceeding u (``view="exceedances"``).
+as fitted, with only the exceedances and the distribution conditional on exceeding u (``view="exceedances"``, the
+default), or with all maxima (``view="full-sample"``).
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python

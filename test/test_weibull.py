@@ -636,7 +636,7 @@ class WeibullPlotTestCases(unittest.TestCase):
 
     def test_exceedances_tail(self):
         w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
-        ax = w.plot(paper="rayleigh", ax=self.axes())
+        ax = w.plot(paper="rayleigh", ax=self.axes(), view="full-sample")
         (fitted, _), (line,), (_,) = self.lines(ax)
         u_value = w.fit_info["threshold"]
         self.assertEqual(fitted.get_xdata().size, np.count_nonzero(self.x > u_value))
@@ -645,7 +645,7 @@ class WeibullPlotTestCases(unittest.TestCase):
 
     def test_exceedances_tail_labels(self):
         w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
-        ax = w.plot(paper="rayleigh", ax=self.axes())
+        ax = w.plot(paper="rayleigh", ax=self.axes(), view="full-sample")
         labels = [t.get_text() for t in ax.get_legend().get_texts()]
         self.assertEqual(labels[0], "Data")
         self.assertEqual(labels[2], f"Fitted, F = 1 - p(1 - F_u), p = {0.2:.3g}")
@@ -654,7 +654,7 @@ class WeibullPlotTestCases(unittest.TestCase):
     def test_exceedances_view(self):
         w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
         u_value = w.fit_info["threshold"]
-        ax = w.plot(paper="rayleigh", kind="median", ax=self.axes(), view="exceedances")
+        ax = w.plot(paper="rayleigh", kind="median", ax=self.axes())  # the default view of a fit to the exceedances
         p = probability_paper(
             self.x, w, paper="rayleigh", kind="median", tail=0.2, tail_model="exceedances", view="exceedances"
         )
