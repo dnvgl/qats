@@ -40,7 +40,8 @@ for label, g in fits.items():
 # global maxima and the Gumbel distribution of the 3-hour maximum derived from it. Each realisation gives its own
 # estimate, so the table shows their mean and range. The default fits all global maxima by 'pwm'. The largest tension
 # maxima are short peaks after near-slack, which the bulk of the maxima doesn't describe, so fits to the 20% largest
-# maxima are shown too: a censored fit, and a fit to the maxima above the threshold value u with the location at u.
+# maxima are shown too: a censored fit to all maxima, and a fit to the maxima above the threshold value u as a sample
+# of their own, truncated at u, with the location at u.
 options = {
     "Weibull, all maxima, pwm": dict(),
     "Weibull, censored 20% tail, lse": dict(method="lse", tail=0.2),
