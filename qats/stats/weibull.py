@@ -751,7 +751,7 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
     """
     x = np.sort(x)  # sorted dataset
-    f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf according to Weibull [1]
+    f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf, i/(n+1)
     weights = np.ones(np.shape(x))  # by default include all data points
     threshold = _tail_threshold(f, threshold=threshold, tail=tail)
     if threshold is not None:
