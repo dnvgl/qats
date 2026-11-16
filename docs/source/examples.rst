@@ -116,13 +116,13 @@ the sum of those.
 Tail fitting with Weibull
 *************************
 
-Fit a parametric Weibull distribution to the largest 13% of the peak sample, often called tail fitting, by a censored
-fit to all maxima and by a fit to the exceedances of the threshold value u as a sample of their own. The least squares
-fit is fitted to median rank plotting positions (``plotting_positions``). The fitted distribution keeps its fit
-settings in :attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to
-show which maxima were fitted, against the plotting positions of the least squares fit. A fit to the exceedances is
-drawn as fitted, with only the exceedances and the distribution conditional on exceeding u (``view="exceedances"``,
-the default), or with all maxima (``view="full-sample"``).
+Fit a Weibull distribution to the 20% largest maxima, often called tail fitting, with
+:meth:`~qats.stats.weibull.Weibull.fit`: by a censored least squares fit to all maxima, and by a maximum likelihood fit
+to the exceedances of the threshold value u as a sample of their own. The fitted distribution keeps its fit settings in
+:attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which
+maxima were fitted. A fit to the exceedances is drawn as fitted, with only the exceedances and the distribution
+conditional on exceeding u (``view="exceedances"``, the default), or with all maxima (``view="full-sample"``). The next
+example compares more tail fits through :meth:`~qats.TimeSeries.stats`, with the extremes derived from them.
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python
@@ -133,8 +133,8 @@ the default), or with all maxima (``view="full-sample"``).
     :figclass: align-center
     :target: _images/weibull_tail_fit.png
 
-    The maxima and the two tail fits on Rayleigh paper, the fit to the exceedances in both views. The maxima
-    outside the tail are faded, and u is dashed.
+    The censored fit, and the fit to the exceedances in both views, on Rayleigh paper. The maxima outside the tail
+    are faded, and u is dashed. The probability axis of the right panel is conditional on exceeding u.
 
 
 Weibull fits to the tail of the maxima
