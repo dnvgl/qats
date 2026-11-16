@@ -178,8 +178,8 @@ STATS_LABELS_TOOLTIPS = {
 WEIBULL_METHODS = ("pwm", "msm", "lse", "mle")
 WEIBULL_FIT_DEFAULTS = dict(method="pwm", tail=None, tail_model="censored", loc=None)
 TAIL_MODELS = {
-    "censored": "Censored: the fit describes all maxima, only the largest are fitted",
-    "exceedances": "Exceedances: the fit describes only the maxima above the threshold value u",
+    "censored": "Censored fit to all maxima: the largest are fitted, the others count only by their number",
+    "exceedances": "Exceedances: the maxima above u as a sample of their own, the distribution truncated at u",
 }
 PLOTTING_POSITIONS = {
     "median": "Median ranks, (i - 0.3)/(n + 0.4)",
@@ -1905,9 +1905,10 @@ class SettingsDialog(QDialog):
             self.tailmodelcombo.setItemData(i, tooltip, Qt.ToolTipRole)
         self.tailmodelcombo.setCurrentIndex(list(TAIL_MODELS).index(fit["tail_model"]))
         self.tailmodelcombo.setToolTip(
-            "Censored: the smaller maxima count only by their number, and the fit describes all maxima.\n"
-            "Exceedances: the maxima above the threshold value u are fitted as a complete sample, and the\n"
-            "fit and the extremes derived from it describe only those maxima."
+            "Censored: a censored fit to all maxima. The smaller maxima count only by their number,\n"
+            "and the fit describes all maxima.\n"
+            "Exceedances: the maxima above the threshold value u are fitted as a sample of their own. The fit is\n"
+            "the distribution truncated at u, and it and the extremes derived from it describe only those maxima."
         )
         form.addRow("Tail model", self.tailmodelcombo)
 

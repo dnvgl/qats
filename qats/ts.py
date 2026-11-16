@@ -516,8 +516,9 @@ class TimeSeries(object):
             Fraction <0, 1] of the largest maxima to fit, so 0.2 fits the 20% largest maxima. By default all maxima are
             fitted.
         tail_model : {'censored', 'exceedances'}, optional
-            How the tail is fitted: 'censored' (default) fits the tail maxima as part of all maxima, 'exceedances'
-            fits the maxima above the threshold value as a complete sample.
+            How the tail is fitted: 'censored' (default) is a censored fit to all maxima, where the maxima at or
+            below the threshold value u count only by their number, and 'exceedances' fits the maxima above u as a
+            complete sample of their own. See the Notes of :meth:`stats`.
         loc : {None, 'mean', 'threshold'} or float, optional
             Location parameter: fitted (None, default), the mean level of the time series ('mean'), the threshold value
             u ('threshold', only with ``tail_model='exceedances'``) or a number.
@@ -1469,15 +1470,19 @@ class TimeSeries(object):
         Exceedances, location at u       p          'exceedances'    'threshold'      all          exceedances
         ===============================  =========  ===============  ===============  ===========  ==============
 
-        - **Censored** (the default tail model): the tail maxima keep their positions among all maxima, and the
-          maxima below u count only by their number. The fitted distribution describes all maxima, so the Gumbel
-          distribution uses all maxima in `statsdur`. The moment methods ('pwm', 'pwm2', 'msm') have no censored form.
-          The fitted distribution also describes the censored maxima, so a fixed location parameter should be below
-          them and 'threshold' is not possible. The mean level of the time series is a lower bound of the global
-          maxima.
-        - **Exceedances**: the maxima above u are fitted as a complete sample. The fitted distribution describes only
-          the maxima above u, so the Gumbel distribution uses only the exceedances in `statsdur` (n * p instead of n,
-          `gn`).
+        - **Censored** (the default tail model): a censored fit to all maxima. All maxima are known, but only those
+          in the tail are fitted by value: the maxima at or below u count only by their number, as values known only
+          to lie at or below u. The tail maxima keep their positions among all maxima. The fitted distribution
+          describes all maxima, so the Gumbel distribution uses all maxima in `statsdur`. The moment methods ('pwm',
+          'pwm2', 'msm') have no censored form. The fitted distribution also describes the censored maxima, so a fixed
+          location parameter should be below them and 'threshold' is not possible. The mean level of the time series
+          is a lower bound of the global maxima.
+        - **Exceedances**: the maxima above u are fitted as a complete sample of their own. The fitted distribution
+          is the distribution of the exceedances, truncated at u, and describes only the maxima above u, so the Gumbel
+          distribution uses only the exceedances in `statsdur` (n * p instead of n, `gn`).
+
+        In both tail models all maxima are known. The maxima at or below u are kept out of the fit by value by choice,
+        so that they don't affect the shape of the fitted tail. See :class:`qats.stats.weibull.Weibull` for references.
 
         A tail fit that fails (no convergence, or invalid parameters, see :meth:`qats.stats.weibull.Weibull.fit`)
         gives NaN for the Weibull and Gumbel parameters and the extreme values. Options that can't be combined raise
