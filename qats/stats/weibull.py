@@ -395,10 +395,16 @@ class Weibull(object):
         tail_model : {'censored', 'exceedances'}, optional
             How a fit to the tail treats the other values:
 
-            - 'censored' (default): the distribution describes the whole sample, and the values outside the tail
-              count only by their number. Only with ``lse`` and ``mle``, see :func:`lse` and :func:`mle`.
-            - 'exceedances': the values above the threshold value u, the largest value outside the tail, are fitted as
-              a complete sample with any method, and the distribution describes only those values.
+            - 'censored' (default): a censored fit to the whole sample. The values in the tail are fitted, and the
+              values outside it count only by their number, as values at or below the threshold value u, the largest
+              of them. The distribution describes the whole sample. Only with ``lse`` and ``mle``, see :func:`lse`
+              and :func:`mle`.
+            - 'exceedances': the values above u are fitted as a complete sample of their own, with any method. The
+              distribution is truncated at u and describes only those values.
+
+            All values are known in both: the values outside the tail are kept out of the fit by value by choice, so
+            that they don't affect the shape of the fitted tail. Censored and truncated samples are described in [6],
+            fits to threshold exceedances in [7], see :class:`Weibull`.
 
         Returns
         -------
@@ -869,6 +875,10 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     Notes
     -----
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
+
+    A fit to the tail is a censored fit to the whole sample: the values in the tail keep their plotting positions in
+    the whole sample, and the other values count only by their number, which sets those positions. The fitted
+    distribution describes the whole sample.
     """
     x = np.sort(x)  # sorted dataset
     f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf according to Weibull [1]
