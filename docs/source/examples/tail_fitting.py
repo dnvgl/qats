@@ -19,10 +19,11 @@ ts = db.get(name="mooring line 4")
 x = ts.maxima()
 
 # fit the distribution to the 13% largest maxima:
-# - censored: by least squares to median rank plotting positions (plotting_positions=), the other maxima count only
-#   by their number and the distribution describes all maxima
-# - exceedances: the maxima above the threshold value u, the largest maximum outside the tail, by maximum likelihood
-#   with the location parameter at u. The distribution describes only the maxima above u.
+# - censored: a censored fit to all maxima by least squares to median rank plotting positions (plotting_positions=).
+#   The other maxima count only by their number, and the distribution describes all maxima.
+# - exceedances: the maxima above the threshold value u, the largest maximum outside the tail, as a sample of their
+#   own, by maximum likelihood with the location parameter at u. The distribution is truncated at u and describes only
+#   the maxima above u.
 u = tail_threshold(x, 0.13)
 censored = Weibull.fit(x, method="lse", tail=0.13, plotting_positions="median")
 exceedances = Weibull.fit(x, method="mle", tail=0.13, tail_model="exceedances", loc=u)

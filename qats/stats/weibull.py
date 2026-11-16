@@ -101,6 +101,11 @@ class Weibull(object):
 
     5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
+    6. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.
+       Censored and truncated samples.
+
+    7. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer. Threshold exceedances.
+
     6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
        J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
 
@@ -400,10 +405,16 @@ class Weibull(object):
         tail_model : {'censored', 'exceedances'}, optional
             How a fit to the tail treats the other values:
 
-            - 'censored' (default): the distribution describes the whole sample, and the values outside the tail
-              count only by their number. Only with ``lse`` and ``mle``, see :func:`lse` and :func:`mle`.
-            - 'exceedances': the values above the threshold value u, the largest value outside the tail, are fitted as
-              a complete sample with any method, and the distribution describes only those values.
+            - 'censored' (default): a censored fit to the whole sample. The values in the tail are fitted, and the
+              values outside it count only by their number, as values at or below the threshold value u, the largest
+              of them. The distribution describes the whole sample. Only with ``lse`` and ``mle``, see :func:`lse`
+              and :func:`mle`.
+            - 'exceedances': the values above u are fitted as a complete sample of their own, with any method. The
+              distribution is truncated at u and describes only those values.
+
+            All values are known in both: the values outside the tail are kept out of the fit by value by choice, so
+            that they don't affect the shape of the fitted tail. Censored and truncated samples are described in [6],
+            fits to threshold exceedances in [7], see :class:`Weibull`.
 
         plotting_positions : str, optional
             Plotting positions an ``lse`` fit is fitted to, see :func:`lse` and
@@ -893,6 +904,10 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None, plott
     rank estimates. In a fit to the tail, the plotting positions are those of the whole sample, and the tail is
     selected by mean rank whatever the plotting positions: the values with ``i/(n+1)`` at or above ``1 - tail`` (or
     `threshold`).
+
+    A fit to the tail is thus a censored fit to the whole sample: the values in the tail are fitted at their
+    plotting positions in the whole sample, and the other values count only by their number, which sets those
+    positions. The fitted distribution describes the whole sample.
     """
     _check_plotting_positions(plotting_positions)
     x = np.sort(x)  # sorted dataset
@@ -959,7 +974,8 @@ def mle(x, tail: float = None, loc: float = None):
     tail : float, optional
         Fit distribution to the tail of the sample by censored maximum likelihood: the fraction <0, 1] of the largest
         values is fitted, so 0.13 fits the 13% largest values. The values are selected as in :func:`lse`, those with
-        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored.
+        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored: they count only by their
+        number. The fitted distribution describes the whole sample. See Notes.
     loc : float, optional
         Fixed location parameter. Only the scale and shape parameters are fitted. Must be below the smallest value in
         the likelihood, which is the censoring value in a tail fit.
@@ -981,6 +997,13 @@ def mle(x, tail: float = None, loc: float = None):
     them, ``xc = x(r)``. They enter the likelihood only through the probability that a value is at or below `xc`::
 
         L = F(xc)^r * f(x(r+1)) * ... * f(x(n))
+
+    All values are known, and the censoring is a choice of the fit: the smaller values set how much of the
+    distribution lies at or below `xc`, but not its shape. `L` is the likelihood of values censored at a known value
+    [6], here `xc`, which is itself one of the censored values. In Type II censoring of a life test, by contrast, the
+    `r` smallest values are not observed, and the censoring value is the smallest observed value x(r+1). A fit to the
+    exceedances, see :meth:`Weibull.fit`, leaves out the factor ``F(xc)^r`` and fits the distribution truncated at
+    `xc` instead [6, 7].
 
     The likelihood equations [2, p. 656 eq. 21.73-21.75] are then summed over the n - r fitted values and each gets
     the derivative of ``r * ln F(xc)``. With no censored values (`r` = 0) the fit is the same as without `tail`.

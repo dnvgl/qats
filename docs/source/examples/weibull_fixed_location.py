@@ -16,8 +16,9 @@ ts = db.get(name="mooring line 4")
 x = ts.maxima()
 
 # fit the scale and shape parameters to the 13% largest peaks, with the location parameter fixed at the mean level of
-# the time series. The location parameter must be below the smaller peaks, which are left out of the least squares fit
-# and count only as being at or below the censoring value in the maximum likelihood fit.
+# the time series. The location parameter must be below the smaller peaks. Both are censored fits to all peaks: the
+# smaller peaks are not fitted by value. They keep the tail peaks at their positions among all peaks in the least
+# squares fit, and count as being at or below the censoring value in the maximum likelihood fit.
 tail = 0.13
 loc = ts.mean()
 
