@@ -55,9 +55,9 @@ ax3 = fig.add_subplot(1, 3, 3)
 censored.plot(paper="rayleigh", plotting_positions="median", ax=ax1)
 exceedances.plot(paper="rayleigh", plotting_positions="median", ax=ax2, view="full-sample")
 exceedances.plot(paper="rayleigh", plotting_positions="median", ax=ax3)
-ax1.set_title("Censored fit (lse): all maxima")
-ax2.set_title("Fit to the exceedances (mle): all maxima")
-ax3.set_title("Fit to the exceedances (mle): as fitted")
+ax1.set_title("Censored fit (lse)")
+ax2.set_title("Fit to the exceedances (mle)")
+ax3.set_title("Fit to the exceedances (mle)")
 for ax in (ax1, ax2, ax3):
     ax.set_xlabel("Maxima of mooring line 4 tension")
     ax.legend(loc="lower right")  # clear of the largest maxima

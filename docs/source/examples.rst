@@ -121,8 +121,9 @@ Fit a Weibull distribution to the 20% largest maxima, often called tail fitting,
 to the exceedances of the threshold value u as a sample of their own. The fitted distribution keeps its fit settings in
 :attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which
 maxima were fitted. A fit to the exceedances is drawn as fitted, with only the exceedances and the distribution
-conditional on exceeding u (``view="exceedances"``, the default), or with all maxima (``view="full-sample"``). The next
-example compares more tail fits through :meth:`~qats.TimeSeries.stats`, with the extremes derived from them.
+conditional on exceeding u (``view="exceedances"``, the default), or with all maxima (``view="full-sample"``). The
+exceedances view checks the fit as it was made. The full-sample view compares it with a censored fit, and shows the
+distribution of all maxima that the extremes are derived from. The next example compares more tail fits through :meth:`~qats.TimeSeries.stats`, with the extremes derived from them.
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python
@@ -133,8 +134,11 @@ example compares more tail fits through :meth:`~qats.TimeSeries.stats`, with the
     :figclass: align-center
     :target: _images/weibull_tail_fit.png
 
-    The censored fit, and the fit to the exceedances in both views, on Rayleigh paper. The maxima outside the tail
-    are faded, and u is dashed. The probability axis of the right panel is conditional on exceeding u.
+    Left: the censored fit. Middle and right: the same fit to the exceedances, drawn with all maxima
+    (``view="full-sample"``) and as fitted (``view="exceedances"``). All on Rayleigh paper. The maxima outside the
+    tail are faded, and u is dashed. In the right panel the exceedances are ranked among themselves, and the
+    probability axis is conditional on exceeding u: P there is 1 - p(1 - P) on the middle panel's axis, where
+    p = 0.201 is the fraction of maxima above u.
 
 
 Weibull fits to the tail of the maxima
