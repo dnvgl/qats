@@ -436,5 +436,38 @@ class WeibullPlotLinearTestCases(unittest.TestCase):
         )
 
 
+class WeibullFitDescriptionTestCases(unittest.TestCase):
+    """The one-line description of a Weibull fit used in plot titles and the GUI."""
+
+    def test_descriptions(self):
+        from qats.stats.weibull import _fit_description
+
+        for fit, minima, expected in (
+            (
+                dict(method="pwm", tail=None, tail_model="censored", loc=None),
+                False,
+                "Weibull fit: pwm, all maxima, location fitted; median plotting positions",
+            ),
+            (
+                dict(method="lse", tail=0.2, tail_model="censored", loc="mean"),
+                True,
+                "Weibull fit: lse, the 20 % lowest minima, censored, location at the mean level; "
+                "median plotting positions",
+            ),
+            (
+                dict(method="mle", tail=0.13, tail_model="exceedances", loc="threshold"),
+                False,
+                "Weibull fit: mle, the 13 % largest maxima, exceedances, location at u; median plotting positions",
+            ),
+            (
+                dict(method="msm", tail=None, tail_model="censored", loc=-35.25),
+                True,
+                "Weibull fit: msm, all minima, location -35.25; median plotting positions",
+            ),
+        ):
+            with self.subTest(expected=expected):
+                self.assertEqual(_fit_description(fit, "median", minima=minima), expected)
+
+
 if __name__ == "__main__":
     unittest.main()

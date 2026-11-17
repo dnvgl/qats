@@ -58,6 +58,7 @@ from .. import __version__
 from .._validation import QatsTypeError, QatsValueError
 from ..io import registry
 from ..stats.empirical import empirical_cdf
+from ..stats.weibull import _fit_description as fit_description
 from ..ts import _check_weibull_options
 from ..tsdb import TsDB
 from . import LOGGING_LEVELS
@@ -196,43 +197,6 @@ PLOTTING_POSITIONS = {
 }
 # maxima/minima left out of a tail fit: faded and smaller, so dense clusters recede behind the fitted ones
 _UNFITTED_STYLE = dict(alpha=0.3, markersize=4.5)
-
-
-def fit_description(fit, kind, minima=False):
-    """
-    One line describing the Weibull fit settings and plotting positions, for the statistics table and plots.
-
-    Parameters
-    ----------
-    fit : dict
-        Weibull fit options: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
-    kind : str
-        Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
-    minima : bool, optional
-        The fit is to minima.
-
-    Returns
-    -------
-    str
-        Description
-    """
-    sample = "minima" if minima else "maxima"
-    parts = [fit["method"]]
-    if fit["tail"] is None:
-        parts.append(f"all {sample}")
-    else:
-        parts.append(f"the {100 * fit['tail']:g} % {'lowest' if minima else 'largest'} {sample}")
-        parts.append(fit["tail_model"])
-    loc = fit["loc"]
-    if loc is None:
-        parts.append("location fitted")
-    elif loc == "mean":
-        parts.append("location at the mean level")
-    elif loc == "threshold":
-        parts.append("location at u")
-    else:
-        parts.append(f"location {loc:g}")
-    return f"Weibull fit: {', '.join(parts)}; {kind} plotting positions"
 
 
 # todo: New method that generalize threading
@@ -1261,6 +1225,7 @@ class Qats(QMainWindow):
         is_tail_fit = False
         has_unfitted = False
         is_conditional = False
+        is_exceedances = False
 
         # draw: the fitted maxima, the others faded, and the threshold value u of a tail fit dashed. The x axis of
         # Rayleigh paper is in data units, so matplotlib's ticks serve all series (the paper's own x ticks are made
@@ -1279,6 +1244,7 @@ class Qats(QMainWindow):
             axes.plot(p.fit_x, p.fit_y, "-", color=color)
             has_unfitted = has_unfitted or not np.all(p.fitted)
             is_conditional = is_conditional or (p.view == "exceedances" and u is not None)
+            is_exceedances = is_exceedances or (data.get("wtail_model") == "exceedances" and u is not None)
             if u is not None:
                 is_tail_fit = True
                 axes.axvline(u, color=color, linestyle="--", linewidth=1.0)
@@ -1299,17 +1265,30 @@ class Qats(QMainWindow):
         axes.set_xlabel("Minima" if is_minima else "Maxima")
         if is_conditional:
             # a fit to the exceedances as fitted: the probability is conditional on exceeding u of each series
-            axes.set_ylabel(f"Cumulative probability given {'X < u' if is_minima else 'X > u'} (-)")
+            axes.set_ylabel(f"Cumulative probability given {'X < u' if is_minima else 'X > u'}")
         else:
-            axes.set_ylabel("Cumulative probability (-)")
+            axes.set_ylabel("Cumulative probability")
         axes.set_title(self._fit_description, fontsize="small")
-        if handles and is_tail_fit and has_unfitted:
-            # explain the markers once for all series
-            handles.append(Line2D([], [], color="0.3", marker="o", linestyle="none", label="Fitted"))
-            handles.append(
-                Line2D([], [], color="0.3", marker="o", linestyle="none", label="Not fitted", **_UNFITTED_STYLE)
-            )
         if handles:
+            # explain the points and the line once for all series, labelled as by Weibull.plot
+            handles.append(
+                Line2D(
+                    [], [], color="0.3", marker="o", linestyle="none", label="Exceedances" if is_conditional else "Data"
+                )
+            )
+            if is_tail_fit and has_unfitted:
+                handles.append(
+                    Line2D(
+                        [], [], color="0.3", marker="o", linestyle="none", label="Data not fitted", **_UNFITTED_STYLE
+                    )
+                )
+            if is_conditional:
+                fit_label = "Fitted, F_u"
+            elif is_exceedances:
+                fit_label = "Fitted, F = 1 - p(1 - F_u)"
+            else:
+                fit_label = "Fitted"
+            handles.append(Line2D([], [], color="0.3", linestyle="-", label=fit_label))
             axes.legend(handles=handles, loc="upper left")
         self.weibull_canvas.draw()
         self.set_status("Weibull distribution plot updated", msecs=3000)
@@ -1371,7 +1350,7 @@ class Qats(QMainWindow):
         axes.legend(loc="upper left")
         axes.grid(True)
         axes.set_xlabel("Data")
-        axes.set_ylabel("Cumulative probability (-)")
+        axes.set_ylabel("Cumulative probability")
         canvas.draw()
 
         self.set_status("Gumbel distribution plot created", msecs=3000)
@@ -1509,7 +1488,7 @@ class Qats(QMainWindow):
         self.weibull_axes.clear()
         self.weibull_axes.grid(True)
         self.weibull_axes.set_xlabel("Maxima")
-        self.weibull_axes.set_ylabel("Cumulative probability (-)")
+        self.weibull_axes.set_ylabel("Cumulative probability")
         self.weibull_canvas.draw()
         self.cycles_axes.clear()
         self.cycles_axes.grid(True)
