@@ -336,6 +336,34 @@ class TestTsWeibullFit(unittest.TestCase):
         self.assertEqual(self.ts.stats(method="pwm2")["wloc_from"], "value")
         self.assertEqual(self.ts.stats(method="lse", loc=95.0)["wloc_from"], "value")
 
+    def test_fit_info(self):
+        # fit_weibull() keeps the settings that stats() reports, with the location given as a number
+        cases = [
+            dict(method="msm"),
+            dict(method="lse", tail=self.tail),
+            dict(method="lse", tail=self.tail, loc="mean"),
+            dict(method="msm", tail=self.tail, tail_model="exceedances"),
+            dict(method="mle", tail=self.tail, tail_model="exceedances", loc="threshold"),
+        ]
+        for kwargs in cases:
+            with self.subTest(**kwargs):
+                s = self.ts.stats(**kwargs)
+                info = self.ts.fit_weibull(**kwargs).fit_info
+                loc_from = "value" if s["wloc_from"] in ("mean", "threshold") else s["wloc_from"]
+                expected = dict(
+                    method=s["wmethod"],
+                    tail=s["wtail"],
+                    tail_model=s["wtail_model"],
+                    loc_from=loc_from,
+                    threshold=s["wthreshold"],
+                    n=s["wn"],
+                )
+                self.assertEqual(info, expected)
+
+    def test_fit_keeps_all_maxima(self):
+        w = self.ts.fit_weibull(method="msm", tail=self.tail, tail_model="exceedances")
+        np.testing.assert_array_equal(np.sort(w.data), np.sort(self.mx))
+
     def test_default_unchanged(self):
         s = self.ts.stats()
         self.assertEqual((s["wloc"], s["wscale"], s["wshape"]), _pwm3(self.mx))

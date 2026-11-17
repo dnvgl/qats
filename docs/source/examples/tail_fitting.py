@@ -4,8 +4,11 @@ Example showing tail fitting with Weibull
 
 import os
 
+import matplotlib.pyplot as plt
+
 from qats import TsDB
-from qats.stats.weibull import lse, plot_fit
+from qats.stats.empirical import tail_threshold
+from qats.stats.weibull import Weibull
 
 # locate time series file
 file_name = os.path.join("..", "..", "..", "data", "mooring.ts")
@@ -15,8 +18,32 @@ ts = db.get(name="mooring line 4")
 # fetch peak sample
 x = ts.maxima()
 
-# fit distribution to the values exceeding the 0.87-quantile of the empirical cumulative distribution function
-a, b, c = lse(x, threshold=0.87)
+# fit the distribution to the 13% largest maxima:
+# - censored: a censored fit to all maxima by least squares. The other maxima count only by their number, and the
+#   distribution describes all maxima.
+# - exceedances: the maxima above the threshold value u, the largest maximum outside the tail, as a sample of their
+#   own, by maximum likelihood with the location parameter at u. The distribution is truncated at u and describes only
+#   the maxima above u.
+u = tail_threshold(x, 0.13)
+censored = Weibull.fit(x, method="lse", tail=0.13)
+exceedances = Weibull.fit(x, method="mle", tail=0.13, tail_model="exceedances", loc=u)
 
-# plot sample and fitted distribution on Weibull scales
-plot_fit(x, (a, b, c))
+# the fit settings are kept with the distribution
+print(censored.fit_info)
+print(exceedances.fit_info)
+
+# plot the maxima and the fitted distributions on Rayleigh paper, with median rank plotting positions. The maxima
+# outside the tail are faded, and u is dashed. The fit to the exceedances is drawn in two views:
+# - full-sample: all maxima, and the fitted distribution solved for all maxima, F = 1 - p (1 - F_u), where F_u is the
+#   fitted distribution and p the fraction of maxima above u. Comparable with the censored fit.
+# - exceedances (default): only the maxima above u, at their own plotting positions, and F_u itself, as fitted.
+fig, axes = plt.subplots(1, 3, figsize=(16, 5))
+censored.plot(paper="rayleigh", kind="median", ax=axes[0])
+exceedances.plot(paper="rayleigh", kind="median", ax=axes[1], view="full-sample")
+exceedances.plot(paper="rayleigh", kind="median", ax=axes[2])
+axes[1].sharey(axes[0])
+axes[0].set_title("Censored, lse")
+axes[1].set_title("Exceedances, mle, location at u")
+axes[2].set_title("Exceedances, as fitted")
+fig.tight_layout()
+plt.show()

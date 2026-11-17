@@ -11,6 +11,7 @@ Paper         x axis        y axis               Straight line for
 ``rayleigh``  x             √(−ln(1−F))          Rayleigh: Weibull with shape 2 (any location)
 ``weibull``   ln(x − loc)   ln(−ln(1−F))         Weibull with location `loc`
 ``gumbel``    x             −ln(−ln F)           Gumbel (extremes)
+``linear``    x             F                    Uniform: the cumulative distribution on linear scales
 ============  ============  ===================  ==========================================================
 
 .. versionadded :: 5.6.0
@@ -22,11 +23,9 @@ from dataclasses import dataclass
 import numpy as np
 
 from .._validation import QatsTypeError, QatsValueError
-from .empirical import _tail_count, empirical_cdf
+from .empirical import _PLOTTING_POSITIONS, _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
 
-PAPERS = ("rayleigh", "weibull", "gumbel")
-_KINDS = ("mean", "median", "symmetrical", "beard", "gringorten")
-_TAIL_MODELS = ("censored", "exceedances")
+_PAPERS = ("rayleigh", "weibull", "gumbel", "linear")
 _VIEWS = ("full-sample", "exceedances")
 
 # candidate probabilities for the ticks on the probability axis of each paper, spread evenly enough on that paper
@@ -35,7 +34,14 @@ _PROBABILITIES = dict(
     rayleigh=np.array([0.0, 0.1, 0.3] + _UPPER),
     weibull=np.array([0.001, 0.01, 0.05, 0.1, 0.2, 0.3] + _UPPER),
     gumbel=np.array([0.001, 0.01, 0.05, 0.1, 0.2, 0.3] + _UPPER),
+    linear=np.round(np.linspace(0.0, 1.0, 11), 1),
 )
+
+# probability range of the fitted line without a sample
+_F_RANGE = (0.001, 0.999)
+
+# the values outside a tail fit: faded and smaller, so dense clusters recede behind the fitted values
+_UNFITTED_STYLE = dict(alpha=0.3, markersize=4.5)
 
 # number of points on the fitted line
 _NFIT = 500
@@ -51,7 +57,7 @@ class ProbabilityPaper:
     Attributes
     ----------
     paper : str
-        Probability paper: 'rayleigh', 'weibull' or 'gumbel'.
+        Probability paper: 'rayleigh', 'weibull', 'gumbel' or 'linear'.
     kind : str
         Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
     loc : float
@@ -112,7 +118,7 @@ def paper_coordinates(x, f, paper="rayleigh", loc=0.0):
     f : array_like
         Cumulative probabilities, between 0 and 1.
     paper : str, optional
-        Probability paper: 'rayleigh' (default), 'weibull' or 'gumbel'. See :mod:`qats.stats.paper`.
+        Probability paper: 'rayleigh' (default), 'weibull', 'gumbel' or 'linear'. See :mod:`qats.stats.paper`.
     loc : float, optional
         Location of the Weibull paper, the x axis is ln(x - loc). Used only on Weibull paper.
 
@@ -151,14 +157,15 @@ def probability_paper(
 
     Parameters
     ----------
-    sample : array_like
-        Sample, for example the maxima of a time series. With `is_minima`, the minima in their original units.
+    sample : array_like or None
+        Sample, for example the maxima of a time series. With `is_minima`, the minima in their original units. None
+        draws only `fitted`, between the probabilities 0.001 and 0.999.
     fitted : object, optional
         Fitted distribution with methods ``cdf()`` and ``invcdf()``, for example
         :class:`~qats.stats.weibull.Weibull` or :class:`~qats.stats.gumbel.Gumbel`. With `is_minima`, the
         distribution fitted to the minima multiplied by -1.
     paper : str, optional
-        Probability paper: 'rayleigh' (default), 'weibull' or 'gumbel'. See :mod:`qats.stats.paper`.
+        Probability paper: 'rayleigh' (default), 'weibull', 'gumbel' or 'linear'. See :mod:`qats.stats.paper`.
     kind : str, optional
         Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`. Default 'median', ``(i-0.3)/(n+0.4)``.
     tail : float, optional
@@ -256,26 +263,24 @@ def probability_paper(
     >>> plt.yticks(p.yticks, p.yticklabels)
     >>> plt.show()
 
-    Draw a fit to the exceedances, where `w` is a Weibull distribution fitted to the maxima above the threshold value
-    u of the 20% largest maxima: by default as it was made, with only those maxima and the fitted distribution
-    conditional on exceeding u, or with all maxima and the fitted distribution solved for all maxima
+    Draw a fit to the exceedances of the threshold value u of the 20% largest maxima: by default as it was made, with
+    only the maxima above u and the fitted distribution conditional on exceeding u, or with all maxima and the fitted
+    distribution solved for all maxima
 
+    >>> from qats.stats.empirical import tail_threshold
+    >>> w = Weibull.fit(mx, method="mle", tail=0.2, tail_model="exceedances", loc=tail_threshold(mx, 0.2))
     >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances")
     >>> p = probability_paper(mx, w, tail=0.2, tail_model="exceedances", view="full-sample")
     """
     _check_paper(paper)
-    if kind not in _KINDS:
-        raise QatsValueError(f"The plotting positions (kind) must be one of {', '.join(_KINDS)}, got {kind!r}")
+    if kind not in _PLOTTING_POSITIONS:
+        raise QatsValueError(
+            f"The plotting positions (kind) must be one of {', '.join(_PLOTTING_POSITIONS)}, got {kind!r}"
+        )
     if tail is not None:
-        if isinstance(tail, bool) or not isinstance(tail, numbers.Real):
-            raise QatsTypeError(f"The tail must be a number, got {type(tail).__name__}")
-        if not 0.0 < tail <= 1.0:
-            raise QatsValueError(f"The tail must be larger than 0 and at most 1, got {tail}")
-    if tail_model not in _TAIL_MODELS:
-        raise QatsValueError(f"The tail model must be one of {', '.join(_TAIL_MODELS)}, got {tail_model!r}")
+        _check_tail(tail)
+    _check_tail_model(tail_model, tail)
     exceedances = tail is not None and tail_model == "exceedances"
-    if tail is None and tail_model == "exceedances":
-        raise QatsValueError("A fit to the exceedances (tail_model='exceedances') needs the tail fraction, tail=")
     if exceedances and fitted is None:
         raise QatsValueError("The tail model 'exceedances' describes a fitted distribution, give fitted=")
     if view is None:
@@ -288,14 +293,18 @@ def probability_paper(
         )
     if fitted is not None and not callable(getattr(fitted, "invcdf", None)):
         raise QatsTypeError(f"The fitted distribution must have a method invcdf(), got {type(fitted).__name__}")
+    if sample is None and fitted is None:
+        raise QatsValueError("Give a sample, a fitted distribution or both")
+    if sample is None and tail is not None:
+        raise QatsValueError("A tail (tail=) selects values of the sample, give the sample")
     if loc is not None:
         if paper != "weibull":
             raise QatsValueError(f"The location (loc=) is only for Weibull paper, not {paper} paper")
         if isinstance(loc, bool) or not isinstance(loc, numbers.Real):
             raise QatsTypeError(f"The location must be a number, got {type(loc).__name__}")
 
-    z = np.asarray(sample, dtype=float).ravel()
-    if z.size == 0:
+    z = np.array([]) if sample is None else np.asarray(sample, dtype=float).ravel()
+    if sample is not None and z.size == 0:
         raise QatsValueError("The sample is empty")
     if not np.all(np.isfinite(z)):
         raise QatsValueError("The sample has values that are not finite (NaN or infinite)")
@@ -306,7 +315,7 @@ def probability_paper(
 
     # values used in the fit
     r = _tail_count(n, tail) if tail is not None else 0
-    u = z[r - 1] if r > 0 else None
+    u = tail_threshold(z, tail) if tail is not None else None
     if exceedances and u is not None:
         used = z > u
     else:
@@ -332,14 +341,19 @@ def probability_paper(
         shown = np.ones(n, dtype=bool)
     x, y = _paper_x(z[shown], paper, loc), _paper_y(f[shown], paper)
 
-    # probability axis: from the tick at or below the lowest point to the tick at or above the highest
-    fs = f[shown] if np.any(shown) else f
-    f_lo = fs[0]
-    if exceedances and u is not None:
-        # the fitted line runs from u upwards
-        f_lo = 1.0 - p * (1.0 - _cdf_at(fitted, u))
+    # probability axis: from the tick at or below the lowest point to the tick at or above the highest, or without a
+    # sample over a fixed range
     candidates = _PROBABILITIES[paper]
-    ptick = _tick_probabilities(candidates, min(fs[0], f_lo), fs[-1])
+    if n == 0:
+        ptick = _tick_probabilities(candidates, *_F_RANGE)
+        f_lo = ptick[0]
+    else:
+        fs = f[shown] if np.any(shown) else f
+        f_lo = fs[0]
+        if exceedances and u is not None:
+            # the fitted line runs from u upwards
+            f_lo = 1.0 - p * (1.0 - _cdf_at(fitted, u))
+        ptick = _tick_probabilities(candidates, min(fs[0], f_lo), fs[-1])
 
     # fitted line on a grid uniform on the probability axis
     fit_x, fit_y = np.array([]), np.array([])
@@ -382,8 +396,8 @@ def probability_paper(
 
 
 def _check_paper(paper):
-    if paper not in PAPERS:
-        raise QatsValueError(f"The probability paper must be one of {', '.join(PAPERS)}, got {paper!r}")
+    if paper not in _PAPERS:
+        raise QatsValueError(f"The probability paper must be one of {', '.join(_PAPERS)}, got {paper!r}")
 
 
 def _paper_x(x, paper, loc):
@@ -402,8 +416,10 @@ def _paper_y(f, paper):
         return np.sqrt(-np.log1p(-f))
     elif paper == "weibull":
         return np.log(-np.log1p(-f))
-    else:
+    elif paper == "gumbel":
         return -np.log(-np.log(f))
+    else:  # linear
+        return f.copy()
 
 
 def _paper_f(y, paper):
@@ -413,8 +429,10 @@ def _paper_f(y, paper):
         return -np.expm1(-(y**2))
     elif paper == "weibull":
         return -np.expm1(-np.exp(y))
-    else:
+    elif paper == "gumbel":
         return np.exp(-np.exp(-y))
+    else:  # linear
+        return y.copy()
 
 
 def _lower_bound(fitted):
@@ -462,3 +480,109 @@ def _nice_ticks(lo, hi, n=5):
 
 def _format(v):
     return f"{v + 0.0:g}"
+
+
+def _plot_distribution(distribution, filename, paper, kind, ax, view=None, *, is_minima=False, xlabel="X", title=None):
+    """
+    Draw a fitted distribution and the sample it was fitted to on probability paper.
+
+    Shared implementation of :meth:`qats.stats.weibull.Weibull.plot` and :meth:`qats.stats.gumbel.Gumbel.plot`.
+
+    Parameters
+    ----------
+    distribution : Weibull or Gumbel
+        Distribution to draw. Its `data` is drawn as the sample if not None, and the tail settings of the fit are
+        taken from its `fit_info`.
+    filename : str or None
+        Save the figure as `filename`.
+    paper : str
+        Probability paper: 'rayleigh', 'weibull', 'gumbel' or 'linear', see :func:`probability_paper`.
+    kind : str
+        Plotting positions of the sample, see :func:`qats.stats.empirical.empirical_cdf`.
+    ax : matplotlib.axes.Axes or None
+        Axes to draw on. None draws on a new figure.
+    view : {'exceedances', 'full-sample'}, optional
+        How a fit to the exceedances is drawn, default 'exceedances', see :func:`probability_paper`.
+    is_minima : bool, optional
+        The distribution is fitted to minima multiplied by -1, and its `data` are those values. The minima are drawn
+        in their original units, see :func:`probability_paper`.
+    xlabel : str, optional
+        Label of the x axis.
+    title : str, optional
+        Title of the axes, in a small font.
+
+    Returns
+    -------
+    matplotlib.axes.Axes
+        The axes drawn on.
+
+    Notes
+    -----
+    With a tail fit, the sample values outside the fit are drawn faded and smaller, and the threshold value u as a
+    dashed vertical line. A fit to the exceedances is labelled by what the line is: ``F = 1 - p(1 - F_u)`` with the
+    fraction p above u in the full-sample view, and ``F_u`` with the probability axis conditional on exceeding u in
+    the exceedances view.
+
+    A new figure (`ax` is None) is shown, or saved to `filename` and then closed. A figure given through `ax` is only
+    saved, if `filename` is given, and is neither shown nor closed.
+    """
+    import matplotlib.pyplot as plt  # here, so that the module works without drawing
+
+    info = distribution.fit_info or dict()
+    tail = info.get("tail")
+    u = info.get("threshold")
+    tail_model = info.get("tail_model") or "censored"
+    sign = -1.0 if is_minima else 1.0
+    p = probability_paper(
+        None if distribution.data is None else sign * np.asarray(distribution.data),
+        distribution,
+        paper=paper,
+        kind=kind,
+        tail=tail,
+        tail_model=tail_model,
+        view=view,
+        is_minima=is_minima,
+    )
+
+    # labels: a fit to the exceedances is labelled by what the line is
+    data_label, fit_label, ylabel = "Data", "Fitted", "Cumulative probability"
+    if tail_model == "exceedances" and u is not None:
+        if p.view == "exceedances":
+            data_label, fit_label = "Exceedances", "Fitted, F_u"
+            ylabel = f"Cumulative probability given {'X < u' if is_minima else 'X > u'}"
+        else:
+            frac = np.count_nonzero(p.fitted) / (p.sample.size + p.excluded.size)
+            fit_label = f"Fitted, F = 1 - p(1 - F_u), p = {frac:.3g}"
+
+    new_figure = ax is None
+    if new_figure:
+        ax = plt.figure().gca()
+
+    # the sample: with a tail fit, the values outside the fit faded
+    if p.x.size > 0:
+        ax.plot(p.x[p.fitted], p.y[p.fitted], "ko", label=data_label)
+        if not np.all(p.fitted):
+            ax.plot(p.x[~p.fitted], p.y[~p.fitted], "ko", label="Data not fitted", **_UNFITTED_STYLE)
+    ax.plot(p.fit_x, p.fit_y, "-r", label=fit_label)
+    if u is not None:
+        xu = float(_paper_x(u, paper, p.loc))
+        if np.isfinite(xu):
+            ax.axvline(xu, color="0.4", linestyle="--", linewidth=1.0, label=f"u = {sign * u:.5g}")
+
+    ax.set_xticks(p.xticks, p.xticklabels)
+    ax.set_yticks(p.yticks, p.yticklabels)
+    ax.set_ylim(p.yticks[0], p.yticks[-1])
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title is not None:
+        ax.set_title(title, fontsize="small")
+    ax.legend(loc="upper left")
+    ax.grid(True)
+
+    if filename is not None:
+        ax.figure.savefig(filename)
+        if new_figure:
+            plt.close(ax.figure)  # avoid keeping figures that are only saved
+    elif new_figure:
+        plt.show()
+    return ax

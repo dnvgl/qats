@@ -4,15 +4,18 @@
 :class:`Weibull` class and functions related to Weibull distribution.
 """
 
+import numbers
+
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.optimize import brentq, fsolve, leastsq
 from scipy.special import binom, gamma
 
-from .._validation import QatsValueError
+from .._deprecation import warn_deprecated
+from .._validation import QatsTypeError, QatsValueError
 from ..signal import find_maxima
-from .empirical import empirical_cdf
-from .paper import paper_coordinates
+from .empirical import _check_tail, _check_tail_model, _tail_count, empirical_cdf, tail_threshold
+from .paper import _plot_distribution, paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -55,7 +58,10 @@ class Weibull(object):
     shape: float
         Weibull shape parameter.
     data: array_like
-        Sample data. Exists only if distribution parameters are estimated from a sample.
+        Sample data. Exists only if distribution parameters are estimated from a sample. After a fit to the
+        exceedances, the full sample, of which only the values above the threshold value were fitted.
+    fit_info: dict or None
+        How the distribution was fitted, see :attr:`Weibull.fit_info`.
 
     Notes
     -----
@@ -115,6 +121,40 @@ class Weibull(object):
             self.data = np.array(data)
         else:
             self.data = None
+        self._fit_info = None  # set by Weibull.fit()
+
+    @property
+    def fit_info(self):
+        """
+        How the distribution was fitted by :meth:`Weibull.fit`, None if it was not.
+
+        .. versionadded :: 5.6.0
+
+        Returns
+        -------
+        dict or None
+            A copy of the fit settings, with the meanings of the ``w*`` keys of :meth:`qats.TimeSeries.stats`:
+
+            ==========  ===============================================================================================
+            method      Method of the fit
+            tail        Tail fraction of a tail fit, None if all values were fitted
+            tail_model  'censored' or 'exceedances', None if all values were fitted
+            loc_from    Where the location parameter comes from: 'fitted', or 'value' (given, or zero with ``pwm2``)
+            threshold   Threshold value u of a tail fit, the largest value outside the tail (None if none)
+            n           Number of values fitted
+            ==========  ===============================================================================================
+        """
+        return None if self._fit_info is None else dict(self._fit_info)
+
+    def _described(self):
+        """
+        The sample values the distribution describes: all of `data`, or only the values above the threshold value
+        after a fit to the exceedances.
+        """
+        info = self._fit_info
+        if info is not None and info["tail_model"] == "exceedances" and info["threshold"] is not None:
+            return self.data[self.data > info["threshold"]]
+        return self.data
 
     @property
     def cov(self):
@@ -184,13 +224,18 @@ class Weibull(object):
         """
         Mean squared error of fitted cumulative distribution (a,b,c) and empirical distribution
 
+        .. versionchanged :: 5.6.0
+            After a fit to the exceedances, the error is computed for the values above the threshold value, which
+            the distribution describes, with their own empirical distribution.
+
         Returns
         -------
         float
             mean squared error
 
         """
-        e = np.sum((self.ecdf - self.cdf(np.sort(self.data))) ** 2.0) / self.data.size
+        x = np.sort(self._described())
+        e = np.sum((empirical_cdf(x.size, kind="mean") - self.cdf(x)) ** 2.0) / x.size
         return e
 
     @property
@@ -241,10 +286,15 @@ class Weibull(object):
         Calculate parameters of the asymptotic Gumbel extreme value distribution (Type 1) for the extreme value of N
         independent, Weibull distributed variables.
 
+        .. versionchanged :: 5.6.0
+            After a fit to the exceedances, the default `n` is the number of values above the threshold value, which
+            the distribution describes.
+
         Parameters
         ----------
         n : int
-            number of independent weibull distributed variables, default equal to number of peaks (self.data.size)
+            number of independent weibull distributed variables, default equal to number of peaks (self.data.size),
+            or the number of peaks above the threshold value after a fit to the exceedances
 
         Returns
         -------
@@ -273,7 +323,7 @@ class Weibull(object):
 
         """
         if n is None:
-            n = self.data.size
+            n = self._described().size
         gloc, gscale = weibull2gumbel(self.loc, self.scale, self.shape, n)
 
         return gloc, gscale
@@ -308,12 +358,13 @@ class Weibull(object):
         return p
 
     @classmethod
-    def fit(cls, data, method="msm", verbose=False, *, loc=None, tail=None):
+    def fit(cls, data, method="msm", verbose=False, *, loc=None, tail=None, tail_model="censored"):
         """
         Establish Weibull class instance by fit to sample.
 
         .. versionchanged :: 5.6.0
-            New arguments `loc` and `tail`. A fit that fails raises :class:`ValueError`, see the fit functions.
+            New arguments `loc`, `tail` and `tail_model`. The fit settings are kept in :attr:`fit_info`. A fit that
+            fails raises :class:`ValueError`, see the fit functions.
 
         Parameters
         ----------
@@ -331,20 +382,43 @@ class Weibull(object):
         verbose : bool
             If True, fitted parameters are printed to screen.
         loc : float, optional
-            Fixed location parameter. Only the scale and shape parameters are fitted, to the sample minus `loc`. By
-            default the location parameter is fitted too, except with ``pwm2`` where it is zero.
+            Fixed location parameter. Only the scale and shape parameters are fitted, to the fitted values minus
+            `loc`. By default the location parameter is fitted too, except with ``pwm2`` where it is zero.
         tail : float, optional
             Fit to the tail of the sample: the fraction <0, 1] of the largest values, so 0.2 fits the 20% largest
-            values. Only with ``lse`` and ``mle``, see :func:`lse` and :func:`mle`.
+            values. The values are selected as in :func:`lse` and :func:`mle`, see also
+            :func:`qats.stats.empirical.tail_threshold`.
+        tail_model : {'censored', 'exceedances'}, optional
+            How a fit to the tail treats the other values:
+
+            - 'censored' (default): a censored fit to the full sample. The values in the tail are fitted, and the
+              values outside it count only by their number, as values at or below the threshold value u, the largest
+              of them. The distribution describes the full sample. Only with ``lse`` and ``mle``, see :func:`lse`
+              and :func:`mle`; the moment methods have no form for censored samples [1, p. 1].
+            - 'exceedances': the values above u are fitted as a complete sample of their own, with any method. The
+              distribution is truncated at u and describes only those values.
+
+            All values are known in both: the values outside the tail are kept out of the fit by value by choice, so
+            that they don't affect the shape of the fitted tail. Censored and truncated samples are described in
+            [7], fits to threshold exceedances in [8, ch. 4], and [8, sec. 7.6] compares the two likelihoods; see
+            the references of :class:`Weibull`.
 
         Returns
         -------
         Weibull
-            Weibull class instance
+            Weibull class instance. It keeps the full sample as `data`, also after a fit to the exceedances, and the
+            fit settings in :attr:`fit_info`.
+
+        Raises
+        ------
+        ValueError
+            If an option is invalid or the options can't be combined, or the fit fails.
+        TypeError
+            If `loc` or `tail` is not a number.
 
         See Also
         --------
-        Weibull.fromsignal
+        Weibull.fromsignal, qats.stats.empirical.tail_threshold
 
         Examples
         --------
@@ -353,42 +427,72 @@ class Weibull(object):
         >>> from qats.stats.weibull import Weibull
         >>> weib = Weibull.fit(data, method="msm")
 
-        Fit the scale and shape parameters to the exceedances of a threshold `u`, with the location parameter at the
-        threshold:
-
-        >>> weib = Weibull.fit(data[data > u], method="mle", loc=u)
-
         Fit the largest 13% of the sample by censored maximum likelihood:
 
         >>> weib = Weibull.fit(data, method="mle", tail=0.13)
 
+        Fit the scale and shape parameters to the exceedances of the threshold value u of the 13% largest values,
+        with the location parameter at u:
+
+        >>> from qats.stats.empirical import tail_threshold
+        >>> u = tail_threshold(data, 0.13)
+        >>> weib = Weibull.fit(data, method="mle", tail=0.13, tail_model="exceedances", loc=u)
+
         """
-        options = {"msm": msm, "lse": lse, "mle": mle, "pwm": pwm, "pwm2": pwm2}
+        if not isinstance(method, str) or method.lower() not in _FIT_FUNCTIONS:
+            raise QatsValueError("Method must be either %s" % (" or ".join(_FIT_FUNCTIONS)))
         method = method.lower()
-        if method not in options.keys():
-            raise QatsValueError("Method must be either %s" % (" or ".join(options.keys())))
-        if tail is not None and method not in ("lse", "mle"):
-            raise QatsValueError(f"A tail fit is only available with the methods lse and mle, not {method}")
+        if loc is not None and (isinstance(loc, bool) or not isinstance(loc, numbers.Real)):
+            raise QatsTypeError(f"The location must be a number or None, got {type(loc).__name__}")
+        if tail is not None:
+            _check_tail(tail)
+        _check_tail_model(tail_model, tail)
+        exceedances = tail is not None and tail_model == "exceedances"
+        if tail is not None and not exceedances and method not in ("lse", "mle"):
+            raise QatsValueError(
+                f"A tail fit is only available with the methods lse and mle, not {method}. Or fit the exceedances "
+                f"with tail_model='exceedances'."
+            )
 
         data = np.array(data)  # ensure numpy array
 
+        # values fitted: all, or the exceedances of the threshold value u (a complete sample, without tail)
+        threshold = tail_threshold(data, tail) if tail is not None else None
+        sample = data
+        fit_tail = tail
+        if exceedances:
+            fit_tail = None
+            if threshold is not None:
+                sample = data[data > threshold]
+
         if method == "pwm2" and loc is not None:
-            loc, scale, shape = pwm(data, loc=loc)
+            loc_fit, scale, shape = pwm(sample, loc=loc)
         elif method == "pwm2":  # 2-parameter distribution
-            loc = 0
-            scale, shape = pwm2(data)
+            loc_fit = 0
+            scale, shape = pwm2(sample)
         else:  # 3-parameter distribution
             kwargs = dict()
             if loc is not None:
                 kwargs["loc"] = loc
-            if tail is not None:
-                kwargs["tail"] = tail
-            loc, scale, shape = options[method](data, **kwargs)
+            if fit_tail is not None:
+                kwargs["tail"] = fit_tail
+            loc_fit, scale, shape = _FIT_FUNCTIONS[method](sample, **kwargs)
 
         if verbose:
-            print("Fitted parameters:\nlocation = %5.3g\nscale = %5.3g\nshape = %5.3g" % (loc, scale, shape))
+            print("Fitted parameters:\nlocation = %5.3g\nscale = %5.3g\nshape = %5.3g" % (loc_fit, scale, shape))
 
-        weib = cls(loc, scale, shape, data=data)
+        # number of values fitted: in a censored fit the values in the tail, selected by rank as in lse() and mle()
+        nfit = sample.size if fit_tail is None else data.size - _tail_count(data.size, tail)
+
+        weib = cls(loc_fit, scale, shape, data=data)
+        weib._fit_info = dict(
+            method=method,
+            tail=tail,
+            tail_model=tail_model if tail is not None else None,
+            loc_from="value" if (loc is not None or method == "pwm2") else "fitted",
+            threshold=threshold,
+            n=nfit,
+        )
         return weib
 
     @classmethod
@@ -498,14 +602,50 @@ class Weibull(object):
         )
         return p
 
-    def plot(self, filename=None):
+    def plot(self, filename=None, *, paper=None, kind=None, ax=None, view=None, is_minima=False):
         """
-        Plot data on regular scales
+        Plot the distribution and the sample it was fitted to on probability paper
+
+        .. versionchanged :: 5.6.0
+            New arguments `paper`, `kind`, `ax`, `view` and `is_minima`, and the axes are returned. The plot is
+            drawn with :func:`qats.stats.paper.probability_paper`, and shows a tail fit as :attr:`fit_info` describes
+            it: the values outside the fit faded, and the threshold value u dashed. With the default arguments the data
+            and the fitted distribution are drawn as before, but the fitted line spans the probability axis, from the
+            lowest data point to the top tick. The x axis is labelled 'Maxima' or 'Minima', and a fitted
+            distribution has the fit settings as title.
 
         Parameters
         ----------
         filename : str, optional
             Save plot as `filename`, default is to show plot on screen
+        paper : str, optional
+            Probability paper: 'linear' (cumulative probability on a linear scale), 'rayleigh', 'weibull' or
+            'gumbel'. See :mod:`qats.stats.paper`. Default 'linear'; will be 'rayleigh' from 6.0.
+        kind : str, optional
+            Plotting positions of the data, see :func:`qats.stats.empirical.empirical_cdf`. Default 'mean',
+            ``i/(n+1)``; will be 'median' from 6.0.
+        ax : matplotlib.axes.Axes, optional
+            Draw on these axes. The figure is then neither shown nor closed, only saved if `filename` is given.
+        view : {'exceedances', 'full-sample'}, optional
+            How a fit to the exceedances (``tail_model='exceedances'``) is drawn: 'exceedances' (default), as it was
+            made, with only the values above the threshold value u and the fitted distribution F_u conditional on
+            exceeding u; or 'full-sample', with the full sample and the fitted distribution solved for the full
+            sample, ``F = 1 - p (1 - F_u)``. Any other fit is drawn with the full sample. See the Notes of
+            :func:`qats.stats.paper.probability_paper` for both views and their equations.
+        is_minima : bool, optional
+            The distribution is fitted to minima multiplied by -1, as by :meth:`qats.TimeSeries.stats` with
+            ``is_minima=True``, and `data` are those values. The minima are drawn in their original units, and the x
+            axis is labelled 'Minima' instead of 'Maxima'.
+
+        Returns
+        -------
+        matplotlib.axes.Axes
+            The axes drawn on.
+
+        Raises
+        ------
+        ValueError
+            If `view` is 'exceedances' and the distribution is not a fit to the exceedances.
 
         Examples
         --------
@@ -517,35 +657,55 @@ class Weibull(object):
 
         Plot distribution and save the figure as png
 
-        >>> from qats.stats.weibull import Weibull
-        >>> distribution = Weibull(100., 15., 2.5)
         >>> distribution.plot(filename="plot.png")
 
+        Plot a fit to the 20% largest maxima on Rayleigh paper with median plotting positions, in a figure of your
+        own
+
+        >>> import matplotlib.pyplot as plt
+        >>> fig, ax = plt.subplots()
+        >>> Weibull.fit(maxima, method="mle", tail=0.2).plot(paper="rayleigh", kind="median", ax=ax)
+        >>> plt.show()
+
+        Plot a fit to the exceedances with all maxima, and the fitted distribution solved for all maxima. By default
+        it is drawn as it was made, with only the maxima above u and the fitted distribution conditional on exceeding u
+
+        >>> w = Weibull.fit(maxima, method="mle", tail=0.2, tail_model="exceedances")
+        >>> w.plot(paper="rayleigh", kind="median", view="full-sample")
+
+        Plot a fit to the 20% lowest minima, fitted as the largest of the minima multiplied by -1
+
+        >>> Weibull.fit(-minima, method="lse", tail=0.2).plot(paper="rayleigh", kind="median", is_minima=True)
+
         """
-        plt.figure()
-
-        # plot data if that exist
-        if self.data is not None:
-            plt.plot(np.sort(self.data), self.ecdf, "ko", label="Data")
-
-        # plot fitted/specified distribution
-        y = np.linspace(0.001, 0.9999, 1000)
-        x = self.invcdf(p=y)
-        plt.plot(x, y, "-r", label="Fitted")
-        plt.xlabel("X")
-        plt.ylabel("Cumulative probability")
-        plt.legend(loc="upper left")
-        plt.grid(True)
-
-        # show figure
-        if filename is not None:
-            plt.savefig(filename)
-        else:
-            plt.show()
+        kind = "mean" if kind is None else kind
+        title = None
+        info = self._fit_info
+        if info is not None:
+            # the fit settings, as described in the GUI
+            loc = None
+            if info["loc_from"] == "value":
+                loc = "threshold" if info["threshold"] is not None and self.loc == info["threshold"] else self.loc
+            fit = dict(method=info["method"], tail=info["tail"], tail_model=info["tail_model"] or "censored", loc=loc)
+            title = _fit_description(fit, kind, minima=is_minima)
+        return _plot_distribution(
+            self,
+            filename,
+            "linear" if paper is None else paper,
+            kind,
+            ax,
+            view=view,
+            is_minima=is_minima,
+            xlabel="Minima" if is_minima else "Maxima",
+            title=title,
+        )
 
     def plot_linear(self, filename=None):
         """
         Plot data on Weibull paper (linearized scales))
+
+        .. deprecated :: 5.6.0
+            Use :meth:`Weibull.plot` with ``paper="weibull"`` instead. ``plot_linear`` will be removed in 6.0.
 
         .. versionchanged :: 5.6.0
             The coordinates come from :func:`qats.stats.paper.paper_coordinates`, and data at or below the location
@@ -575,6 +735,12 @@ class Weibull(object):
         1. `Continuous univariate distributions, Volume 1`, N.L.Johnson, S.Kotz and N.Balakrishnan, 1994, \
             John Wiley and sons inc.
         """
+        warn_deprecated(
+            "qats.stats.weibull.Weibull.plot_linear()",
+            "5.6.0",
+            "6.0.0",
+            alternative="Weibull.plot(paper='weibull', kind='mean')",
+        )
         plt.figure()
 
         # plot data if that exists, except values at or below the location parameter
@@ -750,11 +916,15 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     Notes
     -----
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
+
+    A fit to the tail is a censored fit to the full sample: the values in the tail keep their plotting positions in
+    the full sample, and the other values count only by their number, which sets those positions. The fitted
+    distribution describes the full sample.
     """
     x = np.sort(x)  # sorted dataset
     f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf, i/(n+1)
     weights = np.ones(np.shape(x))  # by default include all data points
-    threshold = _tail_threshold(f, threshold=threshold, tail=tail)
+    threshold = _tail_level(f, threshold=threshold, tail=tail)
     if threshold is not None:
         # exclude data points below threshold (fit only to the tail)
         weights[f < threshold] = 0.0
@@ -896,7 +1066,7 @@ def mle(x, tail: float = None, loc: float = None):
     z = x  # fitted values
     if tail is not None:
         f = empirical_cdf(x.size, kind="mean")
-        threshold = _tail_threshold(f, tail=tail)
+        threshold = _tail_level(f, tail=tail)
         r = int(np.count_nonzero(f < threshold))
         if r > 0:
             z = np.sort(x)
@@ -1065,6 +1235,10 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
     """
     Plot data sample versus empirical and fitted cumulative distribution function on linearized Weibull scales
 
+    .. deprecated :: 5.6.0
+        Use ``Weibull(loc, scale, shape, data=x).plot(paper="weibull")`` instead, see :meth:`Weibull.plot`.
+        ``plot_fit`` will be removed in 6.0.
+
     Parameters
     ----------
     x : array_like
@@ -1075,6 +1249,12 @@ def plot_fit(x: np.ndarray, params: tuple, path: str = None):
         Save figure to file instead of displaying it.
 
     """
+    warn_deprecated(
+        "qats.stats.weibull.plot_fit()",
+        "5.6.0",
+        "6.0.0",
+        alternative="Weibull(loc, scale, shape, data=x).plot(paper='weibull', kind='mean')",
+    )
     # unpack distribution parameters
     a, b, c = params
 
@@ -1302,7 +1482,7 @@ def _fit_description(fit, plotting_positions, minima=False):
     return f"Weibull fit: {', '.join(parts)}; {plotting_positions} plotting positions"
 
 
-def _tail_threshold(f, threshold=None, tail=None):
+def _tail_level(f, threshold=None, tail=None):
     """
     Level of the empirical cdf `f` at and above which values are fitted, from either `threshold` (that level) or
     `tail` (the fraction of the largest values, the level is ``1 - tail``). None if neither is given.
@@ -1310,8 +1490,7 @@ def _tail_threshold(f, threshold=None, tail=None):
     if threshold is not None and tail is not None:
         raise QatsValueError("Give either tail or threshold, not both")
     if tail is not None:
-        if not 0.0 < tail <= 1.0:
-            raise QatsValueError(f"The tail must be larger than 0 and at most 1, got {tail}")
+        _check_tail(tail)
         threshold = 1.0 - tail
     elif threshold is None:
         return None
@@ -1373,3 +1552,8 @@ def _shape_root(f, statistic, value):
         raise QatsValueError(
             f"The msm fit failed, no shape parameter between 0.1 and 1000 matches the sample {statistic} ({value:g})"
         ) from err
+
+
+# fit functions of Weibull.fit() by method, defined once for the library: TimeSeries.fit_weibull() and stats() offer the
+# same methods
+_FIT_FUNCTIONS = {"msm": msm, "lse": lse, "mle": mle, "pwm": pwm, "pwm2": pwm2}
