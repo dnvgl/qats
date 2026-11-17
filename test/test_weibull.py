@@ -10,7 +10,7 @@ from scipy.special import gamma
 
 from qats import TsDB
 from qats._validation import QatsTypeError, QatsValueError
-from qats.stats.empirical import empirical_cdf
+from qats.stats.empirical import empirical_cdf, tail_threshold
 from qats.stats.paper import probability_paper
 from qats.stats.weibull import Weibull, lse, mle, msm, plot_fit, pwm, pwm2, weibull2gumbel
 
@@ -691,8 +691,9 @@ class WeibullPlotTestCases(unittest.TestCase):
         np.testing.assert_allclose(data.get_ydata(), empirical_cdf(self.x.size, kind="mean"), rtol=1e-14)
         np.testing.assert_allclose(line.get_ydata(), w.cdf(line.get_xdata()), rtol=1e-9, atol=1e-12)
         self.assertEqual(dashed, [])
-        self.assertEqual(ax.get_xlabel(), "X")
+        self.assertEqual(ax.get_xlabel(), "Maxima")
         self.assertEqual(ax.get_ylabel(), "Cumulative probability")
+        self.assertEqual(ax.get_title(), "Weibull fit: msm, all maxima, location fitted; mean plotting positions")
 
     def test_ax(self):
         ax = self.axes()
@@ -791,6 +792,61 @@ class WeibullPlotTestCases(unittest.TestCase):
         with self.assertRaises(ValueError):
             Weibull.fit(self.x, method="msm").plot(ax=self.axes(), view="tail")
 
+    def test_title(self):
+        # the fit settings, as in the GUI
+        u = tail_threshold(self.x, 0.2)
+        for w, expected in (
+            (
+                Weibull.fit(self.x, method="lse", tail=0.2),
+                "Weibull fit: lse, the 20 % largest maxima, censored, location fitted; median plotting positions",
+            ),
+            (
+                Weibull.fit(self.x, method="mle", tail=0.2, tail_model="exceedances", loc=u),
+                "Weibull fit: mle, the 20 % largest maxima, exceedances, location at u; median plotting positions",
+            ),
+            (
+                Weibull.fit(self.x, method="mle", loc=100.0),
+                "Weibull fit: mle, all maxima, location 100; median plotting positions",
+            ),
+        ):
+            with self.subTest(expected=expected):
+                ax = w.plot(paper="rayleigh", plotting_positions="median", ax=self.axes())
+                self.assertEqual(ax.get_title(), expected)
+        self.assertEqual(Weibull(1.0, 2.0, 1.5).plot(ax=self.axes()).get_title(), "")  # not fitted
+
+    def test_minima(self):
+        # a fit to the minima multiplied by -1, drawn in the original units as probability_paper draws it
+        minima = -self.x
+        for kwargs, view, ylabel in (
+            (dict(method="lse", tail=0.2), None, "Cumulative probability"),
+            (dict(method="msm", tail=0.2, tail_model="exceedances"), None, "Cumulative probability given X < u"),
+            (dict(method="msm", tail=0.2, tail_model="exceedances"), "full-sample", "Cumulative probability"),
+        ):
+            with self.subTest(view=view, **kwargs):
+                w = Weibull.fit(-minima, **kwargs)
+                ax = w.plot(paper="rayleigh", plotting_positions="median", ax=self.axes(), view=view, is_minima=True)
+                p = probability_paper(
+                    minima,
+                    w,
+                    paper="rayleigh",
+                    plotting_positions="median",
+                    tail=0.2,
+                    tail_model=kwargs.get("tail_model", "censored"),
+                    view=view,
+                    is_minima=True,
+                )
+                points, (line,), (u,) = self.lines(ax)
+                np.testing.assert_array_equal(points[0].get_xdata(), p.x[p.fitted])
+                np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+                self.assertEqual([t.get_text() for t in ax.get_xticklabels()], p.xticklabels)
+                self.assertEqual(ax.get_xlabel(), "Minima")
+                self.assertEqual(ax.get_ylabel(), ylabel)
+                self.assertIn("the 20 % lowest minima", ax.get_title())
+                # u in the original units in the legend, at the threshold value of the minima multiplied by -1
+                self.assertEqual(u.get_xdata()[0], w.fit_info["threshold"])
+                labels = [t.get_text() for t in ax.get_legend().get_texts()]
+                self.assertIn(f"u = {-w.fit_info['threshold']:.5g}", labels)
+
     def test_no_data(self):
         w = Weibull(1.0, 2.0, 1.5)
         ax = w.plot(ax=self.axes())
@@ -799,6 +855,39 @@ class WeibullPlotTestCases(unittest.TestCase):
         np.testing.assert_allclose(line.get_ydata(), w.cdf(line.get_xdata()), rtol=1e-9, atol=1e-12)
         self.assertGreaterEqual(line.get_ydata().min(), 0.0)
         self.assertLess(line.get_ydata().max(), 1.0)
+
+
+class WeibullFitDescriptionTestCases(unittest.TestCase):
+    """The one-line description of a Weibull fit used in plot titles and the GUI."""
+
+    def test_descriptions(self):
+        from qats.stats.weibull import _fit_description
+
+        for fit, minima, expected in (
+            (
+                dict(method="pwm", tail=None, tail_model="censored", loc=None),
+                False,
+                "Weibull fit: pwm, all maxima, location fitted; median plotting positions",
+            ),
+            (
+                dict(method="lse", tail=0.2, tail_model="censored", loc="mean"),
+                True,
+                "Weibull fit: lse, the 20 % lowest minima, censored, location at the mean level; "
+                "median plotting positions",
+            ),
+            (
+                dict(method="mle", tail=0.13, tail_model="exceedances", loc="threshold"),
+                False,
+                "Weibull fit: mle, the 13 % largest maxima, exceedances, location at u; median plotting positions",
+            ),
+            (
+                dict(method="msm", tail=None, tail_model="censored", loc=-35.25),
+                True,
+                "Weibull fit: msm, all minima, location -35.25; median plotting positions",
+            ),
+        ):
+            with self.subTest(expected=expected):
+                self.assertEqual(_fit_description(fit, "median", minima=minima), expected)
 
 
 if __name__ == "__main__":
