@@ -4,6 +4,7 @@ The Weibull fit settings of the desktop application (#154): the Statistics and M
 fit, the settings dialog can't produce an invalid combination, and changed settings recalculate the shown series.
 """
 
+import itertools
 import logging
 import os
 import tempfile
@@ -13,7 +14,7 @@ import unittest.mock
 
 import numpy as np
 
-from . import requires_qt
+from . import realisations, requires_qt, riser_seeds
 from .test_reader_snapshot import DATA
 
 NAMES = ("Mooring line 4", "Mooring line 5")
@@ -84,19 +85,21 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.on_display()
         self.wait_for(lambda: set(self.table()) == set(NAMES), "the statistics table did not show the series")
 
-    def set_fit(self, fit, kind="median", view=None):
+    def set_fit(self, fit, plotting_positions="median", view=None):
         self.window.settings.update(
             weibull_method=fit.get("method", "pwm"),
             weibull_tail=fit.get("tail"),
             weibull_tail_model=fit.get("tail_model", "censored"),
             weibull_loc=fit.get("loc"),
-            plotting_positions=kind,
+            plotting_positions=plotting_positions,
         )
         if view is not None:
             self.window.settings["weibull_view"] = view
 
     def expected(self, name, fit, minima=False):
         ts = self.window.db.get(name=name)
+        # an lse fit is fitted to the plotting positions of the Maxima/Minima CDF tab
+        lse = dict(plotting_positions=self.window.plotting_positions()) if fit.get("method") == "lse" else dict()
         return ts.stats(
             twin=self.window.time_window(),
             filterargs=self.window.filter_settings(),
@@ -105,6 +108,7 @@ class TestGuiMaxima(unittest.TestCase):
             is_minima=minima,
             include_sample=True,
             **fit,
+            **lse,
         )
 
     def table(self):
@@ -120,7 +124,11 @@ class TestGuiMaxima(unittest.TestCase):
         return rows
 
     def check_same_fit(self, fit, minima=False, view="exceedances"):
-        """The table and the maxima/minima CDF plot show the library's fit with these settings."""
+        """
+        The table and the maxima/minima CDF plot show the library's statistics and fit, for the window's time window,
+        filter and plotting positions and these fit settings and view.
+        """
+        from qats.app.gui import STATS_ORDER
         from qats.stats.paper import probability_paper
         from qats.stats.weibull import Weibull
 
@@ -131,13 +139,15 @@ class TestGuiMaxima(unittest.TestCase):
         self.assertEqual(len(lines), 3 * len(NAMES))
         for i, name in enumerate(table):
             s = self.expected(name, fit, minima=minima)
-            for key in ("wloc", "wscale", "wshape", "wthreshold", "wn", "gn", "p_90.00"):
+            # every column, as the table formats it
+            for key in STATS_ORDER[1:]:
                 value = s[key]
                 self.assertEqual(table[name][key], "" if value is None else f"{value:12.5g}", (name, key))
 
             p = probability_paper(
                 s["sample"],
                 Weibull(s["wloc"], s["wscale"], s["wshape"]),
+                plotting_positions=self.window.plotting_positions(),
                 tail=fit.get("tail"),
                 tail_model=fit.get("tail_model", "censored"),
                 view=view if fit.get("tail_model") == "exceedances" else None,
@@ -147,6 +157,7 @@ class TestGuiMaxima(unittest.TestCase):
             np.testing.assert_array_equal(fitted.get_xdata(), p.x[p.fitted])
             np.testing.assert_array_equal(fitted.get_ydata(), p.y[p.fitted])
             np.testing.assert_array_equal(other.get_xdata(), p.x[~p.fitted])
+            np.testing.assert_array_equal(other.get_ydata(), p.y[~p.fitted])
             np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
             np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
 
@@ -167,6 +178,49 @@ class TestGuiMaxima(unittest.TestCase):
                 full = dict(dict(method="pwm", tail=None, tail_model="censored", loc=None), **fit)
                 self.assertEqual(self.window.stats_fit_label.text(), fit_description(full, "median"))
                 self.assertEqual(self.window.weibull_axes.get_title(), fit_description(full, "median"))
+
+    def set_time_window_and_filter(self, twin, lowpass):
+        self.window.from_time.setValue(twin[0])
+        self.window.to_time.setValue(twin[1])
+        self.window.lowpass.setChecked(True)
+        self.window.lowpass_f.setValue(lowpass)
+        self.assertEqual(self.window.time_window(), twin)
+        self.assertEqual(self.window.filter_settings(), ("lp", lowpass))
+
+    def test_time_window_and_filter(self):
+        # the statistics, maxima/minima CDF and cycle distribution of the cropped and filtered series, with fit
+        # settings and plotting positions that aren't the defaults
+        from qats.fatigue.rainflow import rebin
+
+        self.set_time_window_and_filter((500.0, 6000.0), 0.1)
+        self.window.settings["rfc_nbins"] = 32
+        for fit, minima, plotting_positions in (
+            (dict(method="lse", tail=0.2), False, "gringorten"),
+            (dict(method="mle", tail=0.3, loc="mean"), True, "mean"),
+            (dict(method="msm", tail=0.2, tail_model="exceedances", loc="threshold"), False, "beard"),
+        ):
+            with self.subTest(**fit, minima=minima, plotting_positions=plotting_positions):
+                self.set_fit(fit, plotting_positions=plotting_positions)
+                self.window.minima.setChecked(minima)
+                self.window.maxima.setChecked(not minima)
+                self.display()
+                self.check_same_fit(fit, minima=minima)
+                self.assertIn(f"{plotting_positions} plotting positions", self.window.weibull_axes.get_title())
+
+                # the cycle bars: the library's rainflow count of each series, in 32 equal bins
+                bars = self.window.cycles_axes.patches
+                self.assertEqual(len(bars), 32 * len(NAMES))
+                for i, name in enumerate(NAMES):
+                    cycles = self.window.db.get(name=name).rfc(twin=(500.0, 6000.0), filterargs=("lp", 0.1))
+                    expected = rebin(cycles, binby="range", n=32)
+                    series = bars[i * 32 : (i + 1) * 32]
+                    np.testing.assert_allclose(
+                        [b.get_x() + 0.5 * b.get_width() for b in series], expected[:, 0], rtol=1e-12
+                    )
+                    np.testing.assert_array_equal([b.get_height() for b in series], expected[:, 2])
+                    np.testing.assert_allclose(
+                        [b.get_width() for b in series], np.full(32, cycles[:, 0].max() / 32), rtol=1e-12
+                    )
 
     def test_minima(self):
         fit = dict(method="msm", tail=0.2, tail_model="exceedances")
@@ -210,12 +264,40 @@ class TestGuiMaxima(unittest.TestCase):
         self.display()
         before = self.table()[NAMES[0]]["wloc"]
         fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
-        result = (False, 20000, 256, 2, fit, "median", "exceedances", True)
+        result = (
+            False,
+            20000,
+            256,
+            2,
+            fit,
+            "median",
+            "exceedances",
+            dict(method="pwm", plotting_positions="median"),
+            True,
+        )
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
         self.wait_for(lambda: set(self.table()) == set(NAMES), "the statistics were not recalculated")
         self.assertNotEqual(self.table()[NAMES[0]]["wloc"], before)
         self.check_same_fit(fit)
+
+    def test_gumbel_settings(self):
+        # stored on OK, used by the next Extremes CDF tab, and the shown statistics are not recalculated
+        from qats.app.gui import SettingsDialog
+
+        self.display()
+        gumbel = dict(method="mle", plotting_positions="gringorten")
+        w = self.window
+        result = (False, 20000, 256, 2, w.weibull_fit(), w.plotting_positions(), w.weibull_view(), gumbel, True)
+        with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
+            with unittest.mock.patch.object(self.window, "start_times_series_processing_thread") as recalculate:
+                self.window.on_open_settings()
+        recalculate.assert_not_called()
+        self.assertEqual(self.window.settings["gumbel_method"], "mle")
+        self.assertEqual(self.window.settings["gumbel_plotting_positions"], "gringorten")
+        self.assertEqual(self.window.gumbel_fit(), gumbel)
+        # independent of the plotting positions of the Maxima/Minima CDF tab
+        self.assertEqual(self.window.plotting_positions(), "median")
 
     def test_cancelled_settings_keep_table(self):
         from qats.app.gui import SettingsDialog
@@ -224,12 +306,26 @@ class TestGuiMaxima(unittest.TestCase):
         before = self.table()
         fit = dict(method="msm", tail=0.2, tail_model="exceedances", loc=None)
         with unittest.mock.patch.object(
-            SettingsDialog, "settings", return_value=(False, 20000, 256, 2, fit, "median", "full-sample", False)
+            SettingsDialog,
+            "settings",
+            return_value=(
+                False,
+                20000,
+                256,
+                2,
+                fit,
+                "median",
+                "full-sample",
+                dict(method="mle", plotting_positions="gringorten"),
+                False,
+            ),
         ):
             self.window.on_open_settings()
         self.settle()
         self.assertEqual(self.table(), before)
         self.assertNotIn("weibull_method", self.window.settings)
+        self.assertNotIn("gumbel_method", self.window.settings)
+        self.assertNotIn("gumbel_plotting_positions", self.window.settings)
         self.assertNotIn("weibull_view", self.window.settings)
 
     def test_views(self):
@@ -275,7 +371,17 @@ class TestGuiMaxima(unittest.TestCase):
         self.set_fit(fit)
         self.display()
         self.check_same_fit(fit, view="exceedances")
-        result = (False, 20000, 256, 2, fit, "median", "full-sample", True)
+        result = (
+            False,
+            20000,
+            256,
+            2,
+            fit,
+            "median",
+            "full-sample",
+            dict(method="pwm", plotting_positions="median"),
+            True,
+        )
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
         self.wait_for(lambda: set(self.table()) == set(NAMES), "the statistics were not recalculated")
@@ -301,6 +407,141 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.settings = dict(weibull_view="conditional")
         with self.assertLogs(level="WARNING"):
             self.assertEqual(self.window.weibull_view(), "exceedances")
+        for settings, expected in (
+            (dict(gumbel_method="gumbel"), dict(method="pwm", plotting_positions="median")),
+            (
+                dict(gumbel_method="PWM", gumbel_plotting_positions="beard"),
+                dict(method="pwm", plotting_positions="beard"),
+            ),
+            (
+                dict(gumbel_method=None, gumbel_plotting_positions="mle"),
+                dict(method="pwm", plotting_positions="median"),
+            ),
+            (
+                dict(gumbel_method="lse", gumbel_plotting_positions="hazen"),
+                dict(method="lse", plotting_positions="median"),
+            ),
+        ):
+            with self.subTest(**settings):
+                self.window.settings = dict(settings)
+                with self.assertLogs(level="WARNING"):
+                    self.assertEqual(self.window.gumbel_fit(), expected)
+        self.window.settings = dict()
+        self.assertEqual(self.window.gumbel_fit(), dict(method="pwm", plotting_positions="median"))
+
+    def container(self):
+        return {name: self.window.db.get(name=name) for name in NAMES}
+
+    def extremes_axes(self):
+        """Axes of the last Extremes CDF tab."""
+        from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
+
+        tabs = self.window.tabs
+        index = max(i for i in range(tabs.count()) if tabs.tabText(i) == "Extremes CDF")
+        return tabs.widget(index).findChild(FigureCanvasQTAgg).figure.axes[0]
+
+    def test_extremes_cdf(self):
+        # the tab follows the maxima/minima selection and its own Gumbel fit method and plotting positions, and draws
+        # what the library returns, for the extremes of 12 generated realisations of the same process and of 20
+        # realisations of riser top tension from simulations
+        from qats.app.funcs import calculate_gumbel_fit
+
+        self.window.settings["plotting_positions"] = "symmetrical"  # of the Maxima/Minima CDF tab, not used here
+        self.window.settings["gumbel_plotting_positions"] = "mean"
+        for (sample, container), (minima, method) in itertools.product(
+            (("generated", realisations()), ("riser", riser_seeds())),
+            ((False, "pwm"), (True, "pwm"), (False, "mle"), (True, "lse")),
+        ):
+            with self.subTest(sample=sample, minima=minima, method=method):
+                self.window.settings["gumbel_method"] = method
+                self.window.minima.setChecked(minima)
+                self.window.maxima.setChecked(not minima)
+                self.window.start_gumbel_fit_thread(container)
+                self.settle()
+                axes = self.extremes_axes()
+                g = calculate_gumbel_fit(
+                    container,
+                    self.window.time_window(),
+                    self.window.filter_settings(),
+                    minima=minima,
+                    plotting_positions="mean",
+                    method=method,
+                )
+                self.assertIn(f"Gumbel fit: {method},", axes.get_title())
+                p = g["paper"]
+                points, line = axes.get_lines()
+                np.testing.assert_array_equal(points.get_xdata(), p.x)
+                np.testing.assert_array_equal(points.get_ydata(), p.y)
+                np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+                np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
+                self.assertEqual(points.get_color(), line.get_color())
+                np.testing.assert_array_equal(axes.get_yticks(), p.yticks)
+                self.assertEqual([t.get_text() for t in axes.get_xticklabels()], p.xticklabels)
+                self.assertIn("minima" if minima else "maxima", axes.get_title())
+                self.assertIn("mean plotting positions", axes.get_title())
+                self.assertGreater(p.fit_x.size, 0)
+
+    def test_extremes_cdf_time_window_and_filter(self):
+        # the library's fit to the extremes of the cropped and filtered series. The low-pass filter removes the upper
+        # half of the generated process's frequency band (0.08 to 0.12 Hz), and the wave-frequency peak of the riser
+        # tension (about 0.13 Hz), so it changes the extremes.
+        from qats.stats.gumbel import Gumbel
+        from qats.stats.paper import probability_paper
+
+        self.set_time_window_and_filter((1000.0, 9000.0), 0.1)
+        self.window.settings.update(gumbel_method="lse", gumbel_plotting_positions="gringorten")
+        for (sample, container), minima in itertools.product(
+            (("generated", realisations()), ("riser", riser_seeds())), (False, True)
+        ):
+            with self.subTest(sample=sample, minima=minima):
+                self.window.minima.setChecked(minima)
+                self.window.maxima.setChecked(not minima)
+                self.window.start_gumbel_fit_thread(container)
+                self.settle()
+                extremes = list()
+                for ts in container.values():
+                    _, x = ts.get(twin=(1000.0, 9000.0), filterargs=("lp", 0.1))
+                    extremes.append(x.min() if minima else x.max())
+                extremes = np.sort(extremes)
+                fitted = Gumbel.fit(-extremes if minima else extremes, method="lse", plotting_positions="gringorten")
+                p = probability_paper(
+                    extremes, fitted, paper="gumbel", plotting_positions="gringorten", is_minima=minima
+                )
+                points, line = self.extremes_axes().get_lines()
+                np.testing.assert_array_equal(points.get_xdata(), p.x)
+                np.testing.assert_array_equal(points.get_ydata(), p.y)
+                np.testing.assert_array_equal(line.get_xdata(), p.fit_x)
+                np.testing.assert_array_equal(line.get_ydata(), p.fit_y)
+                unfiltered = np.sort([ts.x.min() if minima else ts.x.max() for ts in container.values()])
+                self.assertFalse(np.array_equal(extremes, unfiltered))
+
+    def test_extremes_cdf_failed_fit(self):
+        # the same realisation twice: equal extremes, so the Gumbel scale is zero: the points without a line
+        ts = realisations()["seed 1"]
+        with self.assertLogs(level="WARNING") as logs:
+            self.window.start_gumbel_fit_thread({"a": ts, "b": ts})
+            self.settle()
+        self.assertTrue(any("could not be fitted" in m for m in logs.output))
+        points, line = self.extremes_axes().get_lines()
+        self.assertEqual(points.get_xdata().size, 2)
+        self.assertEqual(line.get_xdata().size, 0)
+
+    def test_cycle_distribution(self):
+        # the bars are the library's cycle counts, also with a single bin
+        from qats.app.funcs import calculate_rfc
+
+        for nbins in (1, 16):
+            with self.subTest(nbins=nbins):
+                rfc = calculate_rfc(self.container(), None, None, nbins)
+                self.window.plot_rfc(rfc)
+                bars = self.window.cycles_axes.patches
+                self.assertEqual(len(bars), nbins * len(NAMES))
+                for i, name in enumerate(NAMES):
+                    r, c, w = rfc[name]
+                    series = bars[i * nbins : (i + 1) * nbins]
+                    np.testing.assert_allclose([b.get_x() + 0.5 * b.get_width() for b in series], r, rtol=1e-12)
+                    np.testing.assert_array_equal([b.get_height() for b in series], c)
+                    np.testing.assert_allclose([b.get_width() for b in series], w, rtol=1e-12)
 
 
 @requires_qt
@@ -308,13 +549,17 @@ class TestGuiOptionsMatchLibrary(unittest.TestCase):
     """The fit options the GUI offers are the library's, so they can't drift apart."""
 
     def test_options(self):
-        from qats.app.gui import PLOTTING_POSITIONS, TAIL_MODELS, WEIBULL_METHODS
+        from qats.app.gui import GUMBEL_DEFAULTS, GUMBEL_METHODS, PLOTTING_POSITIONS, TAIL_MODELS, WEIBULL_METHODS
         from qats.stats.empirical import _PLOTTING_POSITIONS, _TAIL_MODELS
+        from qats.stats.gumbel import _FIT_METHODS as GUMBEL_FIT_METHODS
         from qats.stats.weibull import _FIT_FUNCTIONS
 
         self.assertEqual(set(TAIL_MODELS), set(_TAIL_MODELS))
         self.assertEqual(set(PLOTTING_POSITIONS), set(_PLOTTING_POSITIONS))
         self.assertLessEqual(set(WEIBULL_METHODS), set(_FIT_FUNCTIONS))
+        self.assertEqual(set(GUMBEL_METHODS), set(GUMBEL_FIT_METHODS))
+        self.assertIn(GUMBEL_DEFAULTS["method"], GUMBEL_METHODS)
+        self.assertIn(GUMBEL_DEFAULTS["plotting_positions"], PLOTTING_POSITIONS)
 
 
 @requires_qt
@@ -326,10 +571,10 @@ class TestSettingsDialogFit(unittest.TestCase):
 
         cls.app = QApplication.instance() or QApplication([])
 
-    def dialog(self, fit=None, kind="median", **kwargs):
+    def dialog(self, fit=None, plotting_positions="median", **kwargs):
         from qats.app.gui import SettingsDialog
 
-        d = SettingsDialog(False, 512, 50, 1, fit=fit, kind=kind, **kwargs)
+        d = SettingsDialog(False, 512, 50, 1, fit=fit, plotting_positions=plotting_positions, **kwargs)
         self.addCleanup(d.close)
         return d
 
@@ -341,11 +586,30 @@ class TestSettingsDialogFit(unittest.TestCase):
         d = self.dialog()
         self.assertEqual(d.get_fit(), dict(method="pwm", tail=None, tail_model="censored", loc=None))
         self.assertEqual(d.get_plotting_positions(), "median")
+        self.assertEqual(d.get_gumbel(), dict(method="pwm", plotting_positions="median"))
         self.assertEqual(d.get_view(), "exceedances")
         self.assertFalse(d.viewcombo.isEnabled())
         self.assertFalse(d.tailspinbox.isEnabled())
         self.assertFalse(d.tailmodelcombo.isEnabled())
         self.assertFalse(d.locspinbox.isEnabled())
+
+    def test_gumbel_round_trip(self):
+        from qats.app.gui import SettingsDialog
+
+        for gumbel in (
+            dict(method="pwm", plotting_positions="gringorten"),
+            dict(method="msm", plotting_positions="median"),
+            dict(method="lse", plotting_positions="mean"),
+            dict(method="mle", plotting_positions="beard"),
+        ):
+            with self.subTest(**gumbel):
+                # independent of the plotting positions of the maxima/minima distribution
+                d = SettingsDialog(False, 512, 50, 1, plotting_positions="symmetrical", gumbel=gumbel)
+                self.addCleanup(d.close)
+                self.assertEqual(d.get_gumbel(), gumbel)
+                self.assertEqual(d.get_plotting_positions(), "symmetrical")
+                self.assertTrue(d.gumbelmethodcombo.isEnabled())
+                self.assertTrue(d.gumbelplottingpositionscombo.isEnabled())
 
     def test_censored_tail_disables_pwm_and_msm(self):
         d = self.dialog()
@@ -372,15 +636,15 @@ class TestSettingsDialogFit(unittest.TestCase):
     def test_round_trip(self):
         from qats.ts import _check_weibull_options
 
-        for fit, kind in (
+        for fit, plotting_positions in (
             (dict(method="msm", tail=0.15, tail_model="exceedances", loc=None), "mean"),
             (dict(method="lse", tail=0.3, tail_model="censored", loc="mean"), "gringorten"),
             (dict(method="mle", tail=None, tail_model="censored", loc=120.5), "beard"),
         ):
             with self.subTest(**fit):
-                d = self.dialog(fit=fit, kind=kind)
+                d = self.dialog(fit=fit, plotting_positions=plotting_positions)
                 self.assertEqual(d.get_fit(), fit)
-                self.assertEqual(d.get_plotting_positions(), kind)
+                self.assertEqual(d.get_plotting_positions(), plotting_positions)
                 _check_weibull_options(**d.get_fit())
 
     def test_view_only_for_exceedances(self):

@@ -46,7 +46,7 @@ class PaperCoordinatesTestCases(unittest.TestCase):
         np.testing.assert_allclose(p.y, -np.log(-np.log(self.f)), rtol=1e-14)
 
     def test_mean_ranks(self):
-        p = probability_paper(self.x, kind="mean")
+        p = probability_paper(self.x, plotting_positions="mean")
         np.testing.assert_allclose(p.y, np.sqrt(-np.log(1.0 - np.array([0.25, 0.5, 0.75]))), rtol=1e-14)
 
     def test_unsorted_sample(self):
@@ -181,7 +181,9 @@ class PaperTailTestCases(unittest.TestCase):
     def test_exceedances_view_positions_and_line(self):
         # hand calculation: mean ranks j/(m+1), j = 1..4, and the line is F_u itself, not 1 - p (1 - F_u)
         w = Weibull(3.0, 2.0, 1.5)
-        p = probability_paper(self.x, w, kind="mean", tail=0.5, tail_model="exceedances", view="exceedances")
+        p = probability_paper(
+            self.x, w, plotting_positions="mean", tail=0.5, tail_model="exceedances", view="exceedances"
+        )
         np.testing.assert_array_equal(p.sample, [4.0, 5.0, 6.0, 7.0])
         np.testing.assert_allclose(p.y, np.sqrt(-np.log(1.0 - np.arange(1, 5) / 5.0)), rtol=1e-12)
         np.testing.assert_allclose(p.fit_y, np.sqrt(-np.log(1.0 - w.cdf(p.fit_x))), rtol=1e-10)
@@ -190,7 +192,7 @@ class PaperTailTestCases(unittest.TestCase):
         # with mean ranks, 1 - F of an exceedance in the full-sample view over its conditional position mapped to the
         # full sample, p (1 - F_u), is n (m + 1) / [m (n + 1)] = 10 * 5 / (4 * 11) = 50 / 44 for every exceedance
         w = Weibull(3.0, 2.0, 1.5)
-        kwargs = dict(kind="mean", tail=0.5, tail_model="exceedances")
+        kwargs = dict(plotting_positions="mean", tail=0.5, tail_model="exceedances")
         full = probability_paper(self.x, w, view="full-sample", **kwargs)
         cond = probability_paper(self.x, w, view="exceedances", **kwargs)
         q_full = np.exp(-(full.y[full.fitted] ** 2))  # 1 - F on Rayleigh paper
@@ -422,7 +424,7 @@ class PaperValidationTestCases(unittest.TestCase):
         w = Weibull(0.0, 2.0, 1.5)
         cases = [
             (QatsValueError, dict(paper="normal")),
-            (QatsValueError, dict(kind="weibull")),
+            (QatsValueError, dict(plotting_positions="weibull")),
             (QatsValueError, dict(tail=0.0)),
             (QatsValueError, dict(tail=1.5)),
             (QatsTypeError, dict(tail="0.2")),

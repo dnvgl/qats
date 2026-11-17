@@ -44,3 +44,42 @@ the MIT License, a copy of which is in [LICENSE-dnv-bladed-results](LICENSE-dnv-
 | `powprod.%04`, `powprod.$04` | `powprod/` | Control variables: 9 series, 1,501 time steps |
 | `estop.%15`, `estop.$15` | `estop/` | Blade 1 loads at 2 stations: 8 variables × 2 stations, 624 time steps |
 | `lin1.%31`, `lin1.$31` | `lin1/` | Blade 1 absolute motion against wind speed: not a time series |
+
+## Realisations of one process
+
+`riser_tension_seeds.ts` and `riser_tension_seeds.key` hold 20 realisations of one stationary process: the effective
+tension at the top (end A) of a catenary riser in irregular waves, from 20 simulations of the same sea state with
+different wave seeds. They serve the extreme value tests and examples, where the maxima of several realisations are
+fitted with a Gumbel distribution.
+
+The QATS maintainers generated them with OrcaFlex 11.6b from the example model A01 Catenary riser, which Orcina
+distributes openly with OrcaFlex. The results are published with this repository under its licence.
+
+- Sea state: Hs = 7 m, Tz = 8 s (Tp = 11.26 s), surface current 1 m/s
+- Duration 10,800 s (3 hours) per seed, after the build-up period was removed; time step 0.1 s (108,001 points)
+- Tension in kN, series `seed01` to `seed20` in the order of the simulation cases
+- The largest maxima are short, snatch-like peaks after near-slack, resolved by 2–3 time steps. A coarser time step
+  would lower them noticeably, so the file keeps the logging time step of the simulations.
+
+| Series | Wave seed |
+| --- | --- |
+| `seed01` | -1635867623 |
+| `seed02` | -775308176 |
+| `seed03` | 10805082 |
+| `seed04` | 1938501628 |
+| `seed05` | 50778171 |
+| `seed06` | 632211351 |
+| `seed07` | 1546190736 |
+| `seed08` | 1945408073 |
+| `seed09` | -1706661756 |
+| `seed10` | 1649781963 |
+| `seed11` | -1188483806 |
+| `seed12` | 1695683714 |
+| `seed13` | 433923357 |
+| `seed14` | 521770244 |
+| `seed15` | 242919145 |
+| `seed16` | -340956190 |
+| `seed17` | 1217079413 |
+| `seed18` | 311680655 |
+| `seed19` | 205348630 |
+| `seed20` | 1470604236 |

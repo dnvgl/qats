@@ -116,12 +116,14 @@ the sum of those.
 Tail fitting with Weibull
 *************************
 
-Fit a parametric Weibull distribution to the largest 13% of the peak sample, often called tail fitting, by a censored
-fit to all maxima and by a fit to the exceedances of the threshold value u as a sample of their own. The fitted
-distribution keeps its fit settings in :attr:`~qats.stats.weibull.Weibull.fit_info`, and
-:meth:`~qats.stats.weibull.Weibull.plot` uses them to show which maxima were fitted. A fit to the exceedances is drawn
-as fitted, with only the exceedances and the distribution conditional on exceeding u (``view="exceedances"``, the
-default), or with all maxima (``view="full-sample"``).
+Fit a Weibull distribution to the 20% largest maxima, often called tail fitting, with
+:meth:`~qats.stats.weibull.Weibull.fit`: by a censored least squares fit to all maxima, and by a maximum likelihood fit
+to the exceedances of the threshold value u as a sample of their own. The fitted distribution keeps its fit settings in
+:attr:`~qats.stats.weibull.Weibull.fit_info`, and :meth:`~qats.stats.weibull.Weibull.plot` uses them to show which
+maxima were fitted. A fit to the exceedances is drawn as fitted, with only the exceedances and the distribution
+conditional on exceeding u (``view="exceedances"``, the default), or with all maxima (``view="full-sample"``). The
+exceedances view checks the fit as it was made. The full-sample view compares it with a censored fit, and shows the
+distribution of all maxima that the extremes are derived from. The next example compares more tail fits through :meth:`~qats.TimeSeries.stats`, with the extremes derived from them.
 
 .. literalinclude:: examples/tail_fitting.py
    :language: python
@@ -132,8 +134,11 @@ default), or with all maxima (``view="full-sample"``).
     :figclass: align-center
     :target: _images/weibull_tail_fit.png
 
-    The maxima and the two tail fits on Rayleigh paper, the fit to the exceedances in both views. The maxima
-    outside the tail are faded, and u is dashed.
+    Left: the censored fit. Middle and right: the same fit to the exceedances, drawn with all maxima
+    (``view="full-sample"``) and as fitted (``view="exceedances"``). All on Rayleigh paper. The maxima outside the
+    tail are faded, and u is dashed. In the right panel the exceedances are ranked among themselves, and the
+    probability axis is conditional on exceeding u: P there is 1 - p(1 - P) on the middle panel's axis, where
+    p = 0.201 is the fraction of maxima above u.
 
 
 Weibull fits to the tail of the maxima
@@ -141,9 +146,10 @@ Weibull fits to the tail of the maxima
 
 Fit the Weibull distribution to all maxima of a time series, or only to the largest 20%, with
 :meth:`~qats.TimeSeries.stats`: censored fits to all maxima, where the smaller maxima count only by their number,
-and fits to the maxima above a threshold value as a sample of their own. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
-The Notes of :meth:`~qats.TimeSeries.stats` describe the options. The figure shows each fit on Rayleigh paper, with the
-coordinates from :func:`~qats.stats.paper.probability_paper`.
+and fits to the maxima above a threshold value as a sample of their own. The table compares the fitted parameters and
+the 3-hour extremes derived from each fit. The Notes of :meth:`~qats.TimeSeries.stats` describe the options. The figure
+shows each fit on Rayleigh paper, with the coordinates from :func:`~qats.stats.paper.probability_paper`. Pass
+``paper="weibull"`` for Weibull paper.
 
 .. literalinclude:: examples/weibull_tail_fits.py
    :language: python
@@ -154,7 +160,8 @@ coordinates from :func:`~qats.stats.paper.probability_paper`.
     :figclass: align-center
     :target: _images/weibull_tail_fits.png
 
-    The maxima and the fitted distributions on Rayleigh paper. Filled markers are the maxima used in each fit.
+    The maxima and the fitted distributions on Rayleigh paper. The maxima used in each fit are opaque, the others
+    faded. The fits to the exceedances are drawn with all maxima (``view="full-sample"``), like the other fits.
 
 
 Weibull fit with fixed location parameter
@@ -168,6 +175,51 @@ fit.
    :language: python
    :linenos:
    :lines: 1-
+
+
+.. _gumbel_realisations:
+
+Gumbel fit to the maxima of several realisations
+************************************************
+
+Simulations of the same sea state with different seeds are realisations of one stationary process, and the largest
+value of each is a sample of the extreme value distribution. The example fits Gumbel distributions to the 3-hour maxima
+of the top tension of a catenary riser from 20 simulations, by each method and with two kinds of plotting positions,
+and draws them on Gumbel paper with :func:`~qats.stats.paper.probability_paper`, the same fits and plot as the Extremes
+CDF tab of the desktop application. It compares the most probable maximum (about the 0.37 quantile) and the 0.90
+quantile with those estimated from each realisation alone, by :meth:`~qats.TimeSeries.stats` from Weibull fits to its
+global maxima.
+
+The largest tension maxima are short peaks after near-slack. A Weibull fit to all global maxima describes the bulk of
+the maxima and gives clearly lower extremes than the realisations show; fits to the tail of the maxima come closer.
+
+.. literalinclude:: examples/gumbel_realisations.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+.. code-block:: text
+
+    20 maxima of 3 hours, from 225.3 to 295.0 kN
+
+    Gumbel fit to the maxima                 loc  scale    p_37    p_90
+    pwm                                    247.7  15.26   247.8   282.0
+    msm                                    248.3  14.24   248.3   280.3
+    mle                                    247.8  15.97   247.9   283.7
+    lse, median ranks                      248.8  17.06   248.9   287.1
+    lse, Gringorten                        248.9  16.71   249.0   286.5
+
+    Per realisation: mean (min-max)                     p_37                p_90
+    Weibull, all maxima, pwm               223.7 (216.4-229.8)   242.7 (232.4-251.4)
+    Weibull, censored 20% tail, lse        239.8 (224.9-263.0)   267.5 (244.6-304.2)
+    Weibull, exceedances 20%, mle, loc u   245.5 (228.2-266.0)   278.8 (251.1-312.8)
+
+.. figure:: img/gumbel_realisations.png
+    :figclass: align-center
+    :target: _images/gumbel_realisations.png
+
+    The maxima of the 20 realisations and the fitted Gumbel distributions on Gumbel paper, with median rank plotting
+    positions.
 
 
 Units from MATLAB files

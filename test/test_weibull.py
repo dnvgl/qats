@@ -504,7 +504,11 @@ class WeibullFitTailModelTestCases(unittest.TestCase):
         for kwargs, expected in cases:
             with self.subTest(**kwargs):
                 info = Weibull.fit(self.x, **kwargs).fit_info
-                self.assertEqual(info, dict(method=kwargs["method"].lower(), **expected))
+                method = kwargs["method"].lower()
+                plotting_positions = (
+                    "mean" if method == "lse" else None
+                )  # the plotting positions of an lse fit, default mean
+                self.assertEqual(info, dict(method=method, **expected, plotting_positions=plotting_positions))
 
     def test_fit_info_not_fitted(self):
         self.assertIsNone(Weibull(1.0, 2.0, 1.5).fit_info)
@@ -548,6 +552,108 @@ class WeibullFitTailModelTestCases(unittest.TestCase):
         w = Weibull.fit(self.x, method="msm")
         z = np.sort(self.x)
         self.assertAlmostEqual(w.mse, np.mean((w.ecdf - w.cdf(z)) ** 2.0), delta=1e-15)
+
+
+class WeibullLseKindTestCases(unittest.TestCase):
+    """
+    lse() fitted to chosen plotting positions, against SciPy's least squares fit of the cdf to the same positions.
+    """
+
+    def setUp(self):
+        self.x = Weibull(66000.0, 410.0, 2.0).rnd(size=500, seed=3)
+        self.xs = np.sort(self.x)
+        self.loc = 66000.0
+        self.tail = 0.2
+        # tail: the values with mean rank i / 501 at or above 1 - tail, whatever the plotting positions
+        self.r = int(np.ceil((1.0 - self.tail) * (self.x.size + 1))) - 1
+
+    def reference(self, z, f, loc=None, p0=None):
+        """SciPy's least squares fit of the Weibull cdf to the points (z, f), with or without a fixed location."""
+        if loc is not None:
+            (scale, shape), _ = curve_fit(
+                lambda v, b, c: 1.0 - np.exp(-(((v - loc) / b) ** c)), z, f, p0=(400.0, 2.0), maxfev=10000
+            )
+            return loc, scale, shape
+        (a, b, c), _ = curve_fit(
+            lambda v, a, b, c: 1.0 - np.exp(-(np.clip((v - a) / b, 0.0, None) ** c)), z, f, p0=p0, maxfev=10000
+        )
+        return a, b, c
+
+    def test_complete_sample(self):
+        for plotting_positions in ("median", "gringorten", "symmetrical"):
+            with self.subTest(plotting_positions=plotting_positions):
+                f = empirical_cdf(self.x.size, kind=plotting_positions)
+                np.testing.assert_allclose(
+                    lse(self.x, loc=self.loc, plotting_positions=plotting_positions),
+                    self.reference(self.xs, f, self.loc),
+                    rtol=1e-6,
+                )
+                # 3 parameters: SciPy started from the result confirms it is an optimum of the same objective (the
+                # fixed-location fit above is the independent reference)
+                params = lse(self.x, plotting_positions=plotting_positions)
+                np.testing.assert_allclose(params, self.reference(self.xs, f, p0=params), rtol=1e-6)
+
+    def test_censored_tail(self):
+        # the tail is fitted to the plotting positions of the full sample
+        for plotting_positions in ("median", "gringorten"):
+            with self.subTest(plotting_positions=plotting_positions):
+                f = empirical_cdf(self.x.size, kind=plotting_positions)
+                z, y = self.xs[self.r :], f[self.r :]
+                params = lse(self.x, tail=self.tail, loc=self.loc, plotting_positions=plotting_positions)
+                np.testing.assert_allclose(params, self.reference(z, y, self.loc), rtol=1e-6)
+
+    def test_tail_selected_by_mean_rank(self):
+        # the same values are fitted whatever the plotting positions: the smallest fitted value is the one above u,
+        # so a fixed location at that value is rejected and one at u is accepted
+        u = self.xs[self.r - 1]
+        for plotting_positions in ("mean", "median", "gringorten"):
+            with (
+                self.subTest(plotting_positions=plotting_positions),
+                self.assertRaisesRegex(QatsValueError, "must be below"),
+            ):
+                lse(self.x, tail=self.tail, loc=self.xs[self.r], plotting_positions=plotting_positions)
+            with self.subTest(plotting_positions=plotting_positions):
+                lse(
+                    self.x, tail=self.tail, loc=u, plotting_positions=plotting_positions
+                )  # u is below all fitted values
+
+    def test_default_unchanged(self):
+        # the default is the mean ranks lse() always used
+        self.assertEqual(lse(self.x), lse(self.x, plotting_positions="mean"))
+        self.assertEqual(lse(self.x, tail=self.tail), lse(self.x, tail=self.tail, plotting_positions="mean"))
+        f = empirical_cdf(self.x.size, kind="mean")
+        np.testing.assert_allclose(lse(self.x, loc=self.loc), self.reference(self.xs, f, self.loc), rtol=1e-6)
+
+    def test_fit_and_fit_info(self):
+        w = Weibull.fit(self.x, method="lse", tail=self.tail, plotting_positions="gringorten")
+        self.assertEqual(w.params, lse(self.x, tail=self.tail, plotting_positions="gringorten"))
+        self.assertEqual(w.fit_info["plotting_positions"], "gringorten")
+        # a fit to the exceedances: the exceedances as a complete sample, with their own plotting positions
+        u = self.xs[self.r - 1]
+        w = Weibull.fit(
+            self.x, method="lse", tail=self.tail, tail_model="exceedances", loc=u, plotting_positions="median"
+        )
+        self.assertEqual(w.params, lse(self.x[self.x > u], loc=u, plotting_positions="median"))
+
+    def test_invalid(self):
+        with self.assertRaisesRegex(QatsValueError, "plotting positions"):
+            lse(self.x, plotting_positions="hazen")
+        for method in ("msm", "mle", "pwm", "pwm2"):
+            with self.subTest(method=method), self.assertRaisesRegex(QatsValueError, "only for the method lse"):
+                Weibull.fit(self.x, method=method, plotting_positions="median")
+        with self.assertRaisesRegex(QatsValueError, "plotting positions"):
+            Weibull.fit(self.x, method="lse", plotting_positions="hazen")
+
+    def test_plot_uses_fitted_positions(self):
+        import matplotlib.pyplot as plt
+
+        backend = plt.get_backend()
+        plt.switch_backend("Agg")
+        self.addCleanup(plt.switch_backend, backend)
+        self.addCleanup(plt.close, "all")
+        w = Weibull.fit(self.x, method="lse", plotting_positions="gringorten")
+        data = w.plot(ax=plt.figure().gca()).get_lines()[0]
+        np.testing.assert_allclose(data.get_ydata(), empirical_cdf(self.x.size, kind="gringorten"), rtol=1e-14)
 
 
 class WeibullPlotTestCases(unittest.TestCase):
@@ -611,8 +717,8 @@ class WeibullPlotTestCases(unittest.TestCase):
         w = Weibull.fit(self.x, method="msm")
         for paper in ("rayleigh", "weibull", "gumbel", "linear"):
             with self.subTest(paper=paper):
-                ax = w.plot(paper=paper, kind="median", ax=self.axes())
-                p = probability_paper(self.x, w, paper=paper, kind="median")
+                ax = w.plot(paper=paper, plotting_positions="median", ax=self.axes())
+                p = probability_paper(self.x, w, paper=paper, plotting_positions="median")
                 (data,), (line,), _ = self.lines(ax)
                 np.testing.assert_array_equal(data.get_xdata(), p.x)
                 np.testing.assert_array_equal(data.get_ydata(), p.y)
@@ -655,9 +761,17 @@ class WeibullPlotTestCases(unittest.TestCase):
     def test_exceedances_view(self):
         w = Weibull.fit(self.x, method="msm", tail=0.2, tail_model="exceedances")
         u_value = w.fit_info["threshold"]
-        ax = w.plot(paper="rayleigh", kind="median", ax=self.axes())  # the default view of a fit to the exceedances
+        ax = w.plot(
+            paper="rayleigh", plotting_positions="median", ax=self.axes()
+        )  # the default view of a fit to the exceedances
         p = probability_paper(
-            self.x, w, paper="rayleigh", kind="median", tail=0.2, tail_model="exceedances", view="exceedances"
+            self.x,
+            w,
+            paper="rayleigh",
+            plotting_positions="median",
+            tail=0.2,
+            tail_model="exceedances",
+            view="exceedances",
         )
         (data,), (line,), (u,) = self.lines(ax)
         # only the exceedances, at their own plotting positions, and the conditional distribution F_u
@@ -696,7 +810,7 @@ class WeibullPlotTestCases(unittest.TestCase):
             ),
         ):
             with self.subTest(expected=expected):
-                ax = w.plot(paper="rayleigh", kind="median", ax=self.axes())
+                ax = w.plot(paper="rayleigh", plotting_positions="median", ax=self.axes())
                 self.assertEqual(ax.get_title(), expected)
         self.assertEqual(Weibull(1.0, 2.0, 1.5).plot(ax=self.axes()).get_title(), "")  # not fitted
 
@@ -710,12 +824,12 @@ class WeibullPlotTestCases(unittest.TestCase):
         ):
             with self.subTest(view=view, **kwargs):
                 w = Weibull.fit(-minima, **kwargs)
-                ax = w.plot(paper="rayleigh", kind="median", ax=self.axes(), view=view, is_minima=True)
+                ax = w.plot(paper="rayleigh", plotting_positions="median", ax=self.axes(), view=view, is_minima=True)
                 p = probability_paper(
                     minima,
                     w,
                     paper="rayleigh",
-                    kind="median",
+                    plotting_positions="median",
                     tail=0.2,
                     tail_model=kwargs.get("tail_model", "censored"),
                     view=view,

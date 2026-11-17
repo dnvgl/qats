@@ -63,9 +63,9 @@ class PlottingPositionsTestCases(unittest.TestCase):
             gringorten=(i - 0.44) / (n + 0.12),
         )
         self.assertEqual(set(expected), set(_PLOTTING_POSITIONS))
-        for kind, f in expected.items():
-            with self.subTest(kind=kind):
-                np.testing.assert_allclose(empirical_cdf(4, kind=kind), f, rtol=1e-14)
+        for plotting_positions, f in expected.items():
+            with self.subTest(plotting_positions=plotting_positions):
+                np.testing.assert_allclose(empirical_cdf(4, kind=plotting_positions), f, rtol=1e-14)
 
     def test_invalid_kind(self):
         with self.assertRaises(ValueError):
