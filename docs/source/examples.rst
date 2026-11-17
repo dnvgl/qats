@@ -146,9 +146,10 @@ Weibull fits to the tail of the maxima
 
 Fit the Weibull distribution to all maxima of a time series, or only to the largest 20%, with
 :meth:`~qats.TimeSeries.stats`: censored fits to all maxima, where the smaller maxima count only by their number,
-and fits to the maxima above a threshold value as a sample of their own. The table compares the fitted parameters and the 3-hour extremes derived from each fit.
-The Notes of :meth:`~qats.TimeSeries.stats` describe the options. The figure shows each fit on Rayleigh paper, with the
-coordinates from :func:`~qats.stats.paper.probability_paper`.
+and fits to the maxima above a threshold value as a sample of their own. The table compares the fitted parameters and
+the 3-hour extremes derived from each fit. The Notes of :meth:`~qats.TimeSeries.stats` describe the options. The figure
+shows each fit on Rayleigh paper, with the coordinates from :func:`~qats.stats.paper.probability_paper`. Pass
+``paper="weibull"`` for Weibull paper.
 
 .. literalinclude:: examples/weibull_tail_fits.py
    :language: python
@@ -159,7 +160,8 @@ coordinates from :func:`~qats.stats.paper.probability_paper`.
     :figclass: align-center
     :target: _images/weibull_tail_fits.png
 
-    The maxima and the fitted distributions on Rayleigh paper. Filled markers are the maxima used in each fit.
+    The maxima and the fitted distributions on Rayleigh paper. The maxima used in each fit are opaque, the others
+    faded. The fits to the exceedances are drawn with all maxima (``view="full-sample"``), like the other fits.
 
 
 Weibull fit with fixed location parameter
@@ -174,6 +176,8 @@ fit.
    :linenos:
    :lines: 1-
 
+
+.. _gumbel_realisations:
 
 Gumbel fit to the maxima of several realisations
 ************************************************

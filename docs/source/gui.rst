@@ -48,7 +48,8 @@ set in *Settings* under "Maxima/minima distribution":
   exceedances of the threshold value u, the maxima above u as a sample of their own. See
   :meth:`~qats.stats.weibull.Weibull.fit`.
 - **Location parameter**: fitted, at the mean level, at a value, or at u in a fit to the exceedances.
-- **Plotting positions** of the maxima on Rayleigh paper.
+- **Plotting positions** of the maxima on Rayleigh paper. An lse fit is fitted to them. The *Extremes CDF* tab has a
+  setting of its own.
 - **Fit to the exceedances drawn**: how the *Maxima/minima CDF* tab draws a fit to the exceedances.
 
   - *exceedances* (default): as fitted, with only the maxima above u of each series at their own plotting positions,
@@ -64,3 +65,25 @@ For example, to see how well a fit to the exceedances describes the largest maxi
 "Fit only the largest maxima" with 0.20, choose the tail model *exceedances* and display the two series: the
 *Maxima/minima CDF* tab shows the maxima above each line's u against its fitted distribution. Choose *full-sample* to
 see the same fits with all maxima instead.
+
+
+Extremes distribution
+*********************
+
+*Tools > Plot extremes CDF* fits a Gumbel distribution to the extremes of the selected time series, one from each: the
+largest maximum, or the smallest minimum when *Minima* is selected under "Select statistical quantity". The time window
+and the filter apply. The series should be realisations of one process, for example simulations of the same sea state
+with different seeds, so select at least two. The extremes and the fitted distribution are drawn on Gumbel paper in a
+new tab, whose title names the fit. Minima are fitted multiplied by -1 and drawn in their own units.
+
+The fit is set in *Settings* under "Extremes distribution (extremes CDF)":
+
+- **Gumbel fit method**: pwm (default), msm, lse or mle, see :meth:`~qats.stats.gumbel.Gumbel.fit`. With the few
+  extremes of a set of simulations, the methods can give quite different upper quantiles.
+- **Plotting positions** of the extremes on Gumbel paper, independent of the plotting positions of the maxima/minima
+  distribution. Median ranks are the default; Gringorten is the usual nearly unbiased choice for a Gumbel
+  distribution. An lse fit is fitted to them; the other methods don't use them.
+
+Changed settings apply to the next *Extremes CDF* tab; tabs already open keep the fit they show. If the distribution
+can't be fitted, for example to equal extremes, the extremes are drawn without a line and the log window says so.
+The example :ref:`gumbel_realisations` makes the same fits and plot with the library.
