@@ -69,18 +69,15 @@ class Gumbel(object):
 
     2. Bruk av asymptotiske ekstremverdifordelinger, Haver, S. (2007)
 
-    3. `Plotting positions <http://en.wikipedia.org/wiki/Q%E2%80%93Q_plot>`_, About plotting positions
+    3. `Bootstrapping statistics <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_
 
-    4. `Usable estimators for parameters in Gumbel distribution
-       <http://stats.stackexchange.com/questions/71197/usable-estimators-for-parameters-in-gumbel-distribution>`_
+    4. Probability weighted moments: definition and relation to parameters of several distributions expressable in
+       inverse form, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research,
+       15(5): 1049-1054, `doi:10.1029/WR015i005p01049 <https://doi.org/10.1029/WR015i005p01049>`_
 
-    5. `Bootstrapping statistics <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_
-
-    6. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979,
-       Water Resources Research. 15(5): 1049-1054.
-
-    7. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
-       quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
+    5. Probability weighted moments compared with some traditional techniques in estimating Gumbel parameters and
+       quantiles, Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research, 15(5): 1055-1064,
+       `doi:10.1029/WR015i005p01055 <https://doi.org/10.1029/WR015i005p01055>`_
 
     """
 
@@ -613,7 +610,7 @@ def bootstrap(loc, scale, size, repetitions, method="pwm"):
     given available computing power and time, should be used. Increasing the number of
     samples cannot increase the amount of information in the original data, it can only
     reduce the effects of random sampling errors which can arise from a bootstrap procedure itself.
-    See [5] about bootstrapping.
+    See [3] about bootstrapping.
 
     Examples
     --------
@@ -701,8 +698,7 @@ def mle(x):
 
     Notes
     -----
-    MLE equation set is given in 'Statistical Distributions' by Forbes et.al. (2010) and referred
-    at [4]
+    The likelihood equations are those of [5, Table 2].
     """
 
     def mle_eq(p, z):
@@ -824,7 +820,7 @@ def plot_fits(data, filename=None, methods=None):
 def pwm(x):
     """
     Fit Gumbel distribution parameters to sample by method of probability weighted
-    moments [7].
+    moments [5, Table 2], see also [4, Table 3].
 
     Parameters
     ----------
@@ -840,7 +836,7 @@ def pwm(x):
 
     def mk(z, k):
         """
-        Probability weighted moments with emphasize on the left/lower tail (j=0).
+        Probability weighted moments `M_{1,0,k}` (``j = 0``), weighted towards the small values.
 
         Parameters
         ----------
@@ -850,21 +846,22 @@ def pwm(x):
 
         Notes
         -----
-        The probability weighted moment Mljk is defined by Greenwood and others (1979)::
+        The probability weighted moment is defined by Greenwood and others [4, eq. 3] as::
 
             M_{l,j,k} = E[X^l F^j (1-F)^k]
 
-        where X(F) is the inverse form of the distribution and F is the cumulative distribution function.
-        When j=k=0 and l is a non-negative integer then M_{l,0,0} represents the conventional moment of order l about
-        the origin.
+        where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function. With
+        ``j = k = 0`` and a non-negative integer `l`, `M_{l,0,0}` is the conventional moment of order `l` about the
+        origin.
 
-        PWMs can be applied either when the small observations are more important than the large observations (k=0), as
-        in
-        strength properties of materials, or when the large observations should have more influence than the smaller
-        observations (k=0) as with three diameter distribution modelling. Here we have chose the former and derived
-        unbiased estimators for moments M_{1,0,k} (j=0), see eq. 16 in [6]::
+        The weight `(1-F)^k` (``j = 0``) gives the small values more influence, the weight `F^j` (``k = 0``) the
+        large values. This function estimates `M_{1,0,k}` by the unbiased estimator [5, eq. 16]::
 
-            M_{1,0,k} = \\frac{1}{n}\\sum_{i=1}^{n}{X_{(i)}\\frac{\\binom{n-i}{k}}{\\binom{n-1}{k}}}
+            M_{1,0,k} = (1 / n) * sum(x[i] * binom(n-i, k) / binom(n-1, k))
+
+        where `x[i]` is the `i`-th smallest value, `i` runs from 1 to `n` and `binom()` is the binomial coefficient.
+        The weight of `x[i]` is the probability that it is the smallest value of a subsample of ``k + 1`` values
+        drawn from the sample, see the appendix of [5].
 
         """
         n = float(z.size)
@@ -874,7 +871,7 @@ def pwm(x):
         # ratio of binomial coefficients
         bc = np.array([binom(n - i, k) / binom(n - 1.0, k) for i in ii])
 
-        return (1.0 / n) * np.sum(xi * bc)  # eq. 16 in [6]
+        return (1.0 / n) * np.sum(xi * bc)  # eq. 16 in [5]
 
     m0 = mk(x, 0.0)
     m1 = mk(x, 1.0)

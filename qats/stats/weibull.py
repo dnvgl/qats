@@ -12,6 +12,7 @@ from scipy.special import binom, gamma
 from .._validation import QatsValueError
 from ..signal import find_maxima
 from .empirical import empirical_cdf
+from .paper import paper_coordinates
 
 # todo: build documentation and check that docstrings behave as intended
 # todo: create examples
@@ -81,26 +82,27 @@ class Weibull(object):
     2. Continuous univariate distributions, Volume 1, N.L.Johnson, S.Kotz and N.Balakrishnan, 1994,  John Wiley and sons
        inc.
 
-    3. `weibull.com <http://www.weibull.com/hotwire/issue15/relbasics15.htm>`_, About location parameter
+    3. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
 
-    4. `Plotting positions <http://en.wikipedia.org/wiki/Q%E2%80%93Q_plot>`_, About plotting positions
+    4. Applying medical survival data to estimate the three-parameter Weibull distribution by the method of probability
+       weighted moments, Bartolucci, A. A.; Singh, K. P.; Bartolucci, A. D.; Bae, S., 1999, Mathematics and Computers
+       in Simulation, 48(4): 385-392,
+       `doi:10.1016/S0378-4754(99)00018-X <https://doi.org/10.1016/S0378-4754(99)00018-X>`_
 
-    5. `Bootstrapping <https://en.wikipedia.org/wiki/Bootstrapping_(statistics)>`_, Bootstrapping statistics
+    5. Probability weighted moments: definition and relation to parameters of several distributions expressable in
+       inverse form, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research,
+       15(5): 1049-1054, `doi:10.1029/WR015i005p01049 <https://doi.org/10.1029/WR015i005p01049>`_
 
-    6. Estimation of the generalized extreme value distribution by the method of probability weighted moments, Hosking,
-       J. R. M., Wallis, J. R. and Wood, E. F., 1985, Technometrics, 27, pp. 251-261
+    6. Probability weighted moments compared with some traditional techniques in estimating Gumbel parameters and
+       quantiles, Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water Resources Research, 15(5): 1055-1064,
+       `doi:10.1029/WR015i005p01055 <https://doi.org/10.1029/WR015i005p01055>`_
 
-    7. Estimating the three-parameter Weibull distribution by the method of probability weighted moments with
-       application to medical survival data, Bortolucci, A. A. et.al.
+    7. Statistical models and methods for lifetime data, 2nd edition, J.F. Lawless, 2003, John Wiley and sons inc.,
+       ISBN 978-0-471-37215-8. Censored and truncated samples.
 
-    8. Theory and derivation for Weibull parameter probability weighted moment estimators, Grender, J.M., Dell, T.R.,
-       Reich, R.M., 1991 United Sates Department of Agriculture
-
-    9. Probability weighted moments, Greenwood, J. A.; Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979, Water
-       Resources Research. 15(5): 1049-1054.
-
-    10. Probability weighted moments compared with some traditional techniques in estimating gumbel parameters and
-        quantiles., Landwehr, J.M.; Matalas, N.C.; Wallis, J.R., 1979., Water Resources Research. 15(5): 1063-1064.
+    8. An introduction to statistical modeling of extreme values, S. Coles, 2001, Springer,
+       `doi:10.1007/978-1-4471-3675-0 <https://doi.org/10.1007/978-1-4471-3675-0>`_. Threshold exceedances (ch. 4),
+       and the likelihood of the exceedances with the values below the threshold censored (sec. 7.6).
 
     """
 
@@ -545,6 +547,10 @@ class Weibull(object):
         """
         Plot data on Weibull paper (linearized scales))
 
+        .. versionchanged :: 5.6.0
+            The coordinates come from :func:`qats.stats.paper.paper_coordinates`, and data at or below the location
+            parameter, which can't be shown on Weibull paper, are left out explicitly. The figure is unchanged.
+
         Parameters
         ----------
         filename : str, optional
@@ -571,16 +577,15 @@ class Weibull(object):
         """
         plt.figure()
 
-        # plot data if that exists
+        # plot data if that exists, except values at or below the location parameter
         if self.data is not None:
-            x = np.log(np.sort(self.data - self.loc))
-            y = np.log(-np.log(1.0 - self.ecdf))
-            plt.plot(x, y, "ko", label="Data")
+            x, y = paper_coordinates(np.sort(self.data), self.ecdf, paper="weibull", loc=self.loc)
+            shown = np.isfinite(x)
+            plt.plot(x[shown], y[shown], "ko", label="Data")
 
         # plot fitted distribution
         yy = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
-        y = np.log(-np.log(1.0 - yy))
-        x = np.log(self.invcdf(p=yy) - self.loc)
+        x, y = paper_coordinates(self.invcdf(p=yy), yy, paper="weibull", loc=self.loc)
         plt.plot(x, y, label="Fitted")
 
         plt.xlim(x[0], x[-1])
@@ -673,7 +678,7 @@ def bootstrap(loc, scale, shape, size, repetitions, method="pwm"):
     given available computing power and time, should be used. Increasing the number of
     samples cannot increase the amount of information in the original data, it can only
     reduce the effects of random sampling errors which can arise from a bootstrap procedure itself.
-    See [5] about bootstrapping.
+    See [3] about bootstrapping.
 
     Examples
     --------
@@ -747,7 +752,7 @@ def lse(x, threshold: float = None, tail: float = None, loc: float = None):
     Uses what are known as (approximate) mean rank estimates for the empirical cdf.
     """
     x = np.sort(x)  # sorted dataset
-    f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf according to Weibull [1]
+    f = empirical_cdf(x.size, kind="mean")  # mean rank empirical cdf, i/(n+1)
     weights = np.ones(np.shape(x))  # by default include all data points
     threshold = _tail_threshold(f, threshold=threshold, tail=tail)
     if threshold is not None:
@@ -809,7 +814,8 @@ def mle(x, tail: float = None, loc: float = None):
     tail : float, optional
         Fit distribution to the tail of the sample by censored maximum likelihood: the fraction <0, 1] of the largest
         values is fitted, so 0.13 fits the 13% largest values. The values are selected as in :func:`lse`, those with
-        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored.
+        empirical CDF (mean rank) at or above ``1 - tail``. The other values are censored: they count only by their
+        number. The fitted distribution describes the full sample. See Notes.
     loc : float, optional
         Fixed location parameter. Only the scale and shape parameters are fitted. Must be below the smallest value in
         the likelihood, which is the censoring value in a tail fit.
@@ -831,6 +837,13 @@ def mle(x, tail: float = None, loc: float = None):
     them, ``xc = x(r)``. They enter the likelihood only through the probability that a value is at or below `xc`::
 
         L = F(xc)^r * f(x(r+1)) * ... * f(x(n))
+
+    All values are known, and the censoring is a choice of the fit: the smaller values set how much of the
+    distribution lies at or below `xc`, but not its shape. `L` is the likelihood of values censored at a known value
+    [7], here `xc`, which is itself one of the censored values; see also [8, sec. 7.6, eq. 7.12], which has the same
+    form. In Type II censoring of a life test, by contrast, the `r` smallest values are not observed, and the censoring
+    value is the smallest observed value x(r+1). A fit to the exceedances, see :meth:`Weibull.fit`, leaves out the
+    factor ``F(xc)^r`` and fits the distribution truncated at `xc` instead [7], [8, ch. 4].
 
     The likelihood equations [2, p. 656 eq. 21.73-21.75] are then summed over the n - r fitted values and each gets
     the derivative of ``r * ln F(xc)``. With no censored values (`r` = 0) the fit is the same as without `tail`.
@@ -931,22 +944,22 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
 
     Notes
     -----
-    The probability weighted moment `Mljk` is defined by Greenwood and others (1979) as::
+    The probability weighted moment is defined by Greenwood and others [5, eq. 3] as::
 
         M_{l,j,k} = E[X^l * F^j * (1-F)^k]
 
-    where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function.
-    When `j=k=0` and `l` is a non-negative integer, then `M_{l,0,0}` represents the conventional moment of order `l`
-    about the origin.
+    where `X(F)` is the inverse form of the distribution and `F` is the cumulative distribution function. With
+    ``j = k = 0`` and a non-negative integer `l`, `M_{l,0,0}` is the conventional moment of order `l` about the origin.
 
-    PWMs can be applied either when the small observations are more important than the large observations (k=0), as in
-    strength properties of materials, or when the large observations should have more influence than the smaller
-    observations (k=0) as with three diameter distribution modelling. Here we have chosen the latter and derived
-    unbiased estimators for moments `M_{l,j,0}(k=0)`, see eq. 32 in [8]::
+    The weight `F^j` (``k = 0``) gives the large values more influence, the weight `(1-F)^k` (``j = 0``) the small
+    values. This function estimates `M_{l,j,0}` by the unbiased estimator::
 
         M_{l,j,0} = (1 / n) * sum(x[i]^l * binom(i-1, j) / binom(n-1, j))
 
-    where `i` is a counter from `j+1` to `n` and `binom()` is the binomial coefficient.
+    where `x[i]` is the `i`-th smallest value, `i` runs from `j+1` to `n` and `binom()` is the binomial coefficient.
+    The weight of `x[i]` is the probability that it is the largest value of a subsample of ``j + 1`` values drawn
+    from the sample. This is the counterpart of the estimator of `M_{1,0,k}` in [6, eq. 16], derived in the appendix
+    of [6], whose weight is the probability of being the smallest value.
 
     """
     # todo: include pseudo-code (or Sphinx-friendly LaTex code) for M_{l,j,0} as included below
@@ -962,7 +975,7 @@ def mlj(sample, l, j):  # noqa: E741 (`l` is a public keyword argument)
     # drawn from n.
     bc = np.array([binom(i - 1.0, j) / binom(n - 1.0, j) for i in ii])
 
-    return (1.0 / n) * np.sum(xi**l * bc)  # eq. 32 in [8]
+    return (1.0 / n) * np.sum(xi**l * bc)  # see Notes
 
 
 def msm(x, loc: float = None):
@@ -993,7 +1006,8 @@ def msm(x, loc: float = None):
 
     Notes
     -----
-    See description in [1]. With a fixed location parameter, the shape parameter is the one that gives the sample
+    See description in [1]. The method uses the full sample and has no form for censored samples [1, p. 1], so it
+    has no censored tail fit. With a fixed location parameter, the shape parameter is the one that gives the sample
     coefficient of variation of ``x - loc``, and the scale parameter follows from the sample mean of ``x - loc``.
     """
     x = np.array(x)
@@ -1124,7 +1138,8 @@ def pwm(x, loc: float = None):
 
     Notes
     -----
-    Details on probability weighted moments are provided in [8].
+    The parameters follow from the probability weighted moments as in [5, Table 3] (location parameter not zero),
+    with `M_(k) = M_{1,0,k}` written in terms of `M_{1,j,0}` by [5, eq. 4].
 
     See Also
     --------
@@ -1183,7 +1198,7 @@ def pwm2(x):
 
     Notes
     -----
-    Details on probability weighted moments are provided on p.14-15 in [8]. Note that only the scale and parameters are
+    The parameters follow from [5, Table 3] (location parameter zero). Only the scale and shape parameters are
     estimated, the location parameter is assumed zero. The result is the same as from ``pwm(x, loc=0)``.
 
     See Also

@@ -68,3 +68,12 @@ def empirical_cdf(n, kind="mean"):
         raise ValueError("Distribution type must be either 'mean','median','symmetrical','beard','gringorten'")
 
     return f
+
+
+def _tail_count(n, tail):
+    """
+    Number of values outside the tail of a sorted sample of size `n`: the values whose mean-rank empirical cumulative
+    probability is below ``1 - tail``. The tail fits in :mod:`qats.stats.weibull` select the fitted values by the same
+    rule.
+    """
+    return int(np.count_nonzero(empirical_cdf(n, kind="mean") < 1.0 - tail))

@@ -391,5 +391,50 @@ class WeibullFitTestCases(unittest.TestCase):
         self.assertEqual(Weibull.fit(self.x, method="PWM").params, pwm(self.x))
 
 
+class WeibullPlotLinearTestCases(unittest.TestCase):
+    """Weibull.plot_linear() draws the same as before it used qats.stats.paper, run with the Agg backend."""
+
+    def setUp(self):
+        import matplotlib.pyplot as plt
+
+        self.plt = plt
+        backend = plt.get_backend()
+        plt.switch_backend("Agg")
+        self.addCleanup(plt.switch_backend, backend)
+        self.addCleanup(plt.close, "all")
+
+    def test_unchanged(self):
+        # data below and at the location parameter can't be shown on Weibull paper
+        w = Weibull(1.0, 2.0, 1.5, data=[4.0, 0.5, 1.5, 1.0, 6.0, 2.5])
+        with unittest.mock.patch("matplotlib.pyplot.show"), unittest.mock.patch("matplotlib.pyplot.close"):
+            w.plot_linear()
+        ax = self.plt.gcf().axes[0]
+        data, fitted = ax.get_lines()
+
+        # the coordinates as calculated before 5.6.0
+        with np.errstate(divide="ignore", invalid="ignore"):
+            x = np.log(np.sort(w.data - w.loc))
+        y = np.log(-np.log(1.0 - empirical_cdf(6, kind="mean")))
+        shown = np.isfinite(x)
+        np.testing.assert_allclose(data.get_xdata(), x[shown], rtol=1e-14)
+        np.testing.assert_allclose(data.get_ydata(), y[shown], rtol=1e-14)
+        self.assertEqual(data.get_xdata().size, 4)
+
+        yy = np.array([0.1, 0.2, 0.5, 0.7, 0.8, 0.9, 0.95, 0.99, 0.999, 0.9999])
+        x = np.log(w.invcdf(p=yy) - w.loc)
+        y = np.log(-np.log(1.0 - yy))
+        np.testing.assert_allclose(fitted.get_xdata(), x, rtol=1e-14)
+        np.testing.assert_allclose(fitted.get_ydata(), y, rtol=1e-14)
+        np.testing.assert_allclose(ax.get_xlim(), (x[0], x[-1]), rtol=1e-14)
+        np.testing.assert_allclose(ax.get_ylim(), (y[0], y[-1]), rtol=1e-14)
+        np.testing.assert_allclose(ax.get_yticks(), y, rtol=1e-14)
+        self.assertEqual([t.get_text() for t in ax.get_yticklabels()], [str(v) for v in yy])
+        xloc = np.linspace(x[0], x[-1], 5)
+        np.testing.assert_allclose(ax.get_xticks(), xloc, rtol=1e-14)
+        self.assertEqual(
+            [t.get_text() for t in ax.get_xticklabels()], [str(v) for v in np.around(np.exp(xloc) + w.loc, 2)]
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

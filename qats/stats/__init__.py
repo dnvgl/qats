@@ -3,4 +3,4 @@
 Sub-package for statistics/distributions.
 """
 
-from . import empirical, gumbel, gumbelmin, weibull
+from . import empirical, gumbel, gumbelmin, paper, weibull
