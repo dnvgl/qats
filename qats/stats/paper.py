@@ -482,7 +482,7 @@ def _format(v):
     return f"{v + 0.0:g}"
 
 
-def _plot_distribution(distribution, filename, paper, kind, ax, view=None):
+def _plot_distribution(distribution, filename, paper, kind, ax, view=None, *, is_minima=False, xlabel="X", title=None):
     """
     Draw a fitted distribution and the sample it was fitted to on probability paper.
 
@@ -503,6 +503,13 @@ def _plot_distribution(distribution, filename, paper, kind, ax, view=None):
         Axes to draw on. None draws on a new figure.
     view : {'exceedances', 'full-sample'}, optional
         How a fit to the exceedances is drawn, default 'exceedances', see :func:`probability_paper`.
+    is_minima : bool, optional
+        The distribution is fitted to minima multiplied by -1, and its `data` are those values. The minima are drawn
+        in their original units, see :func:`probability_paper`.
+    xlabel : str, optional
+        Label of the x axis.
+    title : str, optional
+        Title of the axes, in a small font.
 
     Returns
     -------
@@ -525,14 +532,16 @@ def _plot_distribution(distribution, filename, paper, kind, ax, view=None):
     tail = info.get("tail")
     u = info.get("threshold")
     tail_model = info.get("tail_model") or "censored"
+    sign = -1.0 if is_minima else 1.0
     p = probability_paper(
-        distribution.data,
+        None if distribution.data is None else sign * np.asarray(distribution.data),
         distribution,
         paper=paper,
         kind=kind,
         tail=tail,
         tail_model=tail_model,
         view=view,
+        is_minima=is_minima,
     )
 
     # labels: a fit to the exceedances is labelled by what the line is
@@ -540,7 +549,7 @@ def _plot_distribution(distribution, filename, paper, kind, ax, view=None):
     if tail_model == "exceedances" and u is not None:
         if p.view == "exceedances":
             data_label, fit_label = "Exceedances", "Fitted, F_u"
-            ylabel = "Cumulative probability given X > u"
+            ylabel = f"Cumulative probability given {'X < u' if is_minima else 'X > u'}"
         else:
             frac = np.count_nonzero(p.fitted) / (p.sample.size + p.excluded.size)
             fit_label = f"Fitted, F = 1 - p(1 - F_u), p = {frac:.3g}"
@@ -558,13 +567,15 @@ def _plot_distribution(distribution, filename, paper, kind, ax, view=None):
     if u is not None:
         xu = float(_paper_x(u, paper, p.loc))
         if np.isfinite(xu):
-            ax.axvline(xu, color="0.4", linestyle="--", linewidth=1.0, label=f"u = {u:.5g}")
+            ax.axvline(xu, color="0.4", linestyle="--", linewidth=1.0, label=f"u = {sign * u:.5g}")
 
     ax.set_xticks(p.xticks, p.xticklabels)
     ax.set_yticks(p.yticks, p.yticklabels)
     ax.set_ylim(p.yticks[0], p.yticks[-1])
-    ax.set_xlabel("X")
+    ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    if title is not None:
+        ax.set_title(title, fontsize="small")
     ax.legend(loc="upper left")
     ax.grid(True)
 
