@@ -44,15 +44,34 @@ class TestGuiMaxima(unittest.TestCase):
         self.settle()
 
     def settle(self, timeout=60.0):
-        """Let the worker threads finish and their results reach the main thread, which may start new workers."""
+        """
+        Let the worker threads finish and their results reach the main thread, which may start new workers. Displaying
+        a series is a chain of workers, so the pool must stay idle with no events pending on a few checks in a row.
+        """
+        from qtpy.QtCore import QCoreApplication
+
         end = time.monotonic() + timeout
+        idle = 0
         while time.monotonic() < end:
             self.window.threadpool.waitForDone()
-            for _ in range(10):
-                self.app.processEvents()
+            QCoreApplication.sendPostedEvents()
+            self.app.processEvents()
             if self.window.threadpool.activeThreadCount() == 0:
-                return
+                idle += 1
+                if idle >= 5:
+                    return
+                time.sleep(0.01)
+            else:
+                idle = 0
         self.fail("worker threads did not finish")
+
+    def wait_for(self, condition, message, timeout=60.0):
+        """Settle until `condition()` holds; slow machines may need more than one round of workers."""
+        end = time.monotonic() + timeout
+        while not condition():
+            if time.monotonic() > end:
+                self.fail(message)
+            self.settle()
 
     def display(self):
         """Check the series in NAMES and display them."""
@@ -64,7 +83,7 @@ class TestGuiMaxima(unittest.TestCase):
             if os.path.basename(item.text()) in NAMES:
                 item.setCheckState(Qt.Checked)
         self.window.on_display()
-        self.settle()
+        self.wait_for(lambda: set(self.table()) == set(NAMES), "the statistics table did not show the series")
 
     def set_fit(self, fit, plotting_positions="median", view=None):
         self.window.settings.update(
@@ -258,7 +277,7 @@ class TestGuiMaxima(unittest.TestCase):
         )
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
-        self.settle()
+        self.wait_for(lambda: set(self.table()) == set(NAMES), "the statistics were not recalculated")
         self.assertNotEqual(self.table()[NAMES[0]]["wloc"], before)
         self.check_same_fit(fit)
 
@@ -365,7 +384,7 @@ class TestGuiMaxima(unittest.TestCase):
         )
         with unittest.mock.patch.object(SettingsDialog, "settings", return_value=result):
             self.window.on_open_settings()
-        self.settle()
+        self.wait_for(lambda: set(self.table()) == set(NAMES), "the statistics were not recalculated")
         self.assertEqual(self.window.settings["weibull_view"], "full-sample")
         self.check_same_fit(fit, view="full-sample")
 
