@@ -623,16 +623,17 @@ class Weibull(object):
         )
         return p
 
-    def plot(self, filename=None, *, paper=None, plotting_positions=None, ax=None, view=None):
+    def plot(self, filename=None, *, paper=None, plotting_positions=None, ax=None, view=None, is_minima=False):
         """
         Plot the distribution and the sample it was fitted to on probability paper
 
         .. versionchanged :: 5.6.0
-            New arguments `paper`, `plotting_positions`, `ax` and `view`, and the axes are returned. The plot is
-            drawn with :func:`qats.stats.paper.probability_paper`, and shows a tail fit as :attr:`fit_info` describes
-            it: the values outside the fit faded, and the threshold value u dashed. With the default arguments the data
-            and the fitted distribution are drawn as before, but the fitted line spans the probability axis, from the
-            lowest data point to the top tick.
+            New arguments `paper`, `plotting_positions`, `ax`, `view` and `is_minima`, and the axes are returned. The
+            plot is drawn with :func:`qats.stats.paper.probability_paper`, and shows a tail fit as :attr:`fit_info`
+            describes it: the values outside the fit faded, and the threshold value u dashed. With the default
+            arguments the data and the fitted distribution are drawn as before, but the fitted line spans the
+            probability axis, from the lowest data point to the top tick. The x axis is labelled 'Maxima' or 'Minima',
+            and a fitted distribution has the fit settings as title.
 
         Parameters
         ----------
@@ -652,6 +653,10 @@ class Weibull(object):
             exceeding u; or 'full-sample', with the full sample and the fitted distribution solved for the full
             sample, ``F = 1 - p (1 - F_u)``. Any other fit is drawn with the full sample. See the Notes of
             :func:`qats.stats.paper.probability_paper` for both views and their equations.
+        is_minima : bool, optional
+            The distribution is fitted to minima multiplied by -1, as by :meth:`qats.TimeSeries.stats` with
+            ``is_minima=True``, and `data` are those values. The minima are drawn in their original units, and the x
+            axis is labelled 'Minima' instead of 'Maxima'.
 
         Returns
         -------
@@ -689,12 +694,34 @@ class Weibull(object):
         >>> w = Weibull.fit(maxima, method="mle", tail=0.2, tail_model="exceedances")
         >>> w.plot(paper="rayleigh", plotting_positions="median", view="full-sample")
 
+        Plot a fit to the 20% lowest minima, fitted as the largest of the minima multiplied by -1
+
+        >>> w = Weibull.fit(-minima, method="lse", tail=0.2)
+        >>> w.plot(paper="rayleigh", plotting_positions="median", is_minima=True)
+
         """
         if plotting_positions is None:
             # the plotting positions an lse fit was fitted to
             plotting_positions = (self._fit_info or dict()).get("plotting_positions") or "mean"
+        title = None
+        info = self._fit_info
+        if info is not None:
+            # the fit settings, as described in the GUI
+            loc = None
+            if info["loc_from"] == "value":
+                loc = "threshold" if info["threshold"] is not None and self.loc == info["threshold"] else self.loc
+            fit = dict(method=info["method"], tail=info["tail"], tail_model=info["tail_model"] or "censored", loc=loc)
+            title = _fit_description(fit, plotting_positions, minima=is_minima)
         return _plot_distribution(
-            self, filename, "linear" if paper is None else paper, plotting_positions, ax, view=view
+            self,
+            filename,
+            "linear" if paper is None else paper,
+            plotting_positions,
+            ax,
+            view=view,
+            is_minima=is_minima,
+            xlabel="Minima" if is_minima else "Maxima",
+            title=title,
         )
 
     def plot_linear(self, filename=None):
@@ -1449,6 +1476,43 @@ def weibull2gumbel(loc, scale, shape, n):
     gscale = 1.0 / (shape / scale * np.log(n) ** ((shape - 1.0) / shape))
 
     return gloc, gscale
+
+
+def _fit_description(fit, plotting_positions, minima=False):
+    """
+    One line describing a Weibull fit to maxima or minima and the plotting positions, for plot titles and tables.
+
+    Parameters
+    ----------
+    fit : dict
+        Weibull fit options: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
+    plotting_positions : str
+        Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
+    minima : bool, optional
+        The fit is to minima.
+
+    Returns
+    -------
+    str
+        Description
+    """
+    sample = "minima" if minima else "maxima"
+    parts = [fit["method"]]
+    if fit["tail"] is None:
+        parts.append(f"all {sample}")
+    else:
+        parts.append(f"the {100 * fit['tail']:g} % {'lowest' if minima else 'largest'} {sample}")
+        parts.append(fit["tail_model"])
+    loc = fit["loc"]
+    if loc is None:
+        parts.append("location fitted")
+    elif isinstance(loc, str) and loc == "mean":
+        parts.append("location at the mean level")
+    elif isinstance(loc, str) and loc == "threshold":
+        parts.append("location at u")
+    else:
+        parts.append(f"location {loc:g}")
+    return f"Weibull fit: {', '.join(parts)}; {plotting_positions} plotting positions"
 
 
 def _tail_level(f, threshold=None, tail=None):

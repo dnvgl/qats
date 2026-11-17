@@ -165,11 +165,13 @@ class TestGuiMaxima(unittest.TestCase):
         self.set_fit(fit)
         self.display()
         axes = self.window.weibull_axes
-        # one legend entry per series, with u and n, then one entry for each kind of point
+        # one legend entry per series, with u and n, then one entry for each kind of point and the line
         labels = [t.get_text() for t in axes.get_legend().get_texts()]
-        self.assertEqual(len(labels), 4)
+        self.assertEqual(len(labels), 5)
         self.assertTrue(all("u = " in label and "n = " in label for label in labels[:2]))
-        self.assertEqual(labels[2:], ["Fitted", "Not fitted"])
+        self.assertEqual(labels[2:], ["Data", "Data not fitted", "Fitted"])
+        self.assertEqual(axes.get_xlabel(), "Maxima")
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability")
         # fitted points opaque, the others faded and smaller, in the series' colour
         lines = axes.get_lines()
         fitted = [ln for ln in lines if ln.get_marker() == "o" and ln.get_alpha() is None]
@@ -264,25 +266,25 @@ class TestGuiMaxima(unittest.TestCase):
         self.display()
         self.check_same_fit(fit, view="exceedances")
         axes = self.window.weibull_axes
-        self.assertEqual(axes.get_ylabel(), "Cumulative probability given X > u (-)")
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability given X > u")
         labels = [t.get_text() for t in axes.get_legend().get_texts()]
-        self.assertEqual(len(labels), 2)
-        self.assertTrue(all("u = " in label for label in labels))
+        self.assertTrue(all("u = " in label for label in labels[:2]))
+        self.assertEqual(labels[2:], ["Exceedances", "Fitted, F_u"])  # no maxima outside the fit
 
         # with all maxima, as before
         self.set_fit(fit, view="full-sample")
         self.display()
         self.check_same_fit(fit, view="full-sample")
-        self.assertEqual(axes.get_ylabel(), "Cumulative probability (-)")
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability")
         labels = [t.get_text() for t in axes.get_legend().get_texts()]
-        self.assertEqual(labels[2:], ["Fitted", "Not fitted"])
+        self.assertEqual(labels[2:], ["Data", "Data not fitted", "Fitted, F = 1 - p(1 - F_u)"])
 
         # a censored fit has only one view
         censored = dict(method="lse", tail=0.2)
         self.set_fit(censored, view="exceedances")
         self.display()
         self.check_same_fit(censored)
-        self.assertEqual(axes.get_ylabel(), "Cumulative probability (-)")
+        self.assertEqual(axes.get_ylabel(), "Cumulative probability")
 
     def test_minima_view(self):
         fit = dict(method="msm", tail=0.2, tail_model="exceedances")
@@ -290,7 +292,7 @@ class TestGuiMaxima(unittest.TestCase):
         self.window.minima.setChecked(True)
         self.display()
         self.check_same_fit(fit, minima=True, view="exceedances")
-        self.assertEqual(self.window.weibull_axes.get_ylabel(), "Cumulative probability given X < u (-)")
+        self.assertEqual(self.window.weibull_axes.get_ylabel(), "Cumulative probability given X < u")
 
     def test_changed_view_redraws(self):
         from qats.app.gui import SettingsDialog
