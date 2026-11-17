@@ -1418,6 +1418,43 @@ def weibull2gumbel(loc, scale, shape, n):
     return gloc, gscale
 
 
+def _fit_description(fit, plotting_positions, minima=False):
+    """
+    One line describing a Weibull fit to maxima or minima and the plotting positions, for plot titles and tables.
+
+    Parameters
+    ----------
+    fit : dict
+        Weibull fit options: method, tail, tail_model and loc, see :meth:`qats.TimeSeries.stats`.
+    plotting_positions : str
+        Plotting positions, see :func:`qats.stats.empirical.empirical_cdf`.
+    minima : bool, optional
+        The fit is to minima.
+
+    Returns
+    -------
+    str
+        Description
+    """
+    sample = "minima" if minima else "maxima"
+    parts = [fit["method"]]
+    if fit["tail"] is None:
+        parts.append(f"all {sample}")
+    else:
+        parts.append(f"the {100 * fit['tail']:g} % {'lowest' if minima else 'largest'} {sample}")
+        parts.append(fit["tail_model"])
+    loc = fit["loc"]
+    if loc is None:
+        parts.append("location fitted")
+    elif isinstance(loc, str) and loc == "mean":
+        parts.append("location at the mean level")
+    elif isinstance(loc, str) and loc == "threshold":
+        parts.append("location at u")
+    else:
+        parts.append(f"location {loc:g}")
+    return f"Weibull fit: {', '.join(parts)}; {plotting_positions} plotting positions"
+
+
 def _tail_level(f, threshold=None, tail=None):
     """
     Level of the empirical cdf `f` at and above which values are fitted, from either `threshold` (that level) or
