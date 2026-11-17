@@ -11,7 +11,7 @@ from qats.stats.gumbel import pwm as gumbel_pwm
 from qats.stats.paper import probability_paper
 from qats.stats.weibull import Weibull
 
-from . import realisations, requires_qt
+from . import realisations, requires_qt, riser_seeds
 
 FIT_OPTIONS = [
     dict(),
@@ -20,6 +20,9 @@ FIT_OPTIONS = [
     dict(method="msm", tail=0.2, tail_model="exceedances"),
     dict(method="mle", tail=0.2, tail_model="exceedances", loc="threshold"),
 ]
+# a time window and a low-pass filter, as set in the GUI: the series are cropped and filtered before the statistics
+TWIN = (500.0, 6000.0)
+FARGS = ("lp", 0.1)
 
 
 @requires_qt
@@ -31,16 +34,23 @@ class TestCalculateStats(unittest.TestCase):
         path = os.path.join(os.path.dirname(__file__), "..", "data", "mooring.ts")
         cls.ts = TsDB.fromfile(path).get(name="mooring line 4")
 
-    def check(self, fit, minima=False, plotting_positions="median", view="exceedances"):
+    def check(self, fit, minima=False, plotting_positions="median", twin=None, fargs=None, view="exceedances"):
         from qats.app.funcs import calculate_stats
 
         s = calculate_stats(
-            {"a": self.ts}, None, None, minima=minima, fit=fit, plotting_positions=plotting_positions, view=view
+            {"a": self.ts}, twin, fargs, minima=minima, fit=fit, plotting_positions=plotting_positions, view=view
         )["a"]
         # an lse fit is fitted to the plotting positions of the plot
         lse = dict(plotting_positions=plotting_positions) if fit.get("method") == "lse" else dict()
         expected = self.ts.stats(
-            statsdur=10800.0, quantiles=(0.37, 0.57, 0.9), is_minima=minima, include_sample=True, **fit, **lse
+            twin=twin,
+            filterargs=fargs,
+            statsdur=10800.0,
+            quantiles=(0.37, 0.57, 0.9),
+            is_minima=minima,
+            include_sample=True,
+            **fit,
+            **lse,
         )
         for key, value in expected.items():
             if key == "sample":
@@ -76,6 +86,17 @@ class TestCalculateStats(unittest.TestCase):
 
     def test_plotting_positions(self):
         self.check(dict(), plotting_positions="mean")
+
+    def test_time_window_and_filter(self):
+        # the statistics of the cropped and filtered series, for fits with non-default settings
+        for fit, minima, plotting_positions in (
+            (dict(), False, "median"),
+            (dict(method="lse", tail=0.2), False, "gringorten"),
+            (dict(method="mle", tail=0.3, loc="mean"), True, "mean"),
+            (dict(method="msm", tail=0.2, tail_model="exceedances", loc="threshold"), False, "beard"),
+        ):
+            with self.subTest(**fit, minima=minima, plotting_positions=plotting_positions):
+                self.check(fit, minima=minima, plotting_positions=plotting_positions, twin=TWIN, fargs=FARGS)
 
     def test_views(self):
         # the view applies to a fit to the exceedances; the other fits are drawn with all maxima in either view
@@ -206,7 +227,7 @@ class TestCalculateGumbelFit(unittest.TestCase):
         # the same realisation twice: equal extremes, zero scale, NaN parameters and the points without a line
         from qats.app.funcs import calculate_gumbel_fit
 
-        ts = self.container["seed 1"]
+        ts = next(iter(self.container.values()))
         for minima in (False, True):
             with self.subTest(minima=minima):
                 g = calculate_gumbel_fit({"a": ts, "b": ts}, None, None, minima=minima)
@@ -214,11 +235,63 @@ class TestCalculateGumbelFit(unittest.TestCase):
                 self.assertEqual(g["paper"].x.size, 2)
                 self.assertEqual(g["paper"].fit_x.size, 0)
 
+    def test_time_window_and_filter(self):
+        # the extremes of the cropped and filtered series, and the library's fit to them. The process is narrow-banded
+        # between 0.08 and 0.12 Hz, so the band-pass filter removes part of it and changes the extremes.
+        from qats.app.funcs import calculate_gumbel_fit
+
+        twin, fargs = (1000.0, 9000.0), ("bp", 0.09, 0.11)
+        for method, minima, plotting_positions in (("pwm", False, "median"), ("lse", True, "gringorten")):
+            with self.subTest(method=method, minima=minima, plotting_positions=plotting_positions):
+                g = calculate_gumbel_fit(
+                    self.container, twin, fargs, minima=minima, plotting_positions=plotting_positions, method=method
+                )
+                extremes = list()
+                for ts in self.container.values():
+                    _, x = ts.get(twin=twin, filterargs=fargs)
+                    extremes.append(x.min() if minima else x.max())
+                extremes = np.sort(extremes)
+                np.testing.assert_array_equal(g["sample"], extremes)
+                unfiltered = calculate_gumbel_fit(self.container, None, None, minima=minima)["sample"]
+                self.assertFalse(np.array_equal(g["sample"], unfiltered))
+
+                lse = dict(plotting_positions=plotting_positions) if method == "lse" else dict()
+                expected = Gumbel.fit(-extremes if minima else extremes, method=method, **lse)
+                self.assertEqual((g["loc"], g["scale"]), (expected.loc, expected.scale))
+                p = probability_paper(
+                    extremes, expected, paper="gumbel", plotting_positions=plotting_positions, is_minima=minima
+                )
+                for attr in ("x", "y", "fit_x", "fit_y", "xticks", "yticks"):
+                    np.testing.assert_array_equal(getattr(g["paper"], attr), getattr(p, attr), err_msg=attr)
+
     def test_too_few_series(self):
         from qats.app.funcs import calculate_gumbel_fit
 
+        name, ts = next(iter(self.container.items()))
         with self.assertRaises(ValueError):
-            calculate_gumbel_fit({"seed 1": self.container["seed 1"]}, None, None)
+            calculate_gumbel_fit({name: ts}, None, None)
+
+
+@requires_qt
+class TestCalculateGumbelFitRiser(TestCalculateGumbelFit):
+    """
+    The same checks for the maxima and minima of 20 realisations from simulations, the top tension of a catenary
+    riser: a non-Gaussian response with short peaks after near-slack.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.container = riser_seeds()
+
+    def test_sample(self):
+        # the file holds 20 realisations of 3 hours at 0.1 s; the extremes are those of the source simulations
+        self.assertEqual(len(self.container), 20)
+        for ts in self.container.values():
+            self.assertEqual(ts.n, 108001)
+            self.assertAlmostEqual(ts.t[-1] - ts.t[0], 10800.0, places=6)
+        maxima = np.sort([ts.x.max() for ts in self.container.values()])
+        self.assertAlmostEqual(maxima[0], 225.26, places=2)
+        self.assertAlmostEqual(maxima[-1], 295.04, places=2)
 
 
 @requires_qt
@@ -234,12 +307,12 @@ class TestCalculateRfc(unittest.TestCase):
     def test_counts_and_widths(self):
         from qats.app.funcs import calculate_rfc
 
-        for nbins in (1, 10, 256):
-            out = calculate_rfc(self.container, None, None, nbins)
+        for nbins, twin, fargs in ((1, None, None), (10, None, None), (256, None, None), (32, TWIN, FARGS)):
+            out = calculate_rfc(self.container, twin, fargs, nbins)
             for name, ts in self.container.items():
-                with self.subTest(nbins=nbins, name=name):
+                with self.subTest(nbins=nbins, twin=twin, fargs=fargs, name=name):
                     r, c, w = out[name]
-                    cycles = ts.rfc()
+                    cycles = ts.rfc(twin=twin, filterargs=fargs)
                     expected = rebin(cycles, binby="range", n=nbins)
                     np.testing.assert_array_equal(r, expected[:, 0])
                     np.testing.assert_array_equal(c, expected[:, 2])

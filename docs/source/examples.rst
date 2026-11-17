@@ -175,6 +175,49 @@ fit.
    :lines: 1-
 
 
+Gumbel fit to the maxima of several realisations
+************************************************
+
+Simulations of the same sea state with different seeds are realisations of one stationary process, and the largest
+value of each is a sample of the extreme value distribution. The example fits Gumbel distributions to the 3-hour maxima
+of the top tension of a catenary riser from 20 simulations, by each method and with two kinds of plotting positions,
+and draws them on Gumbel paper with :func:`~qats.stats.paper.probability_paper`, the same fits and plot as the Extremes
+CDF tab of the desktop application. It compares the most probable maximum (about the 0.37 quantile) and the 0.90
+quantile with those estimated from each realisation alone, by :meth:`~qats.TimeSeries.stats` from Weibull fits to its
+global maxima.
+
+The largest tension maxima are short peaks after near-slack. A Weibull fit to all global maxima describes the bulk of
+the maxima and gives clearly lower extremes than the realisations show; fits to the tail of the maxima come closer.
+
+.. literalinclude:: examples/gumbel_realisations.py
+   :language: python
+   :linenos:
+   :lines: 1-
+
+.. code-block:: text
+
+    20 maxima of 3 hours, from 225.3 to 295.0 kN
+
+    Gumbel fit to the maxima                 loc  scale    p_37    p_90
+    pwm                                    247.7  15.26   247.8   282.0
+    msm                                    248.3  14.24   248.3   280.3
+    mle                                    247.8  15.97   247.9   283.7
+    lse, median ranks                      248.8  17.06   248.9   287.1
+    lse, Gringorten                        248.9  16.71   249.0   286.5
+
+    Per realisation: mean (min-max)                     p_37                p_90
+    Weibull, all maxima, pwm               223.7 (216.4-229.8)   242.7 (232.4-251.4)
+    Weibull, censored 20% tail, lse        239.8 (224.9-263.0)   267.5 (244.6-304.2)
+    Weibull, exceedances 20%, mle, loc u   245.5 (228.2-266.0)   278.8 (251.1-312.8)
+
+.. figure:: img/gumbel_realisations.png
+    :figclass: align-center
+    :target: _images/gumbel_realisations.png
+
+    The maxima of the 20 realisations and the fitted Gumbel distributions on Gumbel paper, with median rank plotting
+    positions.
+
+
 Units from MATLAB files
 ***********************
 
