@@ -200,7 +200,7 @@ PLOTTING_POSITIONS = {
 GUMBEL_METHODS = {
     "pwm": "Probability weighted moments",
     "msm": "Method of moments",
-    "lse": "Least squares fit to the median-rank empirical distribution",
+    "lse": "Least squares fit to the plotting positions",
     "mle": "Maximum likelihood",
 }
 # defaults: as before the settings existed. Gringorten is the usual nearly unbiased choice for Gumbel distributions
