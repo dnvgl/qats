@@ -53,9 +53,9 @@ for label, kwargs in options.items():
         f"{s['p_57.00']:8.2f} {s['p_90.00']:8.2f}"
     )
 
-# each fit and all maxima on Rayleigh paper, with median rank plotting positions. Filled markers are the maxima used
-# in the fit, hollow grey markers the others. A fit to the exceedances is drawn through all maxima from u upwards
-# (view="full-sample"), so that all fits are drawn the same way.
+# each fit and all maxima on Rayleigh paper, with median rank plotting positions. The maxima used in the fit are drawn
+# opaque, the others faded and smaller, so the dense cluster of small maxima recedes. A fit to the exceedances is drawn
+# through all maxima from u upwards (view="full-sample"), so that all fits are drawn the same way.
 fig, axes = plt.subplots(2, 3, figsize=(13, 8), sharey=True)
 for ax, (label, kwargs) in zip(axes.flat, options.items()):
     s = results[label]
@@ -67,7 +67,7 @@ for ax, (label, kwargs) in zip(axes.flat, options.items()):
         view="full-sample",
     )
     ax.plot(p.x[p.fitted], p.y[p.fitted], "o", color="tab:blue", ms=4, label="Fitted maxima")
-    ax.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color="tab:gray", mfc="none", ms=4, label="Other maxima")
+    ax.plot(p.x[~p.fitted], p.y[~p.fitted], "o", color="tab:blue", alpha=0.3, ms=3, label="Other maxima")
     ax.plot(p.fit_x, p.fit_y, "-", color="tab:red", label="Fitted distribution")
     ax.set_xticks(p.xticks, p.xticklabels)
     ax.set_yticks(p.yticks, p.yticklabels)
